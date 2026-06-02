@@ -1,0 +1,15 @@
+<odoo>
+    <record id="view_account_payment_register_form_inherit" model="ir.ui.view">
+        <field name="name">account.payment.register.form.inherit</field>
+        <field name="model">account.payment.register</field>
+        <field name="inherit_id" ref="account.view_account_payment_register_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_create_payments'][1]" position="attributes">
+                <attribute name="confirm">Are you sure you want to create the payments?</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_create_payments'][2]" position="attributes">
+                <attribute name="confirm">Are you sure you want to create the payment?</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>
