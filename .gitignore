@@ -14,13 +14,17 @@ venv/
 .venv/
 env/
 ENV/
+versions/*/venv/
 
 # Odoo runtime files
 *.log
 *.pid
 *.dump
 *.sql
+.browser_debug_profile/
+versions/*/.browser_debug_profile/
 filestore/
+versions/*/data/
 sessions/
 addons/*/static/lib/
 
@@ -60,3 +64,4 @@ build/
 # Keep source checkouts tracked only when intentionally added.
 # Remove this line if you want to commit the Odoo server source in this repo.
 odoo-server/
+versions/*/odoo-server/

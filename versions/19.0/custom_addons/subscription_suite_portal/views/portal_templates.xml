@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add Subscription to Portal Home Menu -->
+    <template id="portal_my_home_menu_subscription" name="Portal layout : subscription menu entries" inherit_id="portal.portal_breadcrumbs" priority="20">
+        <xpath expr="//ol[hasclass('o_portal_submenu')]" position="inside">
+            <li t-if="page_name == 'subscription' or subscription" t-attf-class="breadcrumb-item #{'active ' if not subscription else ''}">
+                <a t-if="subscription" t-attf-href="/my/subscriptions?{{ keep_query() }}">Subscriptions</a>
+                <t t-else="">Subscriptions</t>
+            </li>
+            <li t-if="subscription" class="breadcrumb-item active">
+                <t t-out="subscription.subscription_code"/>
+            </li>
+        </xpath>
+    </template>
+
+    <template id="portal_my_home_subscription" name="Show Subscriptions" inherit_id="portal.portal_my_home" customize_show="True" priority="20">
+        <xpath expr="//div[hasclass('o_portal_docs')]" position="inside">
+            <t t-call="portal.portal_docs_entry">
+                <t t-set="title">Subscriptions</t>
+                <t t-set="url" t-value="'/my/subscriptions'"/>
+                <t t-set="count" t-value="subscription_count"/>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- Subscriptions List View -->
+    <template id="portal_my_subscriptions" name="My Subscriptions">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Subscriptions</t>
+            </t>
+            <t t-if="not subscriptions">
+                <p>There are currently no subscriptions for your account.</p>
+            </t>
+            <t t-if="subscriptions" t-call="portal.portal_table">
+                <thead>
+                    <tr class="active">
+                        <th>Reference #</th>
+                        <th>Plan</th>
+                        <th class="text-end">Next Invoice</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end">MRR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-foreach="subscriptions" t-as="sub">
+                        <tr>
+                            <td><a t-attf-href="/my/subscription/#{sub.id}"><t t-out="sub.subscription_code or sub.name"/></a></td>
+                            <td><t t-out="sub.subscription_plan_id.name"/></td>
+                            <td class="text-end"><span t-field="sub.next_invoice_date"/></td>
+                            <td class="text-center">
+                                <span t-if="sub.subscription_state == 'draft'" class="badge text-bg-light"><i class="fa fa-fw fa-pencil"/> Draft</span>
+                                <span t-if="sub.subscription_state == 'active'" class="badge text-bg-success"><i class="fa fa-fw fa-check"/> Active</span>
+                                <span t-if="sub.subscription_state == 'trial'" class="badge text-bg-info"><i class="fa fa-fw fa-clock-o"/> Trial</span>
+                                <span t-if="sub.subscription_state == 'past_due'" class="badge text-bg-danger"><i class="fa fa-fw fa-exclamation-triangle"/> Past Due</span>
+                                <span t-if="sub.subscription_state == 'paused'" class="badge text-bg-warning"><i class="fa fa-fw fa-pause"/> Paused</span>
+                                <span t-if="sub.subscription_state == 'cancelled'" class="badge text-bg-secondary"><i class="fa fa-fw fa-times"/> Cancelled</span>
+                                <span t-if="sub.subscription_state == 'expired'" class="badge text-bg-secondary"><i class="fa fa-fw fa-calendar-times-o"/> Expired</span>
+                            </td>
+                            <td class="text-end">
+                                <span t-field="sub.mrr" t-options='{"widget": "monetary", "display_currency": sub.currency_id}'/>
+                            </td>
+                        </tr>
+                    </t>
+                </tbody>
+            </t>
+        </t>
+    </template>
+
+    <!-- Subscription Detailed View -->
+    <template id="portal_subscription_page" name="Subscription Details">
+        <t t-call="portal.portal_layout">
+            <t t-set="subscription" t-value="subscription"/>
+            <div id="optional_layout">
+                <t t-call="portal.portal_record_layout">
+                    <t t-set="card_header">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-12">
+                                <h5 class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-0">
+                                    <span class="text-truncate">
+                                        <t t-out="subscription.subscription_plan_id.name"/>
+                                        <small class="text-muted d-none d-md-inline"> (<t t-out="subscription.subscription_code"/>)</small>
+                                    </span>
+                                    <span>
+                                        <span t-if="subscription.subscription_state == 'draft'" class="badge text-bg-light rounded-pill"><i class="fa fa-fw fa-pencil"/> Draft</span>
+                                        <span t-if="subscription.subscription_state == 'active'" class="badge text-bg-success rounded-pill"><i class="fa fa-fw fa-check"/> Active</span>
+                                        <span t-if="subscription.subscription_state == 'trial'" class="badge text-bg-info rounded-pill"><i class="fa fa-fw fa-clock-o"/> Trial</span>
+                                        <span t-if="subscription.subscription_state == 'past_due'" class="badge text-bg-danger rounded-pill"><i class="fa fa-fw fa-exclamation-triangle"/> Past Due</span>
+                                        <span t-if="subscription.subscription_state == 'paused'" class="badge text-bg-warning rounded-pill"><i class="fa fa-fw fa-pause"/> Paused</span>
+                                        <span t-if="subscription.subscription_state == 'cancelled'" class="badge text-bg-secondary rounded-pill"><i class="fa fa-fw fa-times"/> Cancelled</span>
+                                        <span t-if="subscription.subscription_state == 'expired'" class="badge text-bg-secondary rounded-pill"><i class="fa fa-fw fa-calendar-times-o"/> Expired</span>
+                                    </span>
+                                </h5>
+                            </div>
+                        </div>
+                    </t>
+                    <t t-set="card_body">
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-sm-6 col-lg-3">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="text-muted small">Monthly Recurring Revenue</div>
+                                    <div class="fw-semibold">
+                                        <span t-field="subscription.mrr" t-options='{"widget": "monetary", "display_currency": subscription.currency_id}'/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-lg-3">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="text-muted small">Recurring Amount</div>
+                                    <div class="fw-semibold">
+                                        <span t-field="subscription.recurring_total" t-options='{"widget": "monetary", "display_currency": subscription.currency_id}'/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-lg-3">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="text-muted small">Next Invoice</div>
+                                    <div class="fw-semibold">
+                                        <span t-field="subscription.next_invoice_date"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-lg-3">
+                                <div class="border rounded p-3 h-100">
+                                    <div class="text-muted small">Billing Period</div>
+                                    <div class="fw-semibold">
+                                        Every <span t-field="subscription.billing_interval_count"/> <span t-field="subscription.billing_interval_unit"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-4">
+                                <div class="text-muted small">Current Period</div>
+                                <div>
+                                    <span t-field="subscription.current_period_start"/>
+                                    <span t-if="subscription.current_period_start or subscription.current_period_end"> - </span>
+                                    <span t-field="subscription.current_period_end"/>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="text-muted small">Payment Method</div>
+                                <div>
+                                    <span t-if="subscription.payment_token_id" t-out="subscription.payment_token_id.display_name"/>
+                                    <span t-if="not subscription.payment_token_id" class="text-muted">Not saved</span>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="text-muted small">Auto-Pay</div>
+                                <div>
+                                    <span t-if="subscription.is_auto_pay" class="badge text-bg-success">Enabled</span>
+                                    <span t-if="not subscription.is_auto_pay" class="badge text-bg-secondary">Off</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Lines -->
+                        <h3 class="h5">Subscription Items</h3>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="subscription.order_line.filtered(lambda l: l.is_recurring)" t-as="line">
+                                    <tr>
+                                        <td><span t-field="line.name"/></td>
+                                        <td class="text-end">
+                                            <span t-field="line.product_uom_qty"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-field="line.price_unit" t-options='{"widget": "monetary", "display_currency": subscription.currency_id}'/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <h3 class="h5 mt-4">Invoice History</h3>
+                        <t t-if="not invoices">
+                            <p class="text-muted">No invoices have been generated for this subscription yet.</p>
+                        </t>
+                        <table t-if="invoices" class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Invoice</th>
+                                    <th class="text-end">Invoice Date</th>
+                                    <th class="text-end">Due Date</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="invoices" t-as="invoice">
+                                    <td>
+                                        <a t-att-href="invoice.get_portal_url()"><span t-field="invoice.name"/></a>
+                                    </td>
+                                    <td class="text-end"><span t-field="invoice.invoice_date"/></td>
+                                    <td class="text-end"><span t-field="invoice.invoice_date_due"/></td>
+                                    <td class="text-center">
+                                        <span t-if="invoice.payment_state == 'paid'" class="badge text-bg-success">Paid</span>
+                                        <span t-if="invoice.payment_state == 'not_paid'" class="badge text-bg-warning">Open</span>
+                                        <span t-if="invoice.payment_state == 'partial'" class="badge text-bg-info">Partial</span>
+                                        <span t-if="invoice.payment_state == 'in_payment'" class="badge text-bg-info">In Payment</span>
+                                        <span t-if="invoice.payment_state in ['reversed', 'blocked']" class="badge text-bg-secondary"><span t-field="invoice.payment_state"/></span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-field="invoice.amount_total" t-options='{"widget": "monetary", "display_currency": invoice.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </t>
+                </t>
+
+                <!-- Chatter -->
+                <div id="subscription_communication" class="mt-4">
+                    <h2>History</h2>
+                    <t t-call="portal.message_thread">
+                        <t t-set="object" t-value="subscription"/>
+                    </t>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

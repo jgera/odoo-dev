@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_billing_run_list" model="ir.ui.view">
+        <field name="name">subscription.billing.run.list</field>
+        <field name="model">subscription.billing.run</field>
+        <field name="arch" type="xml">
+            <list string="Billing Runs" create="0" edit="0" decoration-danger="state == 'done_with_errors'" decoration-success="state == 'done'">
+                <field name="name"/>
+                <field name="run_date"/>
+                <field name="state" widget="badge" decoration-success="state == 'done'" decoration-danger="state == 'done_with_errors'" decoration-info="state == 'running'"/>
+                <field name="started_at"/>
+                <field name="finished_at"/>
+                <field name="subscription_count"/>
+                <field name="success_count"/>
+                <field name="failed_count"/>
+                <field name="skipped_count"/>
+                <field name="total_amount" widget="monetary"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_billing_run_form" model="ir.ui.view">
+        <field name="name">subscription.billing.run.form</field>
+        <field name="model">subscription.billing.run</field>
+        <field name="arch" type="xml">
+            <form string="Billing Run" create="0" edit="0">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" icon="fa-list" name="action_view_attempts" type="object">
+                            <field name="subscription_count" widget="statinfo" string="Attempts"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="run_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="started_at"/>
+                            <field name="finished_at"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <group string="Results">
+                        <field name="subscription_count"/>
+                        <field name="success_count"/>
+                        <field name="failed_count"/>
+                        <field name="skipped_count"/>
+                        <field name="total_amount" widget="monetary"/>
+                    </group>
+                    <notebook>
+                        <page string="Attempts">
+                            <field name="attempt_ids" readonly="1">
+                                <list>
+                                    <field name="subscription_id"/>
+                                    <field name="period_start"/>
+                                    <field name="period_end"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="invoice_id"/>
+                                    <field name="amount" widget="monetary"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Log">
+                            <field name="log"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_billing_attempt_list" model="ir.ui.view">
+        <field name="name">subscription.billing.attempt.list</field>
+        <field name="model">subscription.billing.attempt</field>
+        <field name="arch" type="xml">
+            <list string="Billing Attempts" create="0" edit="0" decoration-danger="state == 'failed'" decoration-success="state == 'success'" decoration-muted="state == 'skipped'">
+                <field name="name"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="period_start"/>
+                <field name="period_end"/>
+                <field name="state" widget="badge" decoration-success="state == 'success'" decoration-danger="state == 'failed'" decoration-muted="state == 'skipped'"/>
+                <field name="failure_category" optional="show"/>
+                <field name="failure_count" optional="show"/>
+                <field name="last_failure_at" optional="show"/>
+                <field name="retryable" optional="show"/>
+                <field name="retry_exhausted" optional="show"/>
+                <field name="recovery_required" optional="show"/>
+                <field name="next_retry_at" optional="show"/>
+                <field name="invoice_id"/>
+                <field name="amount" widget="monetary"/>
+                <field name="attempt_date"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_billing_attempt_form" model="ir.ui.view">
+        <field name="name">subscription.billing.attempt.form</field>
+        <field name="model">subscription.billing.attempt</field>
+        <field name="arch" type="xml">
+            <form string="Billing Attempt" create="0" edit="0">
+                <header>
+                    <button name="action_retry" type="object" string="Retry" class="btn-primary" invisible="state != 'failed' or not retryable"/>
+                    <button name="action_open_invoice" type="object" string="Open Invoice" invisible="not invoice_id"/>
+                    <button name="action_open_subscription" type="object" string="Open Subscription"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="run_id"/>
+                            <field name="subscription_id"/>
+                            <field name="partner_id"/>
+                        </group>
+                        <group>
+                            <field name="period_start"/>
+                            <field name="period_end"/>
+                            <field name="attempt_date"/>
+                            <field name="attempt_no"/>
+                            <field name="last_retry_at"/>
+                            <field name="failure_count"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="invoice_id"/>
+                        <field name="amount" widget="monetary"/>
+                        <field name="currency_id" invisible="1"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                    </group>
+                    <group string="Recovery">
+                        <field name="failure_category"/>
+                        <field name="retryable"/>
+                        <field name="retry_exhausted"/>
+                        <field name="recovery_required"/>
+                        <field name="next_retry_at"/>
+                        <field name="first_failure_at"/>
+                        <field name="last_failure_at"/>
+                        <field name="last_failure_message"/>
+                        <field name="recovery_note"/>
+                    </group>
+                    <group string="Technical Details">
+                        <field name="idempotency_key"/>
+                        <field name="error_message"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_billing_attempt_search" model="ir.ui.view">
+        <field name="name">subscription.billing.attempt.search</field>
+        <field name="model">subscription.billing.attempt</field>
+        <field name="arch" type="xml">
+            <search string="Billing Attempts">
+                <field name="name"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="invoice_id"/>
+                <filter string="Successful" name="success" domain="[('state', '=', 'success')]"/>
+                <filter string="Failed" name="failed" domain="[('state', '=', 'failed')]"/>
+                <filter string="Retryable" name="retryable" domain="[('state', '=', 'failed'), ('retryable', '=', True)]"/>
+                <filter string="Retry Exhausted" name="retry_exhausted" domain="[('state', '=', 'failed'), ('retry_exhausted', '=', True)]"/>
+                <filter string="Needs Manual Fix" name="manual_fix" domain="[('state', '=', 'failed'), ('retryable', '=', False)]"/>
+                <filter string="Recovery Required" name="recovery_required" domain="[('state', '=', 'failed'), ('recovery_required', '=', True)]"/>
+                <filter string="Repeated Failures" name="repeated_failures" domain="[('state', '=', 'failed'), ('failure_count', '&gt;', 1)]"/>
+                <filter string="Skipped" name="skipped" domain="[('state', '=', 'skipped')]"/>
+                <group>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Failure Category" name="group_failure_category" context="{'group_by': 'failure_category'}"/>
+                    <filter string="Recovery Required" name="group_recovery_required" context="{'group_by': 'recovery_required'}"/>
+                    <filter string="Run" name="group_run" context="{'group_by': 'run_id'}"/>
+                    <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Period End" name="group_period_end" context="{'group_by': 'period_end:month'}"/>
+                    <filter string="Last Failure" name="group_last_failure_at" context="{'group_by': 'last_failure_at:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_subscription_billing_run" model="ir.actions.act_window">
+        <field name="name">Billing Runs</field>
+        <field name="res_model">subscription.billing.run</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_subscription_billing_attempt" model="ir.actions.act_window">
+        <field name="name">Billing Attempts</field>
+        <field name="res_model">subscription.billing.attempt</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_subscription_failed_billing_attempt" model="ir.actions.act_window">
+        <field name="name">Failed Billing</field>
+        <field name="res_model">subscription.billing.attempt</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('state', '=', 'failed')]</field>
+        <field name="context">{'search_default_retryable': 1}</field>
+    </record>
+
+    <record id="action_subscription_repeated_billing_failure" model="ir.actions.act_window">
+        <field name="name">Repeated Billing Failures</field>
+        <field name="res_model">subscription.billing.attempt</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('state', '=', 'failed'), ('failure_count', '&gt;', 1)]</field>
+        <field name="context">{'search_default_group_partner': 1}</field>
+    </record>
+
+    <menuitem id="menu_subscription_billing"
+              name="Billing"
+              parent="subscription_suite.menu_subscription_root"
+              sequence="30"/>
+
+    <menuitem id="menu_subscription_billing_run"
+              name="Billing Runs"
+              parent="menu_subscription_billing"
+              action="action_subscription_billing_run"
+              sequence="10"/>
+
+    <menuitem id="menu_subscription_billing_attempt"
+              name="Billing Attempts"
+              parent="menu_subscription_billing"
+              action="action_subscription_billing_attempt"
+              sequence="20"/>
+
+    <menuitem id="menu_subscription_failed_billing_attempt"
+              name="Failed Billing"
+              parent="menu_subscription_billing"
+              action="action_subscription_failed_billing_attempt"
+              sequence="30"/>
+
+    <menuitem id="menu_subscription_repeated_billing_failure"
+              name="Repeated Failures"
+              parent="menu_subscription_billing"
+              action="action_subscription_repeated_billing_failure"
+              sequence="40"/>
+</odoo>

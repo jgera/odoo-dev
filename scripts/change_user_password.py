@@ -1,19 +1,8 @@
 import argparse
 import getpass
 import sys
-from pathlib import Path
 
-
-ROOT = Path(__file__).resolve().parents[1]
-ODOO_SERVER = ROOT / "odoo-server"
-DEFAULT_CONFIG = ROOT / "odoo.conf"
-
-sys.path.insert(0, str(ODOO_SERVER))
-
-import odoo  # noqa: E402
-from odoo import api, SUPERUSER_ID  # noqa: E402
-from odoo.modules.registry import Registry  # noqa: E402
-from odoo.tools import config  # noqa: E402
+from odoo_env import DEFAULT_VERSION, add_odoo_to_path, get_paths
 
 
 def parse_args():
@@ -21,10 +10,15 @@ def parse_args():
         description="Interactively change an Odoo user's password using odoo.conf."
     )
     parser.add_argument(
+        "--odoo-version",
+        "--version",
+        default=DEFAULT_VERSION,
+        help="Odoo version folder under versions/",
+    )
+    parser.add_argument(
         "-c",
         "--config",
-        default=str(DEFAULT_CONFIG),
-        help=f"Path to odoo.conf. Defaults to {DEFAULT_CONFIG}",
+        help="Path to odoo.conf. Defaults to versions/<version>/odoo.conf",
     )
     parser.add_argument(
         "-d",
@@ -35,12 +29,17 @@ def parse_args():
 
 
 def load_odoo_config(config_path):
+    from pathlib import Path
+    from odoo.tools import config
+
     if not Path(config_path).is_file():
         raise SystemExit(f"Config file not found: {config_path}")
     config.parse_config(["-c", config_path])
 
 
 def config_value(name, default=None):
+    from odoo.tools import config
+
     value = config.get(name)
     return default if value in (None, False, "") else value
 
@@ -107,6 +106,9 @@ def choose_database(cli_database):
 
 
 def list_users(database):
+    from odoo import api, SUPERUSER_ID
+    from odoo.modules.registry import Registry
+
     registry = Registry(database)
     with registry.cursor() as cr:
         env = api.Environment(cr, SUPERUSER_ID, {"active_test": False})
@@ -154,6 +156,9 @@ def prompt_password():
 
 
 def update_password(database, user_id, password):
+    from odoo import api, SUPERUSER_ID
+    from odoo.modules.registry import Registry
+
     registry = Registry(database)
     with registry.cursor() as cr:
         env = api.Environment(cr, SUPERUSER_ID, {})
@@ -166,8 +171,13 @@ def update_password(database, user_id, password):
 
 def main():
     args = parse_args()
-    load_odoo_config(args.config)
+    paths = get_paths(args.odoo_version)
+    config_path = args.config or paths.config
+    add_odoo_to_path(paths)
 
+    import odoo  # noqa: F401
+
+    load_odoo_config(config_path)
     database = choose_database(args.database)
     users = list_users(database)
     selected_user = choose_user(users)

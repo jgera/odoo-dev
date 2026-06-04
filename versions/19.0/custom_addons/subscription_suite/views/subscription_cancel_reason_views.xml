@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_cancel_reason_tree" model="ir.ui.view">
+        <field name="name">subscription.cancel.reason.tree</field>
+        <field name="model">subscription.cancel.reason</field>
+        <field name="arch" type="xml">
+            <list string="Cancellation Reasons" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+    <record id="action_subscription_cancel_reason" model="ir.actions.act_window">
+        <field name="name">Cancellation Reasons</field>
+        <field name="res_model">subscription.cancel.reason</field>
+        <field name="view_mode">list</field>
+    </record>
+</odoo>

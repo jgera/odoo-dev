@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Auto Collect Payments Cron -->
+        <record id="cron_auto_collect_subscription_payments" model="ir.cron">
+            <field name="name">Subscription: Auto Collect Payments</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_auto_collect_payments()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+
+            <field name="active">True</field>
+            <field name="nextcall" eval="(DateTime.now().replace(hour=8, minute=0, second=0)).strftime('%Y-%m-%d %H:%M:%S')" />
+        </record>
+
+        <record id="cron_retry_failed_subscription_billing" model="ir.cron">
+            <field name="name">Subscription: Retry Failed Billing</field>
+            <field name="model_id" ref="model_subscription_billing_attempt"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_retry_failed_billing_attempts()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="active">True</field>
+            <field name="nextcall" eval="(DateTime.now().replace(minute=15, second=0)).strftime('%Y-%m-%d %H:%M:%S')" />
+        </record>
+    </data>
+</odoo>

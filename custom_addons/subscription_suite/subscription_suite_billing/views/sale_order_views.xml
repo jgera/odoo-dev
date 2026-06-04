@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Action for stat button (must be defined before the view that references it) -->
+    <record id="action_subscription_proration" model="ir.actions.act_window">
+        <field name="name">Prorations</field>
+        <field name="res_model">subscription.proration</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('subscription_id', '=', active_id)]</field>
+    </record>
+
+    <record id="view_order_form_inherit_subscription_billing" model="ir.ui.view">
+        <field name="name">sale.order.form.subscription.billing</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="subscription_suite.view_order_form_inherit_subscription"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_pause_subscription']" position="before">
+                <button name="action_change_plan" type="object" string="Change Plan" 
+                        class="oe_highlight" invisible="subscription_state != 'active'"/>
+            </xpath>
+            
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button class="oe_stat_button" icon="fa-list" name="action_view_billing_attempts" type="object" invisible="not is_subscription">
+                    <field name="billing_attempt_count" widget="statinfo" string="Billing"/>
+                </button>
+                <button class="oe_stat_button" icon="fa-calculator" name="%(subscription_suite_billing.action_subscription_proration)d" type="action" invisible="not is_subscription">
+                    <field name="proration_count" widget="statinfo" string="Prorations"/>
+                </button>
+            </xpath>
+        </field>
+    </record>
+</odoo>

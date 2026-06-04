@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Reporting Menu -->
+    <menuitem id="menu_subscription_reporting"
+              name="Reporting"
+              parent="subscription_suite.menu_subscription_root"
+              sequence="50"/>
+
+    <menuitem id="menu_subscription_analysis"
+              name="Subscription Analysis"
+              parent="menu_subscription_reporting"
+              action="action_subscription_report"
+              sequence="10"/>
+
+    <menuitem id="menu_mrr_analysis"
+              name="MRR Analysis"
+              parent="menu_subscription_reporting"
+              action="action_subscription_mrr_report"
+              sequence="20"/>
+
+    <menuitem id="menu_mrr_movement_analysis"
+              name="MRR Movements"
+              parent="menu_subscription_reporting"
+              action="action_subscription_mrr_movement_report"
+              sequence="25"/>
+
+    <menuitem id="menu_churn_analysis"
+              name="Churn Analysis"
+              parent="menu_subscription_reporting"
+              action="action_subscription_churn_report"
+              sequence="30"/>
+
+    <menuitem id="menu_salesperson_analysis"
+              name="Salesperson Analysis"
+              parent="menu_subscription_reporting"
+              action="action_subscription_salesperson_report"
+              sequence="40"/>
+</odoo>

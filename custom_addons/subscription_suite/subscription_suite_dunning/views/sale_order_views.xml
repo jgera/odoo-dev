@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_inherit_subscription_dunning" model="ir.ui.view">
+        <field name="name">sale.order.form.subscription.dunning</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="subscription_suite.view_order_form_inherit_subscription"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='subscription_details']//group[@name='sub_dates']" position="inside">
+                <field name="dunning_start_date" invisible="subscription_state != 'past_due'"/>
+                <field name="next_dunning_date" invisible="subscription_state != 'past_due'"/>
+                <field name="dunning_step_id" invisible="subscription_state != 'past_due'"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

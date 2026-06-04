@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_plan_form_inherit_dunning" model="ir.ui.view">
+        <field name="name">subscription.plan.form.dunning</field>
+        <field name="model">subscription.plan</field>
+        <field name="inherit_id" ref="subscription_suite.view_subscription_plan_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='settings']//group[@name='lifecycle_settings']" position="inside">
+                <field name="dunning_policy_id"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

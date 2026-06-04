@@ -1,0 +1,33 @@
+{
+    'name': 'Subscription Suite - Billing & Proration',
+    'version': '19.0.1.0.0',
+    'category': 'Sales/Subscriptions',
+    'summary': 'Advanced billing, proration, and auto-payments for subscriptions',
+    'description': """
+Subscription Suite - Billing
+============================
+Odoo 19 Community Edition only.
+
+Handles advanced billing scenarios:
+* Prorated billing for plan changes
+* Automated payment collection via tokens
+* Stored payment methods
+    """,
+    'author': 'Subscription Suite Contributors',
+    'website': 'https://github.com/subscription-suite',
+    'license': 'LGPL-3',
+    'depends': ['subscription_suite', 'payment'],
+    'data': [
+        'security/ir.model.access.csv',
+        'data/sequence_data.xml',
+        'data/cron_data.xml',
+        'views/subscription_billing_views.xml',
+        'views/subscription_proration_views.xml',
+        'views/sale_order_views.xml',
+        'wizard/res_config_settings_views.xml',
+        'wizard/subscription_change_plan_wizard_views.xml',
+    ],
+    'installable': True,
+    'application': False,
+    'auto_install': False,
+}

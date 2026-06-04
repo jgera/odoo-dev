@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_proration_form" model="ir.ui.view">
+        <field name="name">subscription.proration.form</field>
+        <field name="model">subscription.proration</field>
+        <field name="arch" type="xml">
+            <form string="Proration Record">
+                <header>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group string="Change Details">
+                            <field name="subscription_id" readonly="1"/>
+                            <field name="change_type" readonly="1"/>
+                            <field name="change_date" readonly="1"/>
+                            <field name="old_plan_id" readonly="1"/>
+                            <field name="new_plan_id" readonly="1"/>
+                        </group>
+                        <group string="Period Information">
+                            <field name="period_start" readonly="1"/>
+                            <field name="period_end" readonly="1"/>
+                            <field name="total_period_days" readonly="1"/>
+                            <field name="used_days" readonly="1"/>
+                            <field name="remaining_days" readonly="1"/>
+                        </group>
+                        <group string="Financial Calculations">
+                            <field name="old_daily_rate" readonly="1"/>
+                            <field name="new_daily_rate" readonly="1"/>
+                            <field name="credit_amount" readonly="1"/>
+                            <field name="charge_amount" readonly="1"/>
+                            <field name="net_amount" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Generated Documents" invisible="state == 'draft'">
+                            <field name="credit_note_id" readonly="1"/>
+                            <field name="adjustment_invoice_id" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_proration_tree" model="ir.ui.view">
+        <field name="name">subscription.proration.tree</field>
+        <field name="model">subscription.proration</field>
+        <field name="arch" type="xml">
+            <list string="Proration Records" create="0" edit="0">
+                <field name="subscription_id"/>
+                <field name="change_date"/>
+                <field name="change_type"/>
+                <field name="old_plan_id"/>
+                <field name="new_plan_id"/>
+                <field name="net_amount" widget="monetary"/>
+                <field name="state" widget="badge" decoration-success="state == 'applied'"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_dunning_policy_user,subscription.dunning.policy.user,model_subscription_dunning_policy,subscription_suite.group_subscription_user,1,0,0,0
+access_dunning_policy_manager,subscription.dunning.policy.manager,model_subscription_dunning_policy,subscription_suite.group_subscription_manager,1,1,1,1
+access_dunning_policy_line_user,subscription.dunning.policy.line.user,model_subscription_dunning_policy_line,subscription_suite.group_subscription_user,1,0,0,0
+access_dunning_policy_line_manager,subscription.dunning.policy.line.manager,model_subscription_dunning_policy_line,subscription_suite.group_subscription_manager,1,1,1,1

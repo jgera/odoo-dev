@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List View -->
+    <record id="view_subscription_report_list" model="ir.ui.view">
+        <field name="name">subscription.report.list</field>
+        <field name="model">subscription.report</field>
+        <field name="arch" type="xml">
+            <list string="Subscription Analysis" create="0" edit="0" delete="0">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="subscription_state"/>
+                <field name="user_id"/>
+                <field name="subscription_start_date"/>
+                <field name="cancellation_date"/>
+                <field name="recurring_total" sum="Recurring Total"/>
+                <field name="mrr" sum="MRR"/>
+                <field name="arr" sum="ARR"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Pivot View -->
+    <record id="view_subscription_report_pivot" model="ir.ui.view">
+        <field name="name">subscription.report.pivot</field>
+        <field name="model">subscription.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Subscription Analysis" sample="1">
+                <field name="subscription_start_date" type="row" interval="month"/>
+                <field name="subscription_state" type="col"/>
+                <field name="subscription_count" type="measure"/>
+                <field name="mrr" type="measure"/>
+                <field name="arr" type="measure"/>
+                <field name="active_mrr" type="measure"/>
+                <field name="churned_mrr" type="measure"/>
+                <field name="past_due_mrr" type="measure"/>
+                <field name="trial_mrr" type="measure"/>
+                <field name="active_count" type="measure"/>
+                <field name="trial_count" type="measure"/>
+                <field name="paused_count" type="measure"/>
+                <field name="past_due_count" type="measure"/>
+                <field name="churned_count" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Graph View -->
+    <record id="view_subscription_report_graph" model="ir.ui.view">
+        <field name="name">subscription.report.graph</field>
+        <field name="model">subscription.report</field>
+        <field name="arch" type="xml">
+            <graph string="Subscription Analysis" sample="1" type="bar">
+                <field name="subscription_start_date" interval="month"/>
+                <field name="mrr" type="measure"/>
+                <field name="active_mrr" type="measure"/>
+                <field name="churned_mrr" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_subscription_report_search" model="ir.ui.view">
+        <field name="name">subscription.report.search</field>
+        <field name="model">subscription.report</field>
+        <field name="arch" type="xml">
+            <search string="Subscription Analysis">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="user_id"/>
+                <field name="country_id"/>
+                <field name="cancellation_reason_id"/>
+                
+                <filter string="Active" name="active" domain="[('subscription_state', '=', 'active')]"/>
+                <filter string="Trial" name="trial" domain="[('subscription_state', '=', 'trial')]"/>
+                <filter string="Paused" name="paused" domain="[('subscription_state', '=', 'paused')]"/>
+                <filter string="Past Due" name="past_due" domain="[('subscription_state', '=', 'past_due')]"/>
+                <filter string="Churned" name="churned" domain="[('subscription_state', 'in', ['cancelled', 'expired'])]"/>
+                <separator/>
+                <filter string="My Subscriptions" name="my_subscriptions" domain="[('user_id', '=', uid)]"/>
+                <filter string="Started This Month" name="started_this_month" domain="[('subscription_start_date', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <filter string="Cancelled This Month" name="cancelled_this_month" domain="[('cancellation_date', '&gt;=', context_today().strftime('%Y-%m-01'))]"/>
+                <separator/>
+                
+                <filter string="Salesperson" name="group_user_id" context="{'group_by':'user_id'}"/>
+                <filter string="Customer" name="group_partner_id" context="{'group_by':'partner_id'}"/>
+                <filter string="Subscription Plan" name="group_plan_id" context="{'group_by':'subscription_plan_id'}"/>
+                <filter string="Status" name="group_state" context="{'group_by':'subscription_state'}"/>
+                <filter string="Country" name="group_country_id" context="{'group_by':'country_id'}"/>
+                <filter string="Cancellation Reason" name="group_cancellation_reason_id" context="{'group_by':'cancellation_reason_id'}"/>
+                <filter string="Start Month" name="group_start_month" context="{'group_by':'subscription_start_date:month'}"/>
+                <filter string="Cancellation Month" name="group_cancel_month" context="{'group_by':'cancellation_date:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_subscription_report" model="ir.actions.act_window">
+        <field name="name">Subscription Analysis</field>
+        <field name="res_model">subscription.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="context">{'search_default_group_start_month': 1}</field>
+    </record>
+
+    <record id="action_subscription_mrr_report" model="ir.actions.act_window">
+        <field name="name">MRR Analysis</field>
+        <field name="res_model">subscription.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="context">{'search_default_active': 1, 'search_default_group_start_month': 1}</field>
+    </record>
+
+    <record id="action_subscription_churn_report" model="ir.actions.act_window">
+        <field name="name">Churn Analysis</field>
+        <field name="res_model">subscription.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="context">{'search_default_churned': 1, 'search_default_group_cancel_month': 1, 'search_default_group_cancellation_reason_id': 1}</field>
+    </record>
+
+    <record id="action_subscription_salesperson_report" model="ir.actions.act_window">
+        <field name="name">Salesperson Analysis</field>
+        <field name="res_model">subscription.report</field>
+        <field name="view_mode">pivot,graph,list</field>
+        <field name="context">{'search_default_group_user_id': 1, 'search_default_group_start_month': 1}</field>
+    </record>
+</odoo>

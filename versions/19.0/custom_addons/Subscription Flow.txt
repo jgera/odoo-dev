@@ -1,0 +1,19 @@
+Customer Signup
+    ↓
+Trial Period ──→ [Trial Expired] → END (Churned - No Conversion)
+    ↓ (converts)
+Subscription Active ←──────────────────────────────────┐
+    ↓                    ↑ (resume)                     │
+    ├──→ [Pause] ──→ [Paused State] ──→ [Resume] ───────┤
+    ├──→ [Cancel] → Cancellation Flow → END             │
+    ├──→ Upgrade/Downgrade → Proration ──┐              │
+    ↓                                    ↓              │
+Recurring Billing (cron)         Invoice Generated      │
+    ↓                                    ↓              │
+Invoice Generated ───────────→ Payment Collection       │
+                                    ↓         ↓         │
+                            [Paid] ────→ Revenue Recognition
+                            [Failed] → Dunning Process  │
+                                         ↓              │
+                                   [Retry OK] ──────────┘
+                                   [Max Retries] → Auto-Cancel → END

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Dunning Policy Form View -->
+    <record id="view_dunning_policy_form" model="ir.ui.view">
+        <field name="name">subscription.dunning.policy.form</field>
+        <field name="model">subscription.dunning.policy</field>
+        <field name="arch" type="xml">
+            <form string="Dunning Policy">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1><field name="name" placeholder="e.g. Standard 14-Day Cancellation"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="grace_period_days"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="final_action"/>
+                            <field name="final_action_delay" invisible="final_action == 'none'"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page name="steps" string="Dunning Steps">
+                            <field name="line_ids">
+                                <list editable="bottom" default_order="delay_days asc">
+                                    <field name="delay_days"/>
+                                    <field name="action_type"/>
+                                    <field name="email_template_id" invisible="action_type != 'email'" required="action_type == 'email'"/>
+                                </list>
+                            </field>
+                            <p class="text-muted mt-2">
+                                Steps are executed based on the number of days since the payment first failed (Day 0).
+                            </p>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Dunning Policy Tree View -->
+    <record id="view_dunning_policy_tree" model="ir.ui.view">
+        <field name="name">subscription.dunning.policy.tree</field>
+        <field name="model">subscription.dunning.policy</field>
+        <field name="arch" type="xml">
+            <list string="Dunning Policies">
+                <field name="name"/>
+                <field name="grace_period_days"/>
+                <field name="final_action"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_dunning_policy" model="ir.actions.act_window">
+        <field name="name">Dunning Policies</field>
+        <field name="res_model">subscription.dunning.policy</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first Dunning Policy!
+            </p>
+            <p>
+                Dunning policies allow you to automatically send reminders and take action when a customer's payment fails.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu Item -->
+    <menuitem id="menu_dunning_policy"
+              name="Dunning Policies"
+              parent="subscription_suite.menu_subscription_configuration"
+              action="action_dunning_policy"
+              sequence="20"/>
+</odoo>

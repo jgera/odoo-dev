@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <!-- Security Groups -->
+        <record id="group_subscription_user" model="res.groups">
+            <field name="name">Subscription User</field>
+            <field name="implied_ids" eval="[(4, ref('sales_team.group_sale_salesman'))]"/>
+            <field name="comment">the user will have access to his own subscriptions.</field>
+        </record>
+
+        <record id="group_subscription_manager" model="res.groups">
+            <field name="name">Subscription Manager</field>
+            <field name="implied_ids" eval="[(4, ref('subscription_suite.group_subscription_user'))]"/>
+            <field name="user_ids" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+            <field name="comment">the user will have access to all subscriptions.</field>
+        </record>
+    </data>
+
+    <data noupdate="1">
+        <!-- Record Rules -->
+        <record id="subscription_personal_rule" model="ir.rule">
+            <field name="name">Personal Subscriptions</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="groups" eval="[(4, ref('subscription_suite.group_subscription_user'))]"/>
+            <field name="domain_force">[
+                '|', ('is_subscription', '=', False),
+                '&amp;', ('is_subscription', '=', True),
+                '|', ('user_id', '=', user.id), ('user_id', '=', False)
+            ]</field>
+        </record>
+
+        <record id="subscription_see_all_rule" model="ir.rule">
+            <field name="name">All Subscriptions</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="groups" eval="[(4, ref('subscription_suite.group_subscription_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+        
+        <record id="subscription_plan_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Plan Multi-Company</field>
+            <field name="model_id" ref="model_subscription_plan"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+    </data>
+</odoo>
