@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_manager_operation_list" model="ir.ui.view">
+        <field name="name">subscription.manager.operation.list</field>
+        <field name="model">subscription.manager.operation</field>
+        <field name="arch" type="xml">
+            <list string="Manager Operations" create="0" edit="0"
+                  decoration-danger="priority == 'critical'"
+                  decoration-warning="priority == 'high'"
+                  decoration-info="priority == 'normal'">
+                <field name="priority" widget="badge"
+                       decoration-danger="priority == 'critical'"
+                       decoration-warning="priority == 'high'"
+                       decoration-info="priority == 'normal'"/>
+                <field name="operation_type" widget="badge"/>
+                <field name="name"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="action_state" widget="badge"
+                       decoration-info="action_state == 'pending'"
+                       decoration-danger="action_state == 'failed'"/>
+                <field name="event_date"/>
+                <field name="age_days"/>
+                <field name="amount" widget="monetary"/>
+                <field name="note" optional="hide"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_manager_operation_form" model="ir.ui.view">
+        <field name="name">subscription.manager.operation.form</field>
+        <field name="model">subscription.manager.operation</field>
+        <field name="arch" type="xml">
+            <form string="Manager Operation" create="0" edit="0">
+                <header>
+                    <button name="action_open_source" type="object" string="Open Source" class="btn-primary"/>
+                    <button name="action_open_subscription" type="object" string="Open Subscription"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="operation_type"/>
+                            <field name="priority"/>
+                            <field name="action_state"/>
+                            <field name="event_date"/>
+                            <field name="age_days"/>
+                        </group>
+                        <group>
+                            <field name="subscription_id"/>
+                            <field name="partner_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="amount" widget="monetary"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <group string="Source">
+                        <field name="source_reference"/>
+                        <field name="source_model"/>
+                        <field name="source_res_id"/>
+                    </group>
+                    <group string="Note">
+                        <field name="note"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_manager_operation_search" model="ir.ui.view">
+        <field name="name">subscription.manager.operation.search</field>
+        <field name="model">subscription.manager.operation</field>
+        <field name="arch" type="xml">
+            <search string="Manager Operations">
+                <field name="name"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <filter string="Pending Requests" name="pending_requests"
+                        domain="[('action_state', '=', 'pending')]"/>
+                <filter string="Billing Recovery" name="billing_recovery"
+                        domain="[('operation_type', '=', 'billing_recovery')]"/>
+                <filter string="Critical" name="critical"
+                        domain="[('priority', '=', 'critical')]"/>
+                <group>
+                    <filter string="Type" name="group_type" context="{'group_by': 'operation_type'}"/>
+                    <filter string="Priority" name="group_priority" context="{'group_by': 'priority'}"/>
+                    <filter string="Customer" name="group_customer" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Date" name="group_date" context="{'group_by': 'event_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_subscription_manager_operation" model="ir.actions.act_window">
+        <field name="name">Manager Operations</field>
+        <field name="res_model">subscription.manager.operation</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_subscription_manager_operation_search"/>
+        <field name="context">{'search_default_group_type': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Pending customer requests and failed billing recovery items will appear here.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_subscription_operations"
+              name="Operations"
+              parent="subscription_suite.menu_subscription_root"
+              groups="subscription_suite.group_subscription_manager"
+              sequence="15"/>
+
+    <menuitem id="menu_subscription_manager_operation"
+              name="Manager Operations"
+              parent="menu_subscription_operations"
+              action="action_subscription_manager_operation"
+              sequence="10"/>
+</odoo>

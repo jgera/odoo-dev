@@ -295,6 +295,7 @@ For every phase, update or create:
 - Done: activity creation when retries are exhausted.
 - Done: settings UI for retry policy tuning.
 - Done: richer logs and reporting for repeated failures.
+- Done: Manager Operations queue combining pending customer requests and failed billing recovery items.
 
 **Build items:**
 
@@ -325,6 +326,7 @@ For every phase, update or create:
    - Billing Attempts menu.
    - Failed Billing menu.
    - Repeated Failures menu.
+   - Manager Operations queue for pending requests and failed billing recovery.
    - Smart button on subscription.
    - Filters for failed, retryable, retry exhausted, recovery required, repeated failures, success, skipped.
 
@@ -353,6 +355,7 @@ For every phase, update or create:
 - Failed attempts are visible and retryable.
 - Invoice period start/end is always set.
 - Managers can see failed billing attempts from the UI.
+- Managers can see pending plan-change, lifecycle, cancellation, and billing recovery work in one operations queue.
 
 **Tests:**
 

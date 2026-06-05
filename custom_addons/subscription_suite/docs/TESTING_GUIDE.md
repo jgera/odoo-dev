@@ -91,6 +91,7 @@ After an upgrade, validate:
 - MRR movement report opens.
 - Dunning policies open when dunning is installed.
 - Billing Runs, Billing Attempts, Failed Billing, and Repeated Failures menus open when billing is installed.
+- Manager Operations opens under **Subscriptions -> Operations** when billing is installed.
 - Failed Billing list has Retryable, Needs Manual Fix, Recovery Required, Retry Exhausted, and Repeated Failures filters.
 - Plan Change Requests, Lifecycle Requests, and Cancellation Requests open in list/form/activity views with pending filters, request age, activity assignment, and Open Subscription actions.
 - Subscription forms show manager stat buttons for lifecycle, cancellation, and plan-change request history when those modules are installed.
@@ -125,6 +126,15 @@ Failed billing operator flow:
 6. Open **Subscriptions -> Billing -> Repeated Failures** to review attempts with more than one recorded failure.
 7. On a failed attempt, confirm **Failure Count**, **First Failure At**, **Last Failure At**, **Last Failure Message**, and **Recovery Note** are populated.
 8. Confirm the attempt chatter includes billing failure log messages.
+
+Manager operations queue:
+
+1. Open **Subscriptions -> Operations -> Manager Operations**.
+2. Confirm pending plan-change, lifecycle, and cancellation requests appear in the same queue.
+3. Confirm failed billing attempts needing retry or manual recovery appear as **Billing Recovery** items.
+4. Group by **Type** and confirm managers can scan by request/recovery category.
+5. Open a row and use **Open Source** to navigate to the underlying request or billing attempt.
+6. Use **Open Subscription** to navigate back to the customer subscription.
 
 Retry policy settings are available from **Subscriptions -> Configuration -> Settings**:
 
@@ -269,6 +279,7 @@ Portal plan change request:
 Automated coverage:
 
 - `subscription_suite_billing` tests cover the shared portal request helper, including success, inactive subscriptions, unconfigured paths, duplicate pending requests, and already scheduled plan changes.
+- `subscription_suite_billing` tests cover the manager operations queue across pending requests and failed billing recovery items.
 - `subscription_suite_portal` tests cover portal subscription filtering and plan-change visibility context.
 
 Portal pause/resume request:
