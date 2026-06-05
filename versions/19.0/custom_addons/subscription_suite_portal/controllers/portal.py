@@ -1,4 +1,6 @@
 from odoo import http, _
+from odoo.addons.payment import utils as payment_utils
+from odoo.addons.payment.controllers.portal import PaymentPortal
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
 from odoo.exceptions import AccessError, MissingError, UserError, ValidationError
 from odoo.http import request
@@ -103,6 +105,7 @@ class SubscriptionPortal(CustomerPortal):
         ], order='requested_on desc, id desc')
         pending_lifecycle_request = lifecycle_requests.filtered(lambda lifecycle_request: lifecycle_request.state == 'pending')[:1]
         payment_recovery_invoice = subscription_sudo.sudo()._get_portal_payment_recovery_invoice()
+        payment_tokens = subscription_sudo.sudo()._get_portal_available_payment_tokens(request.env.user.partner_id)
 
         values = {
             'sale_order': subscription_sudo,
@@ -117,6 +120,7 @@ class SubscriptionPortal(CustomerPortal):
             'cancellation_reason_ids': cancellation_reason_ids,
             'lifecycle_requests': lifecycle_requests,
             'pending_lifecycle_request': pending_lifecycle_request,
+            'payment_tokens': payment_tokens,
             'plan_change_status': kw.get('plan_change_status'),
             'plan_change_error': kw.get('plan_change_error'),
             'cancellation_status': kw.get('cancellation_status'),
@@ -125,6 +129,8 @@ class SubscriptionPortal(CustomerPortal):
             'lifecycle_error': kw.get('lifecycle_error'),
             'payment_status': kw.get('payment_status'),
             'payment_error': kw.get('payment_error'),
+            'payment_method_status': kw.get('payment_method_status'),
+            'payment_method_error': kw.get('payment_method_error'),
             'page_name': 'subscription',
         }
         values = self._get_page_view_values(subscription_sudo, access_token, values, 'my_subscriptions_history', False, **kw)
@@ -240,3 +246,126 @@ class SubscriptionPortal(CustomerPortal):
 
         status = 'success' if transaction and transaction.state == 'done' else 'pending'
         return self._redirect_to_subscription(subscription_sudo.id, payment_status=status)
+
+    @http.route(
+        ['/my/subscription/<int:subscription_id>/payment/method/select'],
+        type='http',
+        auth='user',
+        website=True,
+        methods=['POST'],
+    )
+    def portal_subscription_select_payment_method(self, subscription_id, token_id=None, **kw):
+        try:
+            subscription_sudo = self._document_check_access('sale.order', subscription_id)
+        except (AccessError, MissingError):
+            return request.redirect('/my')
+
+        try:
+            try:
+                payment_token_id = int(token_id or 0)
+            except (TypeError, ValueError):
+                payment_token_id = 0
+            token = request.env['payment.token'].sudo().browse(payment_token_id).exists()
+            if not token:
+                raise ValidationError(_('Select a saved payment method.'))
+            subscription_sudo.sudo()._portal_assign_payment_token(token, request.env.user)
+        except (UserError, ValidationError) as error:
+            return self._redirect_to_subscription(subscription_sudo.id, payment_method_error=error.args[0])
+
+        return self._redirect_to_subscription(subscription_sudo.id, payment_method_status='saved')
+
+    @http.route(
+        ['/my/subscription/<int:subscription_id>/payment/method'],
+        type='http',
+        auth='user',
+        website=True,
+    )
+    def portal_subscription_payment_method(self, subscription_id, **kw):
+        try:
+            subscription_sudo = self._document_check_access('sale.order', subscription_id)
+        except (AccessError, MissingError):
+            return request.redirect('/my')
+
+        partner_sudo = request.env.user.partner_id
+        availability_report = {}
+        providers_sudo = request.env['payment.provider'].sudo()._get_compatible_providers(
+            request.env.company.id,
+            partner_sudo.id,
+            0.0,
+            force_tokenization=True,
+            is_validation=True,
+            report=availability_report,
+            **kw,
+        )
+        payment_methods_sudo = request.env['payment.method'].sudo()._get_compatible_payment_methods(
+            providers_sudo.ids,
+            partner_sudo.id,
+            force_tokenization=True,
+            report=availability_report,
+        )
+        tokens_sudo = request.env['payment.token'].sudo()._get_available_tokens(
+            None,
+            partner_sudo.id,
+            is_validation=True,
+        )
+        payment_context = {
+            'mode': 'validation',
+            'allow_token_selection': False,
+            'allow_token_deletion': False,
+            'reference_prefix': 'SUB-%s-PM' % (subscription_sudo.subscription_code or subscription_sudo.name),
+            'partner_id': partner_sudo.id,
+            'providers_sudo': providers_sudo,
+            'payment_methods_sudo': payment_methods_sudo,
+            'tokens_sudo': tokens_sudo,
+            'availability_report': availability_report,
+            'transaction_route': '/payment/transaction',
+            'landing_route': '/my/subscription/%s/payment/method/return' % subscription_sudo.id,
+            'access_token': payment_utils.generate_access_token(partner_sudo.id, None, None),
+            'show_tokenize_input_mapping': PaymentPortal._compute_show_tokenize_input_mapping(
+                providers_sudo,
+                force_tokenization=True,
+                is_validation=True,
+            ),
+        }
+        return request.render('payment.payment_methods', payment_context)
+
+    @http.route(
+        ['/my/subscription/<int:subscription_id>/payment/method/return'],
+        type='http',
+        auth='user',
+        website=True,
+    )
+    def portal_subscription_payment_method_return(self, subscription_id, tx_id=None, access_token=None, **kw):
+        try:
+            subscription_sudo = self._document_check_access('sale.order', subscription_id)
+        except (AccessError, MissingError):
+            return request.redirect('/my')
+
+        try:
+            try:
+                transaction_id = int(tx_id or 0)
+            except (TypeError, ValueError):
+                transaction_id = 0
+            tx_sudo = request.env['payment.transaction'].sudo().browse(transaction_id).exists()
+            if not tx_sudo:
+                raise ValidationError(_('Payment method validation was not found.'))
+            if not payment_utils.check_access_token(
+                access_token,
+                tx_sudo.partner_id.id,
+                tx_sudo.amount,
+                tx_sudo.currency_id.id,
+            ):
+                raise ValidationError(_('Payment method validation could not be verified.'))
+            if tx_sudo.operation != 'validation':
+                raise ValidationError(_('Only payment method validation transactions can update a subscription payment method.'))
+            if tx_sudo.partner_id.commercial_partner_id != request.env.user.partner_id.commercial_partner_id:
+                raise ValidationError(_('You do not have access to this payment method validation.'))
+            if tx_sudo.state == 'pending':
+                return self._redirect_to_subscription(subscription_sudo.id, payment_method_status='pending')
+            if tx_sudo.state not in ('authorized', 'done') or not tx_sudo.token_id:
+                raise ValidationError(_('Payment method was not saved. Try again or use another method.'))
+            subscription_sudo.sudo()._portal_assign_payment_token(tx_sudo.token_id, request.env.user)
+        except (UserError, ValidationError) as error:
+            return self._redirect_to_subscription(subscription_sudo.id, payment_method_error=error.args[0])
+
+        return self._redirect_to_subscription(subscription_sudo.id, payment_method_status='saved')

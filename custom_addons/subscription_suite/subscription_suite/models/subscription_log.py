@@ -20,6 +20,7 @@ class SubscriptionLog(models.Model):
         ('upgraded', 'Upgraded'),
         ('downgraded', 'Downgraded'),
         ('invoice_generated', 'Invoice Generated'),
+        ('payment_method_updated', 'Payment Method Updated'),
         ('payment_success', 'Payment Successful'),
         ('payment_failed', 'Payment Failed'),
         ('dunning_started', 'Dunning Started'),

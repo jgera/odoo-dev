@@ -1,6 +1,6 @@
 # Current Status - Subscription Suite
 
-Last updated: 2026-06-05
+Last updated: 2026-06-06
 
 ## Branch
 
@@ -20,6 +20,7 @@ Launcher/config no longer include root `custom_addons` in the Odoo 19 addons pat
 - `fc2450b Add Codex continuation context`
 - `b038ff7 Add subscription manager operations dashboard`
 - `0852b3d Add portal payment recovery entry point`
+- `6fbdceb Add subscription payment attempt ledger`
 
 ## Recently Completed
 
@@ -34,14 +35,16 @@ Launcher/config no longer include root `custom_addons` in the Odoo 19 addons pat
 - Portal saved-payment retry route with no-token safety guard.
 - Dedicated payment-attempt ledger for portal and cron payment collection.
 - Manager-facing payment attempt views and failed-payment recovery queue entries.
+- Portal payment-method onboarding through Odoo's native validation flow.
+- Portal saved-token selector for assigning an existing customer-owned payment method to a subscription.
 
 ## Latest Validation
 
 - `python -m compileall versions\19.0\custom_addons` passed.
-- `/subscription_suite_portal` tests passed with 0 failed, 0 errors.
+- `/subscription_suite_portal` tests passed with 0 failed, 0 errors across 10 tests.
 - `/subscription_suite_billing` tests passed with 0 failed, 0 errors across 33 tests.
 - Full suite upgrade passed for `subscription_suite,subscription_suite_billing,subscription_suite_dunning,subscription_suite_portal,subscription_suite_reports`.
 
 ## Next Careful Slice
 
-Payment-method onboarding and customer update-payment flow. The payment-attempt ledger now records provider outcomes, but customers still need a clean way to add or replace saved payment methods from the subscription portal.
+Dunning recovery links and dunning-attempt audit. The portal can now recover payment methods and retry saved tokens, but dunning emails and dunning execution still need stronger traceability back to the recovery page.

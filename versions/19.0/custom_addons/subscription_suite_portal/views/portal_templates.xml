@@ -238,6 +238,21 @@
                             <div><t t-out="payment_error"/></div>
                         </div>
 
+                        <div t-if="payment_method_status == 'saved'" class="alert alert-success d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-check mt-1"/>
+                            <div>Payment method updated.</div>
+                        </div>
+
+                        <div t-if="payment_method_status == 'pending'" class="alert alert-info d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-clock-o mt-1"/>
+                            <div>Payment method validation is still pending. Refresh this page after the provider confirms it.</div>
+                        </div>
+
+                        <div t-if="payment_method_error" class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+                            <i class="fa fa-fw fa-exclamation-triangle mt-1"/>
+                            <div><t t-out="payment_method_error"/></div>
+                        </div>
+
                         <div t-if="payment_recovery_invoice" class="alert alert-danger d-flex flex-column flex-lg-row gap-3 align-items-lg-center justify-content-between" role="alert">
                             <div class="d-flex align-items-start gap-2">
                                 <i class="fa fa-fw fa-credit-card mt-1"/>
@@ -265,6 +280,42 @@
                                     </button>
                                 </form>
                             </div>
+                        </div>
+
+                        <div class="border rounded p-3 mb-4">
+                            <div class="d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-start">
+                                <div>
+                                    <h3 class="h5 mb-1">Payment Method</h3>
+                                    <div t-if="subscription.payment_token_id" class="text-muted">
+                                        <span t-out="subscription.payment_token_id.display_name"/>
+                                    </div>
+                                    <div t-if="not subscription.payment_token_id" class="text-muted">
+                                        No saved method is assigned to this subscription.
+                                    </div>
+                                </div>
+                                <a class="btn btn-outline-primary" t-att-href="'/my/subscription/%s/payment/method' % subscription.id">
+                                    <i class="fa fa-fw fa-plus"/>
+                                    Add Method
+                                </a>
+                            </div>
+                            <form t-if="payment_tokens" method="post" t-att-action="'/my/subscription/%s/payment/method/select' % subscription.id" class="row g-2 align-items-end mt-3">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <div class="col-12 col-md-8">
+                                    <label for="token_id" class="form-label">Saved Method</label>
+                                    <select id="token_id" name="token_id" class="form-select" required="required">
+                                        <option value="">Select a saved method</option>
+                                        <option t-foreach="payment_tokens" t-as="payment_token" t-att-value="payment_token.id" t-att-selected="payment_token == subscription.payment_token_id">
+                                            <t t-out="payment_token.display_name"/>
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fa fa-fw fa-check"/>
+                                        Use Method
+                                    </button>
+                                </div>
+                            </form>
                         </div>
 
                         <div

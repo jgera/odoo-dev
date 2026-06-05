@@ -493,7 +493,7 @@ For every phase, update or create:
    - Request resume - done as approval-gated lifecycle requests.
    - Request plan change - done for next-period approval requests.
    - Download invoices through Odoo portal URLs.
-   - Update payment method or route to payment-token setup.
+   - Update payment method or route to payment-token setup - native Odoo validation route done.
    - Payment recovery banner for open subscription invoices - initial version done.
    - Retry saved payment method for open subscription invoices - initial guarded route done.
 
@@ -548,6 +548,8 @@ For every phase, update or create:
 - Past-due customers can see recovery instructions.
 - Customers can open the unpaid subscription invoice from the portal subscription page.
 - Customers can retry a saved payment method when the subscription already has a payment token.
+- Customers can assign an existing saved payment method to a subscription.
+- Customers can add a payment method through Odoo's native validation flow and return to the subscription.
 
 **Tests:**
 
@@ -593,7 +595,7 @@ For every phase, update or create:
 
 4. Customer recovery flow
    - Portal banner for failed payment - initial open-invoice recovery banner done.
-   - Update payment method action.
+   - Update payment method action - initial portal selector and native validation flow done.
    - Retry payment action - initial saved-token retry route done.
    - Dunning emails link to portal recovery page.
 

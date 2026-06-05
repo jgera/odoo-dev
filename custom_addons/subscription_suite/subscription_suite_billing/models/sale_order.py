@@ -673,6 +673,47 @@ class SaleOrder(models.Model):
         self.ensure_one()
         return self._get_payment_recovery_invoices()[:1]
 
+    def _get_portal_available_payment_tokens(self, requester_partner):
+        self.ensure_one()
+        requester_partner.ensure_one()
+        commercial_partner = requester_partner.commercial_partner_id
+        return self.env['payment.token'].sudo()._get_available_tokens(
+            None,
+            requester_partner.id,
+            is_validation=True,
+        ).filtered(
+            lambda token: token.active
+            and token.partner_id.commercial_partner_id == commercial_partner
+        )
+
+    def _portal_assign_payment_token(self, token, requester):
+        self.ensure_one()
+        token.ensure_one()
+        requester.ensure_one()
+
+        requester_partner = requester.partner_id.commercial_partner_id
+        subscription_partner = self.partner_id.commercial_partner_id
+        token_partner = token.partner_id.commercial_partner_id
+
+        if not self.is_subscription:
+            raise ValidationError(_('Only subscriptions can update payment methods.'))
+        if requester_partner != subscription_partner:
+            raise ValidationError(_('You can only update payment methods for your own subscription.'))
+        if not token.active:
+            raise ValidationError(_('Select an active saved payment method.'))
+        if token_partner != subscription_partner:
+            raise ValidationError(_('Select a payment method owned by this customer.'))
+
+        old_token = self.payment_token_id
+        self.payment_token_id = token.id
+        self.sudo()._log_subscription_event(
+            'payment_method_updated',
+            _('Portal payment method updated by %(user)s.', user=requester.display_name),
+            old_values={'payment_token': old_token.display_name if old_token else False},
+            new_values={'payment_token': token.display_name, 'requested_by': requester.display_name},
+        )
+        return True
+
     def _portal_retry_payment_recovery(self, invoice, requester):
         self.ensure_one()
         requester.ensure_one()

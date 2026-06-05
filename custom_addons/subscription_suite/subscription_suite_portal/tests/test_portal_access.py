@@ -1,5 +1,6 @@
 from odoo import fields
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
+from odoo.fields import Command
 from odoo.tests.common import TransactionCase
 
 class TestPortalAccess(TransactionCase):
@@ -47,6 +48,41 @@ class TestPortalAccess(TransactionCase):
         invoice.write({'subscription_id': self.sub.id})
         invoice.action_post()
         return invoice
+
+    def _create_payment_provider(self):
+        payment_method = self.env.ref('payment.payment_method_unknown')
+        redirect_form = self.env['ir.ui.view'].create({
+            'name': 'Portal Payment Method Dummy Redirect Form',
+            'type': 'qweb',
+            'arch': '<form action="dummy" method="post"/>',
+        })
+        provider = self.env['payment.provider'].create({
+            'name': 'Portal Payment Method Dummy Provider',
+            'code': 'none',
+            'state': 'test',
+            'is_published': True,
+            'allow_tokenization': True,
+            'payment_method_ids': [Command.set([payment_method.id])],
+            'redirect_form_view_id': redirect_form.id,
+            'available_currency_ids': [Command.set([self.env.company.currency_id.id])],
+        })
+        payment_method.write({
+            'active': True,
+            'support_tokenization': True,
+        })
+        return provider
+
+    def _create_payment_token(self, partner=None):
+        provider = self._create_payment_provider()
+        payment_method = provider.payment_method_ids[:1]
+        return self.env['payment.token'].sudo().create({
+            'provider_id': provider.id,
+            'payment_method_id': payment_method.id,
+            'payment_details': '4242',
+            'partner_id': (partner or self.partner).id,
+            'provider_ref': 'portal-subscription-token',
+            'active': True,
+        })
 
     def test_01_subscription_is_visible(self):
         """Test that a subscription is found when searching for is_subscription."""
@@ -155,3 +191,53 @@ class TestPortalAccess(TransactionCase):
 
         with self.assertRaises(UserError):
             self.sub._portal_retry_payment_recovery(invoice, self.env.user)
+
+    def test_08_portal_available_payment_tokens_are_customer_owned(self):
+        """Portal token selector only exposes active tokens owned by the customer."""
+        owned_token = self._create_payment_token(self.partner)
+        other_partner = self.env['res.partner'].create({'name': 'Other Portal Customer'})
+        self._create_payment_token(other_partner)
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Token User',
+            'login': 'portal-token-user@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+
+        tokens = self.sub._get_portal_available_payment_tokens(portal_user.partner_id)
+
+        self.assertIn(owned_token, tokens)
+        self.assertEqual(tokens.mapped('partner_id').commercial_partner_id, self.partner.commercial_partner_id)
+
+    def test_09_portal_assign_payment_token_updates_subscription(self):
+        """Portal token assignment stores the token and logs the change."""
+        token = self._create_payment_token(self.partner)
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Assign User',
+            'login': 'portal-assign-user@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+
+        self.sub._portal_assign_payment_token(token, portal_user)
+
+        self.assertEqual(self.sub.payment_token_id, token)
+        event = self.env['subscription.log'].search([
+            ('subscription_id', '=', self.sub.id),
+            ('event_type', '=', 'payment_method_updated'),
+        ], limit=1)
+        self.assertTrue(event)
+
+    def test_10_portal_assign_payment_token_rejects_other_customer_token(self):
+        """Portal token assignment cannot attach another customer's saved method."""
+        other_partner = self.env['res.partner'].create({'name': 'Other Token Owner'})
+        token = self._create_payment_token(other_partner)
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Reject User',
+            'login': 'portal-reject-user@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+
+        with self.assertRaises(ValidationError):
+            self.sub._portal_assign_payment_token(token, portal_user)

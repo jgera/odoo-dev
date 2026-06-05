@@ -379,3 +379,13 @@ This slice intentionally reuses Odoo's invoice portal payment page instead of cr
 4. Open **Subscriptions > Billing > Failed Payments** and confirm recovery-required rows are visible.
 5. Open **Subscriptions > Operations > Manager Operations** and confirm failed payment attempts appear as payment recovery work.
 6. From a subscription, use the **Payments** stat button and confirm it filters attempts for that subscription only.
+
+## 13. Portal Payment Method Demo
+
+1. Open a subscription as the portal customer.
+2. Confirm the **Payment Method** panel shows the currently assigned method or a no-method state.
+3. If the customer already has saved tokens, select one and click **Use Method**.
+4. Confirm the subscription returns with **Payment method updated** and auto-pay reflects the assigned token.
+5. Click **Add Method** and confirm Odoo's native payment-method validation form opens.
+6. Complete validation with a tokenizing provider and confirm the return page assigns the newly saved token to the subscription.
+7. Try assigning a token owned by another customer through a crafted request and confirm the server rejects it.
