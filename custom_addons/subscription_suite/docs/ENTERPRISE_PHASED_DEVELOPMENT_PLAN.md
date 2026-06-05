@@ -494,6 +494,8 @@ For every phase, update or create:
    - Request plan change - done for next-period approval requests.
    - Download invoices through Odoo portal URLs.
    - Update payment method or route to payment-token setup.
+   - Payment recovery banner for open subscription invoices - initial version done.
+   - Retry saved payment method for open subscription invoices - initial guarded route done.
 
 3. Action safety
    - CSRF validation.
@@ -544,6 +546,8 @@ For every phase, update or create:
 - Every action logs who did what and when.
 - Portal cancellation cannot bypass configured close reasons.
 - Past-due customers can see recovery instructions.
+- Customers can open the unpaid subscription invoice from the portal subscription page.
+- Customers can retry a saved payment method when the subscription already has a payment token.
 
 **Tests:**
 
@@ -586,9 +590,9 @@ For every phase, update or create:
    - Optional backup payment method field.
 
 4. Customer recovery flow
-   - Portal banner for failed payment.
+   - Portal banner for failed payment - initial open-invoice recovery banner done.
    - Update payment method action.
-   - Retry payment action.
+   - Retry payment action - initial saved-token retry route done.
    - Dunning emails link to portal recovery page.
 
 5. Recovery analytics

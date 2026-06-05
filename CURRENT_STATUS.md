@@ -29,13 +29,16 @@ Launcher/config no longer include root `custom_addons` in the Odoo 19 addons pat
 - Manager Operations queue combining pending requests and failed billing recovery.
 - Operations Dashboard with manager KPIs and drilldowns.
 - Removed stale one-off migration helper scripts from the active Odoo 19 addons root.
+- Portal payment recovery banner for open subscription invoices.
+- Portal saved-payment retry route with no-token safety guard.
 
 ## Latest Validation
 
 - `python -m compileall versions\19.0\custom_addons` passed.
+- `/subscription_suite_portal` tests passed with 0 failed, 0 errors.
 - `/subscription_suite_billing` tests passed with 0 failed, 0 errors.
 - Full suite upgrade passed for `subscription_suite,subscription_suite_billing,subscription_suite_dunning,subscription_suite_portal,subscription_suite_reports`.
 
 ## Next Careful Slice
 
-Payment recovery portal flow, designed carefully because it touches payment and customer self-service.
+Payment attempt ledger and provider-aware recovery outcomes. The current portal recovery slice exposes open invoices and saved-method retry, but does not yet add a dedicated payment-attempt model or payment-method onboarding flow.

@@ -223,6 +223,50 @@
                             <div><t t-out="lifecycle_error"/></div>
                         </div>
 
+                        <div t-if="payment_status == 'success'" class="alert alert-success d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-check mt-1"/>
+                            <div>Payment retry completed.</div>
+                        </div>
+
+                        <div t-if="payment_status == 'pending'" class="alert alert-info d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-clock-o mt-1"/>
+                            <div>Payment retry was submitted. The invoice status will update after the provider confirms the payment.</div>
+                        </div>
+
+                        <div t-if="payment_error" class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+                            <i class="fa fa-fw fa-exclamation-triangle mt-1"/>
+                            <div><t t-out="payment_error"/></div>
+                        </div>
+
+                        <div t-if="payment_recovery_invoice" class="alert alert-danger d-flex flex-column flex-lg-row gap-3 align-items-lg-center justify-content-between" role="alert">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="fa fa-fw fa-credit-card mt-1"/>
+                                <div>
+                                    <div class="fw-semibold">Payment Recovery Needed</div>
+                                    <div>
+                                        Invoice <a t-att-href="payment_recovery_invoice.get_portal_url()"><span t-field="payment_recovery_invoice.name"/></a>
+                                        has
+                                        <span t-field="payment_recovery_invoice.amount_residual" t-options='{"widget": "monetary", "display_currency": payment_recovery_invoice.currency_id}'/>
+                                        due.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a class="btn btn-light" t-att-href="payment_recovery_invoice.get_portal_url()">
+                                    <i class="fa fa-fw fa-file-text-o"/>
+                                    Open Invoice
+                                </a>
+                                <form t-if="subscription.payment_token_id" method="post" t-att-action="'/my/subscription/%s/payment/retry' % subscription.id">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    <input type="hidden" name="invoice_id" t-att-value="payment_recovery_invoice.id"/>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa fa-fw fa-refresh"/>
+                                        Retry Saved Method
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
                         <div
                             t-if="subscription.subscription_state == 'active' and available_plan_change_ids and not subscription.pending_plan_change_id and not pending_plan_change_request and not subscription.pending_cancellation and not pending_cancellation_request and not pending_lifecycle_request"
                             class="border rounded p-3 mb-4"

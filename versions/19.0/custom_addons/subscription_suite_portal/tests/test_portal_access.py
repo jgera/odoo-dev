@@ -1,4 +1,5 @@
 from odoo import fields
+from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase
 
 class TestPortalAccess(TransactionCase):
@@ -18,12 +19,34 @@ class TestPortalAccess(TransactionCase):
             'billing_interval_count': 1,
             'billing_interval_unit': 'month',
         })
+        self.product = self.env['product.product'].create({
+            'name': 'Portal Recovery Product',
+            'type': 'service',
+            'invoice_policy': 'order',
+            'list_price': 75.0,
+        })
         self.sub = self.env['sale.order'].create({
             'partner_id': self.partner.id,
             'is_subscription': True,
             'subscription_state': 'active',
             'subscription_plan_id': self.plan.id,
         })
+
+    def _create_subscription_invoice(self):
+        self.sub.write({
+            'order_line': [(0, 0, {
+                'product_id': self.product.id,
+                'name': self.product.name,
+                'product_uom_qty': 1.0,
+                'price_unit': 75.0,
+                'is_recurring': True,
+            })],
+        })
+        self.sub.action_confirm()
+        invoice = self.sub._create_invoices()[:1]
+        invoice.write({'subscription_id': self.sub.id})
+        invoice.action_post()
+        return invoice
 
     def test_01_subscription_is_visible(self):
         """Test that a subscription is found when searching for is_subscription."""
@@ -113,3 +136,22 @@ class TestPortalAccess(TransactionCase):
         self.assertIn(request, portal_requests)
         self.assertEqual(request.state, 'pending')
         self.assertEqual(request.request_type, 'pause')
+
+    def test_06_portal_payment_recovery_invoice_data_exists(self):
+        """Portal detail values can expose the oldest open subscription invoice."""
+        invoice = self._create_subscription_invoice()
+        self.sub.subscription_state = 'past_due'
+
+        recovery_invoice = self.sub._get_portal_payment_recovery_invoice()
+
+        self.assertEqual(recovery_invoice, invoice)
+        self.assertEqual(recovery_invoice.payment_state, 'not_paid')
+        self.assertEqual(recovery_invoice.subscription_id, self.sub)
+
+    def test_07_portal_payment_retry_requires_saved_payment_method(self):
+        """Portal retry cannot run token collection without a saved payment method."""
+        invoice = self._create_subscription_invoice()
+        self.sub.subscription_state = 'past_due'
+
+        with self.assertRaises(UserError):
+            self.sub._portal_retry_payment_recovery(invoice, self.env.user)

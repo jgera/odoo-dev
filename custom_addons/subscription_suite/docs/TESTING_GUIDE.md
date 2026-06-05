@@ -101,6 +101,7 @@ After an upgrade, validate:
 - Portal subscription detail shows **Request Plan Change** when the subscription is active and its current plan has configured upgrade or downgrade paths.
 - Portal subscription detail shows scheduled cancellation status, cancellation request history, and **Request Cancellation** when cancellation is allowed.
 - Portal subscription detail shows lifecycle request history and **Request Pause** or **Request Resume** when the subscription state allows it.
+- Portal subscription detail shows a payment recovery banner when a posted subscription invoice is unpaid or partially paid.
 
 ## 7. Phase 1 Billing Demo
 
@@ -356,3 +357,16 @@ Demo data updated:
 Documentation updated:
 Known limitations:
 ```
+
+## 11. Portal Payment Recovery Demo
+
+This slice intentionally reuses Odoo's invoice portal payment page instead of creating a separate card-management flow.
+
+1. Generate or open a posted customer invoice linked to a subscription.
+2. Leave the invoice unpaid or partially paid.
+3. Open the subscription as the portal customer.
+4. Confirm the subscription detail page shows **Payment Recovery Needed**.
+5. Click **Open Invoice** and confirm it opens the Odoo invoice portal payment page.
+6. If the subscription has a saved payment token, click **Retry Saved Method**.
+7. Confirm the page returns with a submitted/completed payment message.
+8. If no saved payment method exists, confirm retry is blocked and the customer is directed to open the invoice.

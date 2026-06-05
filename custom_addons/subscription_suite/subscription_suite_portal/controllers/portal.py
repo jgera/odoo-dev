@@ -102,11 +102,13 @@ class SubscriptionPortal(CustomerPortal):
             ('subscription_id', '=', subscription_sudo.id),
         ], order='requested_on desc, id desc')
         pending_lifecycle_request = lifecycle_requests.filtered(lambda lifecycle_request: lifecycle_request.state == 'pending')[:1]
+        payment_recovery_invoice = subscription_sudo.sudo()._get_portal_payment_recovery_invoice()
 
         values = {
             'sale_order': subscription_sudo,
             'subscription': subscription_sudo,
             'invoices': invoices,
+            'payment_recovery_invoice': payment_recovery_invoice,
             'plan_change_requests': plan_change_requests,
             'pending_plan_change_request': pending_plan_change_request,
             'available_plan_change_ids': available_plan_change_ids,
@@ -121,6 +123,8 @@ class SubscriptionPortal(CustomerPortal):
             'cancellation_error': kw.get('cancellation_error'),
             'lifecycle_status': kw.get('lifecycle_status'),
             'lifecycle_error': kw.get('lifecycle_error'),
+            'payment_status': kw.get('payment_status'),
+            'payment_error': kw.get('payment_error'),
             'page_name': 'subscription',
         }
         values = self._get_page_view_values(subscription_sudo, access_token, values, 'my_subscriptions_history', False, **kw)
@@ -208,3 +212,31 @@ class SubscriptionPortal(CustomerPortal):
             return self._redirect_to_subscription(subscription_sudo.id, lifecycle_error=error.args[0])
 
         return self._redirect_to_subscription(subscription_sudo.id, lifecycle_status='requested')
+
+    @http.route(
+        ['/my/subscription/<int:subscription_id>/payment/retry'],
+        type='http',
+        auth='user',
+        website=True,
+        methods=['POST'],
+    )
+    def portal_subscription_retry_payment(self, subscription_id, invoice_id=None, **kw):
+        try:
+            subscription_sudo = self._document_check_access('sale.order', subscription_id)
+        except (AccessError, MissingError):
+            return request.redirect('/my')
+
+        try:
+            try:
+                recovery_invoice_id = int(invoice_id or 0)
+            except (TypeError, ValueError):
+                recovery_invoice_id = 0
+            invoice = request.env['account.move'].sudo().browse(recovery_invoice_id).exists()
+            if not invoice:
+                raise ValidationError(_('Select an open invoice to retry.'))
+            transaction = subscription_sudo.sudo()._portal_retry_payment_recovery(invoice, request.env.user)
+        except (UserError, ValidationError) as error:
+            return self._redirect_to_subscription(subscription_sudo.id, payment_error=error.args[0])
+
+        status = 'success' if transaction and transaction.state == 'done' else 'pending'
+        return self._redirect_to_subscription(subscription_sudo.id, payment_status=status)

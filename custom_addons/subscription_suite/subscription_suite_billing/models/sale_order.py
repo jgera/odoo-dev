@@ -1,6 +1,6 @@
 import logging
 from odoo import models, fields, api, _
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -626,6 +626,49 @@ class SaleOrder(models.Model):
             self._log_subscription_event('payment_failed', f'Auto-payment failed for {invoice.name}')
             
         return tx
+
+    def _get_payment_recovery_invoices(self):
+        self.ensure_one()
+        return self.env['account.move'].sudo().search([
+            ('subscription_id', '=', self.id),
+            ('move_type', '=', 'out_invoice'),
+            ('state', '=', 'posted'),
+            ('payment_state', 'in', ['not_paid', 'partial']),
+        ], order='invoice_date_due asc, invoice_date asc, id asc')
+
+    def _get_portal_payment_recovery_invoice(self):
+        self.ensure_one()
+        return self._get_payment_recovery_invoices()[:1]
+
+    def _portal_retry_payment_recovery(self, invoice, requester):
+        self.ensure_one()
+        requester.ensure_one()
+        invoice.ensure_one()
+
+        if not self.is_subscription:
+            raise ValidationError(_('Only subscriptions can retry payment recovery.'))
+        if invoice.subscription_id != self:
+            raise ValidationError(_('The selected invoice does not belong to this subscription.'))
+        if invoice.move_type != 'out_invoice' or invoice.state != 'posted':
+            raise ValidationError(_('Only posted customer invoices can be retried.'))
+        if invoice.payment_state not in ['not_paid', 'partial']:
+            raise ValidationError(_('This invoice does not need payment recovery.'))
+        if not self.payment_token_id:
+            raise UserError(_('No saved payment method is available. Open the invoice to pay or add a payment method.'))
+
+        transaction = self._auto_collect_payment(invoice)
+        event_type = 'payment_success' if transaction and transaction.state == 'done' else 'payment_failed'
+        self._log_subscription_event(
+            event_type,
+            _('Portal payment retry requested for invoice %(invoice)s by %(user)s.', invoice=invoice.name, user=requester.display_name),
+            new_values={
+                'invoice_id': invoice.id,
+                'transaction_id': transaction.id if transaction else False,
+                'transaction_state': transaction.state if transaction else False,
+                'requested_by': requester.display_name,
+            },
+        )
+        return transaction
 
     @api.model
     def _cron_auto_collect_payments(self):
