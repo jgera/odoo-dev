@@ -11,7 +11,7 @@ D:\Projects\Odoo dev
 ## 1. Compile Python
 
 ```powershell
-python -m compileall custom_addons\subscription_suite
+python -m compileall versions\19.0\custom_addons
 ```
 
 Use this after every Python edit.

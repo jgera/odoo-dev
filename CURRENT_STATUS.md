@@ -16,9 +16,9 @@ Launcher/config no longer include root `custom_addons` in the Odoo 19 addons pat
 
 ## Latest Checkpoints
 
+- `456111f Add subscription operations dashboard metrics`
+- `fc2450b Add Codex continuation context`
 - `b038ff7 Add subscription manager operations dashboard`
-- `a6053b6 Use Odoo 19 custom addons path for development`
-- `a195a12 Polish subscription request manager workflows`
 
 ## Recently Completed
 
@@ -28,12 +28,13 @@ Launcher/config no longer include root `custom_addons` in the Odoo 19 addons pat
 - Billing retry/recovery hardening.
 - Manager Operations queue combining pending requests and failed billing recovery.
 - Operations Dashboard with manager KPIs and drilldowns.
+- Removed stale one-off migration helper scripts from the active Odoo 19 addons root.
 
 ## Latest Validation
 
-- Compile billing addon passed.
+- `python -m compileall versions\19.0\custom_addons` passed.
 - `/subscription_suite_billing` tests passed with 0 failed, 0 errors.
-- Full suite upgrade passed.
+- Full suite upgrade passed for `subscription_suite,subscription_suite_billing,subscription_suite_dunning,subscription_suite_portal,subscription_suite_reports`.
 
 ## Next Careful Slice
 

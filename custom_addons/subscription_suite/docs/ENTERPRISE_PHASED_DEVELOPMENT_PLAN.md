@@ -248,7 +248,7 @@ For every phase, update or create:
 
 **Suggested tests/checks:**
 
-- `python -m compileall custom_addons\subscription_suite`
+- `python -m compileall versions\19.0\custom_addons`
 - Odoo install with demo data.
 - Odoo module upgrade for all suite addons.
 - Existing test suite run.

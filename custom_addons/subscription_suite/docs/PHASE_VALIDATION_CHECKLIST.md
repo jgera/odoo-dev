@@ -52,7 +52,7 @@ If a scenario is unsafe for static XML demo data, add a repeatable demo script o
 Compile:
 
 ```powershell
-python -m compileall custom_addons\subscription_suite
+python -m compileall versions\19.0\custom_addons
 ```
 
 Upgrade all current suite modules:
