@@ -17,6 +17,14 @@
             <field name="company_id" eval="False"/>
         </record>
 
+        <record id="seq_subscription_payment_attempt" model="ir.sequence">
+            <field name="name">Subscription Payment Attempt</field>
+            <field name="code">subscription.payment.attempt</field>
+            <field name="prefix">PAY/%(year)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
         <record id="seq_subscription_plan_change_request" model="ir.sequence">
             <field name="name">Subscription Plan Change Request</field>
             <field name="code">subscription.plan.change.request</field>

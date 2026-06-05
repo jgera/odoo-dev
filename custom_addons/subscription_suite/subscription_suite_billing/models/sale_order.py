@@ -11,6 +11,8 @@ class SaleOrder(models.Model):
     proration_count = fields.Integer(string='Proration Count', compute='_compute_proration_count')
     billing_attempt_ids = fields.One2many('subscription.billing.attempt', 'subscription_id', string='Billing Attempts')
     billing_attempt_count = fields.Integer(string='Billing Attempt Count', compute='_compute_billing_attempt_count')
+    payment_attempt_ids = fields.One2many('subscription.payment.attempt', 'subscription_id', string='Payment Attempts')
+    payment_attempt_count = fields.Integer(string='Payment Attempt Count', compute='_compute_payment_attempt_count')
     billing_in_progress = fields.Boolean(string='Billing in Progress', copy=False, index=True, readonly=True)
     billing_locked_at = fields.Datetime(string='Billing Locked At', copy=False, readonly=True)
     billing_locked_by_run_id = fields.Many2one('subscription.billing.run', string='Billing Locked by Run', copy=False, readonly=True)
@@ -33,6 +35,10 @@ class SaleOrder(models.Model):
     def _compute_billing_attempt_count(self):
         for record in self:
             record.billing_attempt_count = len(record.billing_attempt_ids)
+
+    def _compute_payment_attempt_count(self):
+        for record in self:
+            record.payment_attempt_count = len(record.payment_attempt_ids)
 
     def _compute_plan_change_request_count(self):
         grouped = self.env['subscription.plan.change.request']._read_group(
@@ -64,6 +70,17 @@ class SaleOrder(models.Model):
             'name': _('Billing Attempts'),
             'type': 'ir.actions.act_window',
             'res_model': 'subscription.billing.attempt',
+            'view_mode': 'list,form',
+            'domain': [('subscription_id', '=', self.id)],
+            'context': {'default_subscription_id': self.id},
+        }
+
+    def action_view_payment_attempts(self):
+        self.ensure_one()
+        return {
+            'name': _('Payment Attempts'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.payment.attempt',
             'view_mode': 'list,form',
             'domain': [('subscription_id', '=', self.id)],
             'context': {'default_subscription_id': self.id},
@@ -604,27 +621,43 @@ class SaleOrder(models.Model):
             'order_line': order_lines,
         })
 
-    def _auto_collect_payment(self, invoice):
+    def _auto_collect_payment(self, invoice, source='cron', requested_by=None):
         self.ensure_one()
         token = self.payment_token_id
         if not token:
             return False
-            
-        tx = self.env['payment.transaction'].create({
-            'provider_id': token.provider_id.id,
-            'token_id': token.id,
-            'amount': invoice.amount_total,
-            'currency_id': invoice.currency_id.id,
-            'partner_id': invoice.partner_id.id,
-            'reference': invoice.name,
-        })
-        tx._send_payment_request()
-        
-        if tx.state == 'done':
-            self._log_subscription_event('payment_success', f'Auto-payment collected for {invoice.name}')
+
+        payment_attempt = self.env['subscription.payment.attempt']._create_for_invoice(
+            self,
+            invoice,
+            source=source,
+            requested_by=requested_by,
+        )
+        try:
+            tx = self.env['payment.transaction'].create({
+                'provider_id': token.provider_id.id,
+                'token_id': token.id,
+                'payment_method_id': token.payment_method_id.id,
+                'operation': 'online_token',
+                'amount': invoice.amount_residual or invoice.amount_total,
+                'currency_id': invoice.currency_id.id,
+                'partner_id': invoice.partner_id.id,
+                'reference': invoice.name,
+            })
+            tx._send_payment_request()
+        except Exception as error:
+            payment_attempt._record_exception(error)
+            self._log_subscription_event('payment_failed', _('Auto-payment failed for %s') % invoice.name)
+            raise
+
+        payment_state = payment_attempt._finalize_from_transaction(tx)
+        if payment_state == 'success':
+            self._log_subscription_event('payment_success', _('Auto-payment collected for %s') % invoice.name)
+        elif payment_state == 'pending':
+            self._log_subscription_event('payment_failed', _('Auto-payment is pending provider confirmation for %s') % invoice.name)
         else:
-            self._log_subscription_event('payment_failed', f'Auto-payment failed for {invoice.name}')
-            
+            self._log_subscription_event('payment_failed', _('Auto-payment failed for %s') % invoice.name)
+
         return tx
 
     def _get_payment_recovery_invoices(self):
@@ -656,7 +689,7 @@ class SaleOrder(models.Model):
         if not self.payment_token_id:
             raise UserError(_('No saved payment method is available. Open the invoice to pay or add a payment method.'))
 
-        transaction = self._auto_collect_payment(invoice)
+        transaction = self._auto_collect_payment(invoice, source='portal', requested_by=requester)
         event_type = 'payment_success' if transaction and transaction.state == 'done' else 'payment_failed'
         self._log_subscription_event(
             event_type,

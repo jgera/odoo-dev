@@ -13,6 +13,7 @@ class SubscriptionManagerOperation(models.Model):
         ('lifecycle', 'Lifecycle'),
         ('cancellation', 'Cancellation'),
         ('billing_recovery', 'Billing Recovery'),
+        ('payment_recovery', 'Payment Recovery'),
     ], string='Type', readonly=True)
     action_state = fields.Selection([
         ('pending', 'Pending'),
@@ -160,5 +161,30 @@ class SubscriptionManagerOperation(models.Model):
                 FROM subscription_billing_attempt attempt
                 WHERE attempt.state = 'failed'
                   AND (attempt.recovery_required = true OR attempt.retryable = true OR attempt.retry_exhausted = true)
+
+                UNION ALL
+
+                SELECT
+                    attempt.id * 10 + 5 AS id,
+                    attempt.name AS name,
+                    'payment_recovery'::varchar AS operation_type,
+                    'failed'::varchar AS action_state,
+                    CASE
+                        WHEN attempt.state = 'error' THEN 'critical'
+                        ELSE 'high'
+                    END::varchar AS priority,
+                    COALESCE(attempt.completed_at, attempt.attempt_date) AS event_date,
+                    attempt.subscription_id AS subscription_id,
+                    attempt.partner_id AS partner_id,
+                    attempt.company_id AS company_id,
+                    attempt.currency_id AS currency_id,
+                    attempt.amount AS amount,
+                    'subscription.payment.attempt'::varchar AS source_model,
+                    attempt.id AS source_res_id,
+                    attempt.name AS source_reference,
+                    COALESCE(attempt.recovery_note, attempt.failure_message) AS note
+                FROM subscription_payment_attempt attempt
+                WHERE attempt.recovery_required = true
+                  AND attempt.state IN ('failed', 'error', 'cancelled')
             )
         """ % self._table)

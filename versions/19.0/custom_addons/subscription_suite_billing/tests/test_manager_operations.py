@@ -93,6 +93,21 @@ class TestManagerOperations(TransactionCase):
             'state': 'pending',
         })
         billing_attempt._record_failure(Exception('missing income account'))
+        payment_attempt = self.env['subscription.payment.attempt'].create({
+            'name': 'OPS-PAY-001',
+            'subscription_id': self.subscription.id,
+            'invoice_id': self.env['account.move'].create({
+                'move_type': 'out_invoice',
+                'partner_id': self.partner.id,
+                'invoice_date': fields.Date.today(),
+            }).id,
+            'source': 'portal',
+            'state': 'failed',
+            'amount': 100.0,
+            'failure_message': 'card declined',
+            'recovery_required': True,
+            'recovery_note': 'Payment method needs customer attention.',
+        })
         self.env.flush_all()
 
         operations = self.env['subscription.manager.operation'].search([
@@ -103,6 +118,7 @@ class TestManagerOperations(TransactionCase):
             ('subscription.cancellation.request', cancellation_request.id): 'cancellation',
             ('subscription.plan.change.request', plan_request.id): 'plan_change',
             ('subscription.billing.attempt', billing_attempt.id): 'billing_recovery',
+            ('subscription.payment.attempt', payment_attempt.id): 'payment_recovery',
         }
         indexed_operations = {
             (operation.source_model, operation.source_res_id): operation.operation_type

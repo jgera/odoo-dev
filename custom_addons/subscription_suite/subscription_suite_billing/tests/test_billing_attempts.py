@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from odoo import fields
 from odoo.exceptions import ValidationError
+from odoo.fields import Command
 from odoo.tests.common import TransactionCase
 
 
@@ -51,6 +52,66 @@ class TestBillingAttempts(TransactionCase):
         subscription = self.env['sale.order'].create(values)
         subscription.action_confirm()
         return subscription
+
+    def _create_subscription_invoice(self, subscription):
+        invoice = subscription._generate_subscription_invoice()
+        self.assertTrue(invoice)
+        return invoice
+
+    def _create_payment_provider(self):
+        payment_method = self.env.ref('payment.payment_method_unknown')
+        redirect_form = self.env['ir.ui.view'].create({
+            'name': 'Subscription Payment Attempt Dummy Redirect Form',
+            'type': 'qweb',
+            'arch': '<form action="dummy" method="post"/>',
+        })
+        provider = self.env['payment.provider'].create({
+            'name': 'Subscription Payment Attempt Dummy Provider',
+            'code': 'none',
+            'state': 'test',
+            'is_published': True,
+            'allow_tokenization': True,
+            'payment_method_ids': [Command.set([payment_method.id])],
+            'redirect_form_view_id': redirect_form.id,
+            'available_currency_ids': [Command.set([self.env.company.currency_id.id])],
+        })
+        payment_method.write({
+            'active': True,
+            'support_tokenization': True,
+        })
+        return provider
+
+    def _create_payment_transaction(self, subscription, invoice, state='done', state_message=None):
+        provider = self._create_payment_provider()
+        payment_method = provider.payment_method_ids[:1]
+        token = self.env['payment.token'].sudo().create({
+            'provider_id': provider.id,
+            'payment_method_id': payment_method.id,
+            'payment_details': '4242',
+            'partner_id': subscription.partner_id.id,
+            'provider_ref': 'subscription-payment-attempt-token',
+            'active': True,
+        })
+        subscription.payment_token_id = token.id
+        transaction = self.env['payment.transaction'].sudo().create({
+            'provider_id': provider.id,
+            'payment_method_id': payment_method.id,
+            'token_id': token.id,
+            'operation': 'online_token',
+            'amount': invoice.amount_total,
+            'currency_id': invoice.currency_id.id,
+            'partner_id': subscription.partner_id.id,
+            'reference': '%s-%s' % (invoice.name, state),
+        })
+        if state == 'done':
+            transaction._set_done(state_message=state_message)
+        elif state == 'error':
+            transaction._set_error(state_message or 'Payment was declined')
+        elif state == 'cancel':
+            transaction._set_canceled(state_message=state_message)
+        elif state == 'pending':
+            transaction._set_pending(state_message=state_message)
+        return transaction
 
     def test_cron_creates_successful_billing_attempt_and_invoice_once(self):
         subscription = self._create_due_subscription()
@@ -237,3 +298,77 @@ class TestBillingAttempts(TransactionCase):
                 'subscription_billing_retry_batch_size': 25,
                 'subscription_billing_retry_delay_hours': 2,
             })
+
+    def test_payment_attempt_creation_records_invoice_context(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+
+        attempt = self.env['subscription.payment.attempt']._create_for_invoice(
+            subscription,
+            invoice,
+            source='portal',
+            requested_by=self.env.user,
+        )
+
+        self.assertEqual(attempt.subscription_id, subscription)
+        self.assertEqual(attempt.invoice_id, invoice)
+        self.assertEqual(attempt.partner_id, subscription.partner_id)
+        self.assertEqual(attempt.source, 'portal')
+        self.assertEqual(attempt.state, 'pending')
+        self.assertEqual(attempt.amount, invoice.amount_residual or invoice.amount_total)
+
+    def test_payment_attempt_finalize_success_from_transaction(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        attempt = self.env['subscription.payment.attempt']._create_for_invoice(subscription, invoice)
+        transaction = self._create_payment_transaction(subscription, invoice, state='done')
+
+        mapped_state = attempt._finalize_from_transaction(transaction)
+
+        self.assertEqual(mapped_state, 'success')
+        self.assertEqual(attempt.state, 'success')
+        self.assertEqual(attempt.transaction_id, transaction)
+        self.assertEqual(attempt.provider_id, transaction.provider_id)
+        self.assertEqual(attempt.provider_state, 'done')
+        self.assertFalse(attempt.recovery_required)
+        self.assertFalse(attempt.failure_message)
+
+    def test_payment_attempt_finalize_failed_transaction_requires_recovery(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        attempt = self.env['subscription.payment.attempt']._create_for_invoice(subscription, invoice)
+        transaction = self._create_payment_transaction(
+            subscription,
+            invoice,
+            state='error',
+            state_message='card declined',
+        )
+
+        mapped_state = attempt._finalize_from_transaction(transaction)
+
+        self.assertEqual(mapped_state, 'failed')
+        self.assertEqual(attempt.state, 'failed')
+        self.assertEqual(attempt.provider_state, 'error')
+        self.assertTrue(attempt.recovery_required)
+        self.assertIn('card declined', attempt.failure_message)
+        self.assertTrue(attempt.recovery_note)
+
+    def test_payment_attempt_exception_records_recovery_context(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        attempt = self.env['subscription.payment.attempt']._create_for_invoice(subscription, invoice)
+
+        attempt._record_exception(Exception('provider timeout'))
+
+        self.assertEqual(attempt.state, 'error')
+        self.assertTrue(attempt.completed_at)
+        self.assertTrue(attempt.recovery_required)
+        self.assertIn('provider timeout', attempt.failure_message)
+
+    def test_subscription_payment_attempt_stat_action_filters_subscription(self):
+        subscription = self._create_due_subscription()
+
+        action = subscription.action_view_payment_attempts()
+
+        self.assertEqual(action['res_model'], 'subscription.payment.attempt')
+        self.assertEqual(action['domain'], [('subscription_id', '=', subscription.id)])

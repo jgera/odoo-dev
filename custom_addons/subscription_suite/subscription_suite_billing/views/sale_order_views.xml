@@ -30,6 +30,9 @@
                 <button class="oe_stat_button" icon="fa-list" name="action_view_billing_attempts" type="object" invisible="not is_subscription">
                     <field name="billing_attempt_count" widget="statinfo" string="Billing"/>
                 </button>
+                <button class="oe_stat_button" icon="fa-credit-card" name="action_view_payment_attempts" type="object" invisible="not is_subscription">
+                    <field name="payment_attempt_count" widget="statinfo" string="Payments"/>
+                </button>
                 <button class="oe_stat_button" icon="fa-calculator" name="%(subscription_suite_billing.action_subscription_proration)d" type="action" invisible="not is_subscription">
                     <field name="proration_count" widget="statinfo" string="Prorations"/>
                 </button>

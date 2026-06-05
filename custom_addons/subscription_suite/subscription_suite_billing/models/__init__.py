@@ -1,6 +1,7 @@
 from . import subscription_proration
 from . import subscription_billing_run
 from . import subscription_billing_attempt
+from . import subscription_payment_attempt
 from . import subscription_manager_operation
 from . import subscription_manager_operation_dashboard
 from . import subscription_plan

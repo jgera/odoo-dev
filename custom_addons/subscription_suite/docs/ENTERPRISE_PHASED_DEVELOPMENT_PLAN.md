@@ -577,8 +577,10 @@ For every phase, update or create:
 
 **Build items:**
 
-1. Add `subscription.payment.attempt`
-   - Links subscription, invoice, token, provider, transaction, state, failure code, failure message, attempt date, next retry date.
+1. Add `subscription.payment.attempt` - initial version done.
+   - Links subscription, invoice, token, provider, transaction, state, failure message, attempt date, and provider outcome.
+   - Portal and cron saved-token retries create audit rows.
+   - Failed payment attempts feed the manager operations queue.
 
 2. Add `subscription.dunning.attempt`
    - Links policy, step, subscription, invoice, email, action taken, recovery result.
@@ -601,6 +603,7 @@ For every phase, update or create:
    - Recovery rate by policy.
    - Average days to recover.
    - Failed recovery final actions.
+   - Payment-attempt list/search views for provider and state analysis - initial version done.
 
 **Demo data updates:**
 
