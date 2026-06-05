@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_cancellation_request_list" model="ir.ui.view">
+        <field name="name">subscription.cancellation.request.list</field>
+        <field name="model">subscription.cancellation.request</field>
+        <field name="arch" type="xml">
+            <list string="Cancellation Requests"
+                  decoration-info="state == 'pending'"
+                  decoration-success="state == 'approved'"
+                  decoration-danger="state == 'rejected'"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="reason_id"/>
+                <field name="requested_effective_date"/>
+                <field name="requested_policy"/>
+                <field name="requested_by_id"/>
+                <field name="requested_on"/>
+                <field name="request_age_days"/>
+                <field name="activity_user_id" optional="hide"/>
+                <field name="activity_date_deadline" optional="hide"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'pending'"
+                       decoration-success="state == 'approved'"
+                       decoration-danger="state == 'rejected'"
+                       decoration-muted="state == 'cancelled'"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_cancellation_request_form" model="ir.ui.view">
+        <field name="name">subscription.cancellation.request.form</field>
+        <field name="model">subscription.cancellation.request</field>
+        <field name="arch" type="xml">
+            <form string="Cancellation Request">
+                <header>
+                    <button name="action_approve" type="object" string="Approve" class="btn-primary"
+                            invisible="state != 'pending'"
+                            groups="subscription_suite.group_subscription_manager"/>
+                    <button name="action_reject" type="object" string="Reject"
+                            invisible="state != 'pending'"
+                            groups="subscription_suite.group_subscription_manager"/>
+                    <button name="action_cancel" type="object" string="Cancel Request"
+                            invisible="state != 'pending'"/>
+                    <button name="action_open_subscription" type="object" string="Open Subscription"/>
+                    <field name="state" widget="statusbar" statusbar_visible="pending,approved,rejected,cancelled"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="subscription_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="reason_id" readonly="1"/>
+                            <field name="feedback" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="requested_effective_date" readonly="1"/>
+                            <field name="requested_policy" readonly="1"/>
+                            <field name="requested_by_id" readonly="1"/>
+                            <field name="requested_on" readonly="1"/>
+                            <field name="company_id" readonly="1" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group string="Decision" invisible="state == 'pending'">
+                        <group>
+                            <field name="approved_by_id" readonly="1" invisible="state != 'approved'"/>
+                            <field name="approved_on" readonly="1" invisible="state != 'approved'"/>
+                        </group>
+                        <group>
+                            <field name="rejected_by_id" readonly="1" invisible="state != 'rejected'"/>
+                            <field name="rejected_on" readonly="1" invisible="state != 'rejected'"/>
+                            <field name="rejection_reason" readonly="state != 'pending'" invisible="state != 'rejected'"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_cancellation_request_search" model="ir.ui.view">
+        <field name="name">subscription.cancellation.request.search</field>
+        <field name="model">subscription.cancellation.request</field>
+        <field name="arch" type="xml">
+            <search string="Cancellation Requests">
+                <field name="name"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="reason_id"/>
+                <field name="requested_by_id"/>
+                <filter string="My Activities" name="my_activities" domain="[('activity_ids.user_id', '=', uid)]"/>
+                <filter string="Pending" name="pending" domain="[('state', '=', 'pending')]"/>
+                <filter string="Approved" name="approved" domain="[('state', '=', 'approved')]"/>
+                <filter string="Rejected" name="rejected" domain="[('state', '=', 'rejected')]"/>
+                <filter string="Cancelled" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
+                <group>
+                    <filter string="Status" name="group_status" context="{'group_by': 'state'}"/>
+                    <filter string="Reason" name="group_reason" context="{'group_by': 'reason_id'}"/>
+                    <filter string="Requested By" name="group_requested_by" context="{'group_by': 'requested_by_id'}"/>
+                    <filter string="Effective Date" name="group_effective_date" context="{'group_by': 'requested_effective_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_subscription_cancellation_request" model="ir.actions.act_window">
+        <field name="name">Cancellation Requests</field>
+        <field name="res_model">subscription.cancellation.request</field>
+        <field name="view_mode">list,form,activity</field>
+        <field name="search_view_id" ref="view_subscription_cancellation_request_search"/>
+        <field name="context">{'search_default_pending': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Customer cancellation requests will appear here.
+            </p>
+        </field>
+    </record>
+</odoo>

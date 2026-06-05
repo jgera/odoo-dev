@@ -69,19 +69,96 @@ class SubscriptionProration(models.Model):
                 record.charge_amount = 0.0
                 record.net_amount = 0.0
 
+    def _get_proration_product(self):
+        self.ensure_one()
+        plan = self.new_plan_id or self.old_plan_id
+        product = plan.plan_line_ids[:1].product_id if plan and plan.plan_line_ids else False
+        if not product:
+            product = self.subscription_id.order_line.filtered(
+                lambda line: line.is_recurring and not line.display_type and line.product_id
+            )[:1].product_id
+        if not product:
+            raise ValidationError(_("A proration adjustment needs at least one recurring product to determine accounting."))
+        return product
+
+    def _get_proration_income_account(self, product):
+        self.ensure_one()
+        account = False
+        if hasattr(product, '_get_product_accounts'):
+            account = product._get_product_accounts().get('income')
+        account = account or product.property_account_income_id or product.categ_id.property_account_income_categ_id
+        if not account:
+            raise ValidationError(_("Configure an income account on product %s or its product category.") % product.display_name)
+        return account
+
+    def _prepare_proration_move_vals(self):
+        self.ensure_one()
+        if not self.net_amount:
+            return False
+
+        product = self._get_proration_product()
+        account = self._get_proration_income_account(product)
+        move_type = 'out_invoice' if self.net_amount > 0 else 'out_refund'
+        amount = abs(self.net_amount)
+        taxes = product.taxes_id.filtered(lambda tax: not tax.company_id or tax.company_id == self.company_id)
+
+        return {
+            'move_type': move_type,
+            'partner_id': self.subscription_id.partner_invoice_id.id or self.subscription_id.partner_id.id,
+            'invoice_date': fields.Date.today(),
+            'invoice_origin': self.subscription_id.name,
+            'currency_id': self.currency_id.id,
+            'company_id': self.company_id.id,
+            'subscription_id': self.subscription_id.id,
+            'subscription_period_start': self.period_start,
+            'subscription_period_end': self.period_end,
+            'proration_id': self.id,
+            'invoice_line_ids': [(0, 0, {
+                'product_id': product.id,
+                'name': _('Subscription proration adjustment: %(start)s to %(end)s') % {
+                    'start': self.change_date,
+                    'end': self.period_end,
+                },
+                'quantity': 1.0,
+                'price_unit': amount,
+                'account_id': account.id,
+                'tax_ids': [(6, 0, taxes.ids)],
+            })],
+        }
+
+    def _create_proration_move(self):
+        self.ensure_one()
+        if self.adjustment_invoice_id or self.credit_note_id or not self.net_amount:
+            return self.adjustment_invoice_id or self.credit_note_id
+
+        move_vals = self._prepare_proration_move_vals()
+        if not move_vals:
+            return False
+
+        move = self.env['account.move'].create(move_vals)
+        if move.move_type == 'out_invoice':
+            self.adjustment_invoice_id = move.id
+        else:
+            self.credit_note_id = move.id
+        return move
+
     def action_apply_proration(self):
         self.ensure_one()
         if self.state != 'draft':
             raise ValidationError(_("Can only apply draft prorations."))
-        
-        # In a real implementation, this would generate the actual credit note
-        # and adjustment invoice via account.move.create()
-        
+
+        move = self._create_proration_move()
         self.state = 'applied'
         self.subscription_id.subscription_plan_id = self.new_plan_id
         
         # Log event
         self.subscription_id._log_subscription_event(
             'plan_changed',
-            f'Plan changed from {self.old_plan_id.name} to {self.new_plan_id.name} with proration net amount {self.net_amount}'
+            _(
+                'Plan changed from %(old_plan)s to %(new_plan)s with proration net amount %(amount)s%(document)s',
+                old_plan=self.old_plan_id.name,
+                new_plan=self.new_plan_id.name,
+                amount=self.net_amount,
+                document=_(' and document %s') % move.name if move else '',
+            )
         )

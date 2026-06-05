@@ -16,6 +16,14 @@
             <xpath expr="//button[@name='action_pause_subscription']" position="before">
                 <button name="action_change_plan" type="object" string="Change Plan" 
                         class="oe_highlight" invisible="subscription_state != 'active'"/>
+                <button name="action_cancel_pending_plan_change" type="object" string="Cancel Plan Change"
+                        invisible="not pending_plan_change_id"/>
+            </xpath>
+
+            <xpath expr="//field[@name='subscription_plan_id']" position="after">
+                <field name="pending_plan_change_id" invisible="not pending_plan_change_id" readonly="1"/>
+                <field name="pending_plan_change_date" invisible="not pending_plan_change_id" readonly="1"/>
+                <field name="pending_plan_change_type" invisible="not pending_plan_change_id" readonly="1"/>
             </xpath>
             
             <xpath expr="//div[@name='button_box']" position="inside">
@@ -24,6 +32,9 @@
                 </button>
                 <button class="oe_stat_button" icon="fa-calculator" name="%(subscription_suite_billing.action_subscription_proration)d" type="action" invisible="not is_subscription">
                     <field name="proration_count" widget="statinfo" string="Prorations"/>
+                </button>
+                <button class="oe_stat_button" icon="fa-check-square-o" name="action_view_subscription_plan_change_requests" type="object" invisible="not is_subscription">
+                    <field name="plan_change_request_count" widget="statinfo" string="Plan Requests"/>
                 </button>
             </xpath>
         </field>

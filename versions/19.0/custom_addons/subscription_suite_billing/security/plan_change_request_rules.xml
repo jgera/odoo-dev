@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="subscription_plan_change_request_user_rule" model="ir.rule">
+        <field name="name">Own Plan Change Requests</field>
+        <field name="model_id" ref="model_subscription_plan_change_request"/>
+        <field name="groups" eval="[(4, ref('subscription_suite.group_subscription_user'))]"/>
+        <field name="domain_force">[
+            '|',
+            ('requested_by_id', '=', user.id),
+            ('subscription_id.user_id', '=', user.id)
+        ]</field>
+    </record>
+
+    <record id="subscription_plan_change_request_manager_rule" model="ir.rule">
+        <field name="name">All Plan Change Requests</field>
+        <field name="model_id" ref="model_subscription_plan_change_request"/>
+        <field name="groups" eval="[(4, ref('subscription_suite.group_subscription_manager'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+</odoo>

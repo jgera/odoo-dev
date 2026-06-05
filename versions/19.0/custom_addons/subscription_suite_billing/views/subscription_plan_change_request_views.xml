@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_plan_change_request_list" model="ir.ui.view">
+        <field name="name">subscription.plan.change.request.list</field>
+        <field name="model">subscription.plan.change.request</field>
+        <field name="arch" type="xml">
+            <list string="Plan Change Requests" create="0" edit="0"
+                  decoration-info="state == 'pending'"
+                  decoration-success="state == 'approved'"
+                  decoration-danger="state == 'rejected'"
+                  decoration-muted="state == 'cancelled'">
+                <field name="name"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="current_plan_id"/>
+                <field name="requested_plan_id"/>
+                <field name="change_type" widget="badge"/>
+                <field name="requested_timing"/>
+                <field name="requested_effective_date"/>
+                <field name="requested_on"/>
+                <field name="request_age_days"/>
+                <field name="activity_user_id" optional="hide"/>
+                <field name="activity_date_deadline" optional="hide"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'pending'"
+                       decoration-success="state == 'approved'"
+                       decoration-danger="state == 'rejected'"
+                       decoration-muted="state == 'cancelled'"/>
+                <field name="requested_by_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_plan_change_request_form" model="ir.ui.view">
+        <field name="name">subscription.plan.change.request.form</field>
+        <field name="model">subscription.plan.change.request</field>
+        <field name="arch" type="xml">
+            <form string="Plan Change Request" create="0">
+                <header>
+                    <button name="action_approve" type="object" string="Approve" class="btn-primary"
+                            invisible="state != 'pending'" groups="subscription_suite.group_subscription_manager"/>
+                    <button name="action_reject" type="object" string="Reject"
+                            invisible="state != 'pending'" groups="subscription_suite.group_subscription_manager"/>
+                    <button name="action_cancel" type="object" string="Cancel"
+                            invisible="state != 'pending'"/>
+                    <button name="action_open_subscription" type="object" string="Open Subscription"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Request">
+                            <field name="subscription_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="requested_by_id" readonly="1"/>
+                            <field name="requested_on" readonly="1"/>
+                        </group>
+                        <group string="Decision">
+                            <field name="approved_by_id" readonly="1" invisible="not approved_by_id"/>
+                            <field name="approved_on" readonly="1" invisible="not approved_on"/>
+                            <field name="rejected_by_id" readonly="1" invisible="not rejected_by_id"/>
+                            <field name="rejected_on" readonly="1" invisible="not rejected_on"/>
+                            <field name="rejection_reason" readonly="state != 'pending'"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Change">
+                            <field name="current_plan_id"/>
+                            <field name="requested_plan_id"/>
+                            <field name="change_type"/>
+                            <field name="requested_timing"/>
+                            <field name="requested_effective_date"/>
+                        </group>
+                        <group string="Revenue">
+                            <field name="old_mrr" widget="monetary"/>
+                            <field name="new_mrr" widget="monetary"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_plan_change_request_search" model="ir.ui.view">
+        <field name="name">subscription.plan.change.request.search</field>
+        <field name="model">subscription.plan.change.request</field>
+        <field name="arch" type="xml">
+            <search string="Plan Change Requests">
+                <field name="name"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="requested_by_id"/>
+                <filter string="My Activities" name="my_activities" domain="[('activity_ids.user_id', '=', uid)]"/>
+                <filter string="Pending" name="pending" domain="[('state', '=', 'pending')]"/>
+                <filter string="Approved" name="approved" domain="[('state', '=', 'approved')]"/>
+                <filter string="Rejected" name="rejected" domain="[('state', '=', 'rejected')]"/>
+                <filter string="Cancelled" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
+                <group>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Change Type" name="group_change_type" context="{'group_by': 'change_type'}"/>
+                    <filter string="Requested By" name="group_requested_by" context="{'group_by': 'requested_by_id'}"/>
+                    <filter string="Effective Date" name="group_effective_date" context="{'group_by': 'requested_effective_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_subscription_plan_change_request" model="ir.actions.act_window">
+        <field name="name">Plan Change Requests</field>
+        <field name="res_model">subscription.plan.change.request</field>
+        <field name="view_mode">list,form,activity</field>
+        <field name="search_view_id" ref="view_subscription_plan_change_request_search"/>
+        <field name="context">{'search_default_pending': 1}</field>
+    </record>
+
+    <menuitem id="menu_subscription_plan_change_request"
+              name="Plan Change Requests"
+              parent="subscription_suite.menu_subscriptions_main"
+              action="action_subscription_plan_change_request"
+              sequence="20"/>
+</odoo>

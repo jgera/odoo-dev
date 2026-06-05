@@ -42,6 +42,14 @@ class SaleOrder(models.Model):
         string='Sales History',
         compute='_compute_subscription_quote_count',
     )
+    cancellation_request_count = fields.Integer(
+        string='Cancellation Requests',
+        compute='_compute_subscription_request_counts',
+    )
+    lifecycle_request_count = fields.Integer(
+        string='Lifecycle Requests',
+        compute='_compute_subscription_request_counts',
+    )
     
     trial_start_date = fields.Date(string='Trial Start Date', copy=False)
     trial_end_date = fields.Date(string='Trial End Date', copy=False)
@@ -100,6 +108,23 @@ class SaleOrder(models.Model):
         counts = {subscription.id: count for subscription, count in grouped}
         for order in self:
             order.subscription_quote_count = counts.get(order.id, 0)
+
+    def _compute_subscription_request_counts(self):
+        cancellation_grouped = self.env['subscription.cancellation.request']._read_group(
+            [('subscription_id', 'in', self.ids)],
+            ['subscription_id'],
+            ['__count'],
+        )
+        lifecycle_grouped = self.env['subscription.lifecycle.request']._read_group(
+            [('subscription_id', 'in', self.ids)],
+            ['subscription_id'],
+            ['__count'],
+        )
+        cancellation_counts = {subscription.id: count for subscription, count in cancellation_grouped}
+        lifecycle_counts = {subscription.id: count for subscription, count in lifecycle_grouped}
+        for order in self:
+            order.cancellation_request_count = cancellation_counts.get(order.id, 0)
+            order.lifecycle_request_count = lifecycle_counts.get(order.id, 0)
 
     @api.depends('order_line.price_subtotal', 'order_line.is_recurring')
     def _compute_recurring_total(self):
@@ -194,6 +219,48 @@ class SaleOrder(models.Model):
             'new_mrr': new_mrr,
             'amount': amount,
         })
+
+    def _get_commitment_start_date(self):
+        self.ensure_one()
+        return self.subscription_start_date or self.trial_start_date
+
+    def _get_commitment_end_date(self):
+        self.ensure_one()
+        plan = self.subscription_plan_id
+        start_date = self._get_commitment_start_date()
+        periods = plan.min_commitment_periods if plan else 0
+        if not start_date or not periods:
+            return False
+
+        interval_count = plan.billing_interval_count * periods
+        interval_unit = plan.billing_interval_unit
+        if interval_unit == 'day':
+            return start_date + relativedelta(days=interval_count)
+        if interval_unit == 'week':
+            return start_date + relativedelta(weeks=interval_count)
+        if interval_unit == 'month':
+            return start_date + relativedelta(months=interval_count)
+        if interval_unit == 'year':
+            return start_date + relativedelta(years=interval_count)
+        return False
+
+    def _check_minimum_commitment(self, action_label=None, effective_date=None):
+        self.ensure_one()
+        commitment_end_date = self._get_commitment_end_date()
+        if not commitment_end_date:
+            return True
+
+        effective_date = effective_date or fields.Date.today()
+        if effective_date < commitment_end_date:
+            action_label = action_label or _('This action')
+            raise UserError(
+                _(
+                    '%(action)s is not allowed before the minimum commitment ends on %(date)s.',
+                    action=action_label,
+                    date=commitment_end_date,
+                )
+            )
+        return True
 
     def _prepare_subscription_quote_line_values(self, line):
         self.ensure_one()
@@ -303,6 +370,28 @@ class SaleOrder(models.Model):
                 'default_partner_id': self.partner_id.id,
                 'default_subscription_origin_id': self.id,
             },
+        }
+
+    def action_view_subscription_cancellation_requests(self):
+        self.ensure_one()
+        return {
+            'name': _('Cancellation Requests'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.cancellation.request',
+            'view_mode': 'list,form,activity',
+            'domain': [('subscription_id', '=', self.id)],
+            'context': {'default_subscription_id': self.id},
+        }
+
+    def action_view_subscription_lifecycle_requests(self):
+        self.ensure_one()
+        return {
+            'name': _('Lifecycle Requests'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.lifecycle.request',
+            'view_mode': 'list,form,activity',
+            'domain': [('subscription_id', '=', self.id)],
+            'context': {'default_subscription_id': self.id},
         }
 
     def _apply_renewal_quote(self):
@@ -464,6 +553,65 @@ class SaleOrder(models.Model):
                 new_values={'next_invoice_date': order.next_invoice_date},
             )
 
+    def _portal_request_lifecycle_action(self, request_type, feedback, requester):
+        self.ensure_one()
+        requester.ensure_one()
+        if request_type not in ['pause', 'resume']:
+            raise ValidationError(_("Select a valid lifecycle action."))
+        if not self.is_subscription:
+            raise ValidationError(_("Only subscriptions can request lifecycle changes."))
+        if self.subscription_state in ['cancelled', 'expired']:
+            raise ValidationError(_("Cancelled or expired subscriptions cannot request lifecycle changes."))
+        if 'pending_plan_change_id' in self._fields and self.pending_plan_change_id:
+            raise ValidationError(_("This subscription already has a scheduled plan change."))
+        if self.pending_cancellation:
+            raise ValidationError(_("This subscription already has a scheduled cancellation."))
+
+        if 'subscription.plan.change.request' in self.env.registry:
+            pending_plan_change_request = self.env['subscription.plan.change.request'].search([
+                ('subscription_id', '=', self.id),
+                ('state', '=', 'pending'),
+            ], limit=1)
+            if pending_plan_change_request:
+                raise ValidationError(_("This subscription already has a pending plan change request."))
+
+        existing_request = self.env['subscription.lifecycle.request'].search([
+            ('subscription_id', '=', self.id),
+            ('state', '=', 'pending'),
+        ], limit=1)
+        if existing_request:
+            raise ValidationError(_("This subscription already has a pending lifecycle request."))
+
+        if request_type == 'pause':
+            if self.subscription_state != 'active':
+                raise ValidationError(_("Only active subscriptions can request pause."))
+            if self.subscription_plan_id and not self.subscription_plan_id.pause_allowed:
+                raise ValidationError(_("This subscription plan does not allow pausing."))
+        else:
+            if self.subscription_state != 'paused':
+                raise ValidationError(_("Only paused subscriptions can request resume."))
+            pause_date = self.pause_date or fields.Date.today()
+            paused_days = max((fields.Date.today() - pause_date).days, 0)
+            if self.subscription_plan_id.max_pause_days and paused_days > self.subscription_plan_id.max_pause_days:
+                raise UserError(_("This subscription has exceeded the maximum pause duration for its plan."))
+
+        lifecycle_request = self.env['subscription.lifecycle.request'].create({
+            'subscription_id': self.id,
+            'request_type': request_type,
+            'feedback': feedback,
+            'requested_by_id': requester.id,
+        })
+        self._log_subscription_event(
+            'lifecycle_requested',
+            _('Portal %(request_type)s request %(request)s created', request_type=request_type, request=lifecycle_request.name),
+            new_values={
+                'request_id': lifecycle_request.id,
+                'request_type': request_type,
+                'requested_by': requester.display_name,
+            },
+        )
+        return lifecycle_request
+
     def action_cancel_subscription(self):
         self.ensure_one()
         return {
@@ -490,6 +638,7 @@ class SaleOrder(models.Model):
             if order.subscription_state in ['cancelled', 'expired']:
                 continue
             effective_date = effective_date or order._get_cancellation_effective_date(policy)
+            order._check_minimum_commitment(_('Cancellation'), effective_date=effective_date)
             if effective_date <= fields.Date.today():
                 order._action_cancel(
                     reason_id=reason_id,
@@ -512,6 +661,64 @@ class SaleOrder(models.Model):
                 _('Subscription cancellation scheduled for %s') % effective_date,
                 new_values={'cancellation_effective_date': effective_date, 'policy': policy},
             )
+
+    def _portal_request_cancellation(self, reason, feedback, requester):
+        self.ensure_one()
+        reason.ensure_one()
+        requester.ensure_one()
+
+        if not self.is_subscription:
+            raise ValidationError(_("Only subscriptions can request cancellation."))
+        if self.subscription_state not in ['active', 'trial', 'paused', 'past_due']:
+            raise ValidationError(_("Only active, trial, paused, or past-due subscriptions can request cancellation."))
+        if 'pending_plan_change_id' in self._fields and self.pending_plan_change_id:
+            raise ValidationError(_("This subscription already has a scheduled plan change."))
+        if self.pending_cancellation:
+            raise ValidationError(_("This subscription already has a scheduled cancellation."))
+        if 'subscription.plan.change.request' in self.env.registry:
+            pending_plan_change_request = self.env['subscription.plan.change.request'].search([
+                ('subscription_id', '=', self.id),
+                ('state', '=', 'pending'),
+            ], limit=1)
+            if pending_plan_change_request:
+                raise ValidationError(_("This subscription already has a pending plan change request."))
+        pending_lifecycle_request = self.env['subscription.lifecycle.request'].search([
+            ('subscription_id', '=', self.id),
+            ('state', '=', 'pending'),
+        ], limit=1)
+        if pending_lifecycle_request:
+            raise ValidationError(_("This subscription already has a pending lifecycle request."))
+
+        existing_request = self.env['subscription.cancellation.request'].search([
+            ('subscription_id', '=', self.id),
+            ('state', '=', 'pending'),
+        ], limit=1)
+        if existing_request:
+            raise ValidationError(_("This subscription already has a pending cancellation request."))
+
+        policy = self.subscription_plan_id.cancellation_policy if self.subscription_plan_id else 'immediate'
+        effective_date = self._get_cancellation_effective_date(policy=policy)
+        self._check_minimum_commitment(_('Cancellation'), effective_date=effective_date)
+        request = self.env['subscription.cancellation.request'].create({
+            'subscription_id': self.id,
+            'reason_id': reason.id,
+            'feedback': feedback,
+            'requested_effective_date': effective_date,
+            'requested_policy': policy,
+            'requested_by_id': requester.id,
+        })
+        self._log_subscription_event(
+            'cancellation_requested',
+            _('Portal cancellation request %(request)s created', request=request.name),
+            new_values={
+                'request_id': request.id,
+                'reason': reason.display_name,
+                'effective_date': effective_date,
+                'policy': policy,
+                'requested_by': requester.display_name,
+            },
+        )
+        return request
 
     def action_reverse_scheduled_cancellation(self):
         for order in self:
@@ -539,6 +746,7 @@ class SaleOrder(models.Model):
         for order in self:
             if order.subscription_state in ['cancelled', 'expired']:
                 continue
+            order._check_minimum_commitment(_('Cancellation'), effective_date=cancellation_date or fields.Date.today())
 
             previous_mrr = order.mrr if order.subscription_state in ['active', 'paused', 'past_due'] else 0.0
             

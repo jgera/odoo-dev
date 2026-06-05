@@ -192,6 +192,15 @@
             <field name="is_recurring">True</field>
         </record>
 
+        <record id="demo_cancellation_request_pending" model="subscription.cancellation.request">
+            <field name="subscription_id" ref="demo_subscription_paused"/>
+            <field name="reason_id" ref="demo_cancel_reason_expensive"/>
+            <field name="feedback">Portal customer requested cancellation while paused.</field>
+            <field name="requested_effective_date" eval="(DateTime.today() + relativedelta(days=15)).strftime('%Y-%m-%d')"/>
+            <field name="requested_policy">end_of_period</field>
+            <field name="requested_by_id" ref="base.user_demo"/>
+        </record>
+
         <!-- 4. Active Subscription Due for Billing -->
         <record id="demo_subscription_due_billing" model="sale.order">
             <field name="partner_id" ref="base.res_partner_2"/>
@@ -256,6 +265,13 @@
             <field name="product_uom_qty">1.0</field>
             <field name="price_unit">29.00</field>
             <field name="is_recurring">True</field>
+        </record>
+
+        <record id="demo_lifecycle_request_resume_pending" model="subscription.lifecycle.request">
+            <field name="subscription_id" ref="demo_subscription_pause_resume_example"/>
+            <field name="request_type">resume</field>
+            <field name="feedback">Portal customer is ready to resume service.</field>
+            <field name="requested_by_id" ref="base.user_demo"/>
         </record>
 
         <!-- 7. Active Subscription with End-of-Period Cancellation Scheduled -->

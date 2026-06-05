@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="demo_product_enterprise" model="product.product">
+            <field name="name">Enterprise Subscription Tier</field>
+            <field name="type">service</field>
+            <field name="is_subscription_product">True</field>
+            <field name="list_price">89.00</field>
+        </record>
+
+        <record id="demo_plan_enterprise" model="subscription.plan">
+            <field name="name">Enterprise Monthly</field>
+            <field name="code">ENTERPRISE-MONTHLY</field>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="trial_days">0</field>
+            <field name="approval_required_for_downgrade">True</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="demo_plan_enterprise_line" model="subscription.plan.line">
+            <field name="plan_id" ref="demo_plan_enterprise"/>
+            <field name="product_id" ref="demo_product_enterprise"/>
+            <field name="description">Enterprise Subscription Tier</field>
+            <field name="quantity">1.0</field>
+            <field name="price_unit">89.00</field>
+        </record>
+    </data>
+
+    <function model="subscription.plan" name="write">
+        <value model="subscription.plan" search="[('id', '=', ref('subscription_suite.demo_plan_basic'))]"/>
+        <value eval="{
+            'upgrade_plan_ids': [(4, ref('subscription_suite_billing.demo_plan_enterprise'))],
+            'approval_required_for_upgrade': True,
+        }"/>
+    </function>
+
+    <data noupdate="1">
+        <record id="demo_plan_portal_basic" model="subscription.plan">
+            <field name="name">Portal Basic Monthly</field>
+            <field name="code">PORTAL-BASIC-MONTHLY</field>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="trial_days">0</field>
+            <field name="approval_required_for_upgrade">True</field>
+            <field name="upgrade_plan_ids" eval="[(4, ref('subscription_suite_billing.demo_plan_enterprise'))]"/>
+            <field name="active">True</field>
+        </record>
+
+        <record id="demo_plan_portal_basic_line" model="subscription.plan.line">
+            <field name="plan_id" ref="demo_plan_portal_basic"/>
+            <field name="product_id" ref="subscription_suite.demo_product_basic"/>
+            <field name="description">Portal Basic Subscription Tier</field>
+            <field name="quantity">1.0</field>
+            <field name="price_unit">29.00</field>
+        </record>
+
+        <record id="demo_subscription_portal_plan_change" model="sale.order">
+            <field name="partner_id" ref="base.res_partner_2"/>
+            <field name="user_id" ref="base.user_demo"/>
+            <field name="is_subscription">True</field>
+            <field name="subscription_plan_id" ref="demo_plan_portal_basic"/>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="subscription_state">active</field>
+            <field name="subscription_start_date" eval="(DateTime.today() - relativedelta(months=1)).strftime('%Y-%m-%d')"/>
+            <field name="last_invoice_date" eval="(DateTime.today() - relativedelta(days=8)).strftime('%Y-%m-%d')"/>
+            <field name="next_invoice_date" eval="(DateTime.today() + relativedelta(days=22)).strftime('%Y-%m-%d')"/>
+        </record>
+
+        <record id="demo_subscription_portal_plan_change_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_portal_plan_change"/>
+            <field name="product_id" ref="subscription_suite.demo_product_basic"/>
+            <field name="name">Portal Basic Subscription Tier</field>
+            <field name="product_uom_qty">1.0</field>
+            <field name="price_unit">29.00</field>
+            <field name="is_recurring">True</field>
+        </record>
+
+        <record id="demo_subscription_pending_plan_change" model="sale.order">
+            <field name="partner_id" ref="base.res_partner_2"/>
+            <field name="user_id" ref="base.user_admin"/>
+            <field name="is_subscription">True</field>
+            <field name="subscription_plan_id" ref="subscription_suite.demo_plan_basic"/>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="subscription_state">active</field>
+            <field name="subscription_start_date" eval="(DateTime.today() - relativedelta(months=2)).strftime('%Y-%m-%d')"/>
+            <field name="last_invoice_date" eval="(DateTime.today() - relativedelta(days=10)).strftime('%Y-%m-%d')"/>
+            <field name="next_invoice_date" eval="(DateTime.today() + relativedelta(days=20)).strftime('%Y-%m-%d')"/>
+            <field name="pending_plan_change_id" ref="demo_plan_enterprise"/>
+            <field name="pending_plan_change_date" eval="(DateTime.today() + relativedelta(days=20)).strftime('%Y-%m-%d')"/>
+            <field name="pending_plan_change_type">upgrade</field>
+        </record>
+
+        <record id="demo_subscription_pending_plan_change_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_pending_plan_change"/>
+            <field name="product_id" ref="subscription_suite.demo_product_basic"/>
+            <field name="name">Basic Subscription Tier (Pending Enterprise Upgrade)</field>
+            <field name="product_uom_qty">1.0</field>
+            <field name="price_unit">29.00</field>
+            <field name="is_recurring">True</field>
+        </record>
+
+        <record id="demo_subscription_approval_pending" model="sale.order">
+            <field name="partner_id" ref="base.res_partner_3"/>
+            <field name="user_id" ref="base.user_demo"/>
+            <field name="is_subscription">True</field>
+            <field name="subscription_plan_id" ref="subscription_suite.demo_plan_basic"/>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="subscription_state">active</field>
+            <field name="subscription_start_date" eval="(DateTime.today() - relativedelta(months=1)).strftime('%Y-%m-%d')"/>
+            <field name="last_invoice_date" eval="(DateTime.today() - relativedelta(days=5)).strftime('%Y-%m-%d')"/>
+            <field name="next_invoice_date" eval="(DateTime.today() + relativedelta(days=25)).strftime('%Y-%m-%d')"/>
+        </record>
+
+        <record id="demo_subscription_approval_pending_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_approval_pending"/>
+            <field name="product_id" ref="subscription_suite.demo_product_basic"/>
+            <field name="name">Basic Subscription Tier (Approval Request Pending)</field>
+            <field name="product_uom_qty">1.0</field>
+            <field name="price_unit">29.00</field>
+            <field name="is_recurring">True</field>
+        </record>
+
+        <record id="demo_plan_change_request_pending" model="subscription.plan.change.request">
+            <field name="name">PCR/DEMO/PENDING</field>
+            <field name="subscription_id" ref="demo_subscription_approval_pending"/>
+            <field name="current_plan_id" ref="subscription_suite.demo_plan_basic"/>
+            <field name="requested_plan_id" ref="demo_plan_enterprise"/>
+            <field name="requested_effective_date" eval="(DateTime.today() + relativedelta(days=25)).strftime('%Y-%m-%d')"/>
+            <field name="requested_timing">next_period</field>
+            <field name="change_type">upgrade</field>
+            <field name="state">pending</field>
+            <field name="requested_by_id" ref="base.user_demo"/>
+            <field name="requested_on" eval="(DateTime.today() - relativedelta(days=1)).strftime('%Y-%m-%d 09:00:00')"/>
+            <field name="old_mrr">29.00</field>
+            <field name="new_mrr">89.00</field>
+        </record>
+
+        <record id="demo_subscription_approval_rejected" model="sale.order">
+            <field name="partner_id" ref="base.res_partner_4"/>
+            <field name="user_id" ref="base.user_demo"/>
+            <field name="is_subscription">True</field>
+            <field name="subscription_plan_id" ref="demo_plan_enterprise"/>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="subscription_state">active</field>
+            <field name="subscription_start_date" eval="(DateTime.today() - relativedelta(months=4)).strftime('%Y-%m-%d')"/>
+            <field name="last_invoice_date" eval="(DateTime.today() - relativedelta(days=15)).strftime('%Y-%m-%d')"/>
+            <field name="next_invoice_date" eval="(DateTime.today() + relativedelta(days=15)).strftime('%Y-%m-%d')"/>
+        </record>
+
+        <record id="demo_subscription_approval_rejected_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_approval_rejected"/>
+            <field name="product_id" ref="demo_product_enterprise"/>
+            <field name="name">Enterprise Subscription Tier (Rejected Downgrade Request)</field>
+            <field name="product_uom_qty">1.0</field>
+            <field name="price_unit">89.00</field>
+            <field name="is_recurring">True</field>
+        </record>
+
+        <record id="demo_plan_change_request_rejected" model="subscription.plan.change.request">
+            <field name="name">PCR/DEMO/REJECTED</field>
+            <field name="subscription_id" ref="demo_subscription_approval_rejected"/>
+            <field name="current_plan_id" ref="demo_plan_enterprise"/>
+            <field name="requested_plan_id" ref="subscription_suite.demo_plan_basic"/>
+            <field name="requested_effective_date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+            <field name="requested_timing">immediate</field>
+            <field name="change_type">downgrade</field>
+            <field name="state">rejected</field>
+            <field name="requested_by_id" ref="base.user_demo"/>
+            <field name="requested_on" eval="(DateTime.today() - relativedelta(days=3)).strftime('%Y-%m-%d 10:00:00')"/>
+            <field name="rejected_by_id" ref="base.user_admin"/>
+            <field name="rejected_on" eval="(DateTime.today() - relativedelta(days=2)).strftime('%Y-%m-%d 15:00:00')"/>
+            <field name="rejection_reason">Customer is inside a commercial review period; downgrade requires account manager approval.</field>
+            <field name="old_mrr">89.00</field>
+            <field name="new_mrr">29.00</field>
+        </record>
+
+        <record id="demo_subscription_approval_cancelled" model="sale.order">
+            <field name="partner_id" ref="base.res_partner_1"/>
+            <field name="user_id" ref="base.user_demo"/>
+            <field name="is_subscription">True</field>
+            <field name="subscription_plan_id" ref="subscription_suite.demo_plan_basic"/>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="subscription_state">active</field>
+            <field name="subscription_start_date" eval="(DateTime.today() - relativedelta(months=1)).strftime('%Y-%m-%d')"/>
+            <field name="last_invoice_date" eval="(DateTime.today() - relativedelta(days=12)).strftime('%Y-%m-%d')"/>
+            <field name="next_invoice_date" eval="(DateTime.today() + relativedelta(days=18)).strftime('%Y-%m-%d')"/>
+        </record>
+
+        <record id="demo_subscription_approval_cancelled_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_approval_cancelled"/>
+            <field name="product_id" ref="subscription_suite.demo_product_basic"/>
+            <field name="name">Basic Subscription Tier (Cancelled Upgrade Request)</field>
+            <field name="product_uom_qty">1.0</field>
+            <field name="price_unit">29.00</field>
+            <field name="is_recurring">True</field>
+        </record>
+
+        <record id="demo_plan_change_request_cancelled" model="subscription.plan.change.request">
+            <field name="name">PCR/DEMO/CANCELLED</field>
+            <field name="subscription_id" ref="demo_subscription_approval_cancelled"/>
+            <field name="current_plan_id" ref="subscription_suite.demo_plan_basic"/>
+            <field name="requested_plan_id" ref="demo_plan_enterprise"/>
+            <field name="requested_effective_date" eval="(DateTime.today() + relativedelta(days=18)).strftime('%Y-%m-%d')"/>
+            <field name="requested_timing">next_period</field>
+            <field name="change_type">upgrade</field>
+            <field name="state">cancelled</field>
+            <field name="requested_by_id" ref="base.user_demo"/>
+            <field name="requested_on" eval="(DateTime.today() - relativedelta(days=4)).strftime('%Y-%m-%d 11:00:00')"/>
+            <field name="old_mrr">29.00</field>
+            <field name="new_mrr">89.00</field>
+        </record>
+    </data>
+</odoo>

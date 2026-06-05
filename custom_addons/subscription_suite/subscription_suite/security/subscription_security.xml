@@ -41,5 +41,41 @@
             <field name="model_id" ref="model_subscription_plan"/>
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
+
+        <record id="subscription_cancellation_request_personal_rule" model="ir.rule">
+            <field name="name">Personal Cancellation Requests</field>
+            <field name="model_id" ref="model_subscription_cancellation_request"/>
+            <field name="groups" eval="[(4, ref('subscription_suite.group_subscription_user'))]"/>
+            <field name="domain_force">[
+                '|',
+                ('requested_by_id', '=', user.id),
+                ('subscription_id.user_id', '=', user.id)
+            ]</field>
+        </record>
+
+        <record id="subscription_cancellation_request_manager_rule" model="ir.rule">
+            <field name="name">All Cancellation Requests</field>
+            <field name="model_id" ref="model_subscription_cancellation_request"/>
+            <field name="groups" eval="[(4, ref('subscription_suite.group_subscription_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+
+        <record id="subscription_lifecycle_request_personal_rule" model="ir.rule">
+            <field name="name">Personal Lifecycle Requests</field>
+            <field name="model_id" ref="model_subscription_lifecycle_request"/>
+            <field name="groups" eval="[(4, ref('subscription_suite.group_subscription_user'))]"/>
+            <field name="domain_force">[
+                '|',
+                ('requested_by_id', '=', user.id),
+                ('subscription_id.user_id', '=', user.id)
+            ]</field>
+        </record>
+
+        <record id="subscription_lifecycle_request_manager_rule" model="ir.rule">
+            <field name="name">All Lifecycle Requests</field>
+            <field name="model_id" ref="model_subscription_lifecycle_request"/>
+            <field name="groups" eval="[(4, ref('subscription_suite.group_subscription_manager'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
     </data>
 </odoo>

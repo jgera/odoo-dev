@@ -31,7 +31,7 @@ The strongest differentiator remains the current architectural decision: subscri
 | Addon | Current purpose | State |
 | --- | --- | --- |
 | `subscription_suite` | Core plans, subscription states, sale order fields, recurring invoice cron, cancellation wizard, logs, MRR movement, demo data, menus | Implemented foundation |
-| `subscription_suite_billing` | Proration model, plan change wizard, payment-token auto-collection cron | Partial enterprise billing |
+| `subscription_suite_billing` | Proration model, immediate and next-period plan change wizard, payment-token auto-collection cron | Partial enterprise billing |
 | `subscription_suite_dunning` | Dunning policies, dunning steps, failed-payment state handling, recovery cron | Initial dunning engine |
 | `subscription_suite_portal` | Portal list/detail pages and invoice history display | Read-only portal plus initial polish |
 | `subscription_suite_reports` | SQL report model, MRR/ARR/churn measures, MRR movement views | Basic analytics foundation |
@@ -44,7 +44,7 @@ The strongest differentiator remains the current architectural decision: subscri
 - Subscription plans include recurring products, trial days, setup fee, pause rules, upgrade/downgrade paths, cancellation policy, and monthly equivalent pricing.
 - Core subscription actions exist: confirm, convert trial, pause, resume, cancel, expire.
 - Recurring invoice cron creates invoices from subscription orders.
-- Plan change updates the subscription plan, billing interval, recurring lines, proration, and MRR movement.
+- Plan change supports immediate prorated changes and scheduled next-period changes that apply before renewal invoicing.
 - Dunning policy and dunning policy line models exist.
 - Customer portal has subscription list/detail pages and invoice history.
 - Reporting includes SQL-backed subscription analysis and MRR movement reporting.
@@ -60,10 +60,10 @@ These are not criticisms; they are the exact next enterprise work.
 | Invoice generation | Billing attempts now track success, failure, skipped state, invoice link, period, amount, error message, failure category, retryability, retry timing, retry exhaustion, failure counts, first/last failure times, recovery notes, and chatter logs | Auditability is improved; remaining reporting work belongs in broader analytics |
 | Payment collection | Basic token transaction creation exists, but no retry campaign, provider-specific result handling, attempt ledger, or backup payment method | Payment failures become opaque |
 | Dunning | Policy cron exists, but no attempt model, no recovery metrics, limited customer recovery workflow | Hard to operate at scale |
-| Portal | Mostly read-only; no self-service pause/resume/cancel/change-plan/update-payment flows | Customers still need support for common requests |
+| Portal | Subscription, invoice, pending plan change, lifecycle, cancellation, and approval visibility exists; customers can request next-period plan changes, pause/resume, and cancellations through approval-gated requests | Update-payment still requires support |
 | Pause/resume | Pause/resume now adjusts the next invoice date by paused duration and respects max pause days | Remaining work is mostly portal self-service and support workflow polish |
 | Cancellation | Immediate and end-of-period cancellation now exist, including scheduled cancellation reversal and cron finalization | Remaining work is mostly renewal/upsell lifecycle parity and optional approvals |
-| Renewals/upsells | Linked renewal and upsell quotations, sales history, upsell effective date, proration ledger, and upgrade/downgrade path checks now exist; remaining work is invoice posting for proration, approvals, and deeper sales-policy controls | Sales workflow parity is improving, but advanced billing automation is still needed |
+| Renewals/upsells | Linked renewal and upsell quotations, sales history, upsell effective date, proration ledger, draft adjustment invoices/credit notes, immediate and scheduled next-period plan changes, approval-gated plan change requests, upgrade/downgrade path checks, and minimum commitment enforcement now exist; remaining work is deeper sales-policy controls | Sales workflow parity is improving, but advanced policy depth is still needed |
 | Usage/seats | No usage-based billing, seat metering, tiered pricing, or quantity sync | Weak for SaaS and B2B subscriptions |
 | Analytics | Basic MRR/ARR exists; no NRR, GRR, retention cohorts, forecast, LTV, trial conversion, or dashboard | Management reporting is incomplete |
 | Revenue recognition | Not implemented | Finance/compliance gap for annual/prepaid contracts |
@@ -389,14 +389,15 @@ For every phase, update or create:
    - Add `action_upsell_subscription` - done.
    - Create linked upsell quotation - done.
    - Add recurring products to existing subscription after confirmation - done.
-   - Apply prorated price for remaining period - ledger foundation done.
+   - Apply prorated price for remaining period - draft adjustment invoice/credit-note generation done.
    - Log MRR expansion movement - done.
 
 3. Structured plan change workflow
    - Strengthen current plan-change wizard.
-   - Support immediate vs next-period effective date.
+   - Support immediate vs next-period effective date - done for immediate proration and scheduled renewal-boundary changes.
    - Support upgrade/downgrade path policy - done for configured plan paths.
-   - Support cancellation-policy constraints and minimum commitments.
+   - Support approval gates for restricted plan changes - done with auditable plan change request records.
+   - Support cancellation-policy constraints and minimum commitments - minimum commitment done for cancellation and downgrade.
 
 4. Pause/resume correctness
    - Complete paused-period billing-date adjustment - done.
@@ -415,6 +416,8 @@ For every phase, update or create:
 - Add subscriptions ready for renewal, upsell, downgrade, pause/resume, and scheduled cancellation.
 - Add demo renewal and upsell quotations linked to subscriptions - done.
 - Add cancellation reasons that cover price, missing feature, competitor, non-payment, and end of project.
+- Add approval-gated plan change records for pending, rejected, and cancelled requests - done.
+- Add a scheduled next-period plan change subscription using the Enterprise Monthly demo plan - done.
 
 **Documentation updates:**
 
@@ -427,6 +430,9 @@ For every phase, update or create:
 - Sales team can renew and upsell subscriptions using Odoo-style quotations - initial foundation done.
 - Sales history clearly shows related orders and statuses - initial foundation done.
 - Plan changes cannot violate plan-defined upgrade/downgrade rules.
+- Cancellation and downgrade cannot violate minimum commitment periods.
+- Next-period plan changes apply before the renewal invoice and do not create proration documents.
+- Restricted plan changes create approval requests and only apply after manager approval.
 - Pause/resume does not corrupt next invoice date.
 - Cancellations respect plan policy.
 
@@ -442,6 +448,7 @@ For every phase, update or create:
 **Continuous validation:**
 
 - Demo data makes every lifecycle state reachable without custom shell commands.
+- Demo data includes Enterprise Monthly, a pending scheduled plan change, and pending/rejected/cancelled plan change approval requests.
 - Tests verify every allowed and blocked transition.
 
 ---
@@ -457,32 +464,45 @@ For every phase, update or create:
 - Subscription detail.
 - Recurring items.
 - Invoice history.
+- Scheduled plan change visibility on list and detail pages.
+- Plan change request status visibility on detail pages.
+- Customer-initiated next-period plan change requests for configured upgrade/downgrade paths.
+- Pause/resume lifecycle request status visibility on detail pages.
+- Customer-initiated pause/resume requests with backend manager approval.
+- Scheduled cancellation and cancellation request status visibility on detail pages.
+- Customer-initiated cancellation requests with reason capture and backend manager approval.
 
 **Build items:**
 
-1. Portal actions
-   - Cancel subscription.
-   - Pause subscription.
-   - Resume subscription.
-   - Request plan change.
+1. Read-only subscription workspace - initial baseline done
+   - Show current plan, billing period, MRR, recurring amount, next invoice, auto-pay, and payment method status.
+   - Show scheduled plan changes before renewal.
+   - Show plan change approval requests with status.
+   - Show invoice history through Odoo portal invoice links.
+
+2. Portal actions
+   - Request cancellation - done as approval-gated cancellation requests.
+   - Request pause - done as approval-gated lifecycle requests.
+   - Request resume - done as approval-gated lifecycle requests.
+   - Request plan change - done for next-period approval requests.
    - Download invoices through Odoo portal URLs.
    - Update payment method or route to payment-token setup.
 
-2. Action safety
+3. Action safety
    - CSRF validation.
    - Access-token support where appropriate.
    - Confirmation pages.
    - Plan-policy checks.
    - Chatter and subscription log entries for all customer actions.
 
-3. Retention flow
+4. Retention flow
    - Cancellation reason selection.
    - Optional feedback.
    - Offer pause instead of cancel.
    - Offer downgrade instead of cancel.
    - Optionally support configured retention offers later.
 
-4. Portal UX
+5. Portal UX
    - Status-aware action buttons.
    - Clear billing timeline.
    - Payment failure callout.
@@ -493,6 +513,8 @@ For every phase, update or create:
 - Add portal users for active, past-due, paused, cancelled, and trial subscriptions.
 - Add invoices with paid, open, partial, and in-payment states where feasible.
 - Add portal-visible subscriptions with and without saved payment methods.
+- Add cancellation request demo records - done with `demo_cancellation_request_pending`.
+- Add lifecycle request demo records - done with `demo_lifecycle_request_resume_pending`.
 
 **Documentation updates:**
 
@@ -504,6 +526,13 @@ For every phase, update or create:
 **Acceptance gates:**
 
 - Portal users can only act on their own subscriptions.
+- Portal users can see scheduled plan changes and plan change request status for their own subscriptions.
+- Portal users can request allowed next-period plan changes without directly changing the subscription.
+- Portal users can request pause/resume without directly changing lifecycle state.
+- Portal users can request cancellation without directly cancelling the subscription.
+- Managers can process plan-change, lifecycle, and cancellation requests from list/form/activity views.
+- Request records create manager review activities and close those activities when approved, rejected, or cancelled.
+- Subscription records expose request history through stat buttons so managers can audit customer-requested changes from the subscription itself.
 - Portal action permissions match plan policy.
 - Every action logs who did what and when.
 - Portal cancellation cannot bypass configured close reasons.

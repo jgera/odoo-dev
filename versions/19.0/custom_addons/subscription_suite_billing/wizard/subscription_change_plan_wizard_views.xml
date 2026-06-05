@@ -11,7 +11,8 @@
                     <field name="currency_id" invisible="1"/>
                     <field name="current_plan_id"/>
                     <field name="new_plan_id" domain="[('id', 'in', available_plan_ids)]" options="{'no_create': True}"/>
-                    <field name="effective_date"/>
+                    <field name="change_timing" widget="radio"/>
+                    <field name="effective_date" readonly="change_timing == 'next_period'"/>
                     <field name="change_type" invisible="not new_plan_id"/>
                 </group>
                 

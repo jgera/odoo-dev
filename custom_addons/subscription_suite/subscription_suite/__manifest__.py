@@ -25,6 +25,8 @@ Core module for subscription management. Features include:
         'data/sequence_data.xml',
         'data/cron_data.xml',
         'views/subscription_cancel_reason_views.xml',
+        'views/subscription_cancellation_request_views.xml',
+        'views/subscription_lifecycle_request_views.xml',
         'views/subscription_plan_views.xml',
         'views/sale_order_views.xml',
         'wizard/subscription_close_wizard_views.xml',

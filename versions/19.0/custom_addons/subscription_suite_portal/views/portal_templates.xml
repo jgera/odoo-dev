@@ -39,6 +39,7 @@
                     <tr class="active">
                         <th>Reference #</th>
                         <th>Plan</th>
+                        <th class="text-end">Plan Change</th>
                         <th class="text-end">Next Invoice</th>
                         <th class="text-center">Status</th>
                         <th class="text-end">MRR</th>
@@ -49,6 +50,12 @@
                         <tr>
                             <td><a t-attf-href="/my/subscription/#{sub.id}"><t t-out="sub.subscription_code or sub.name"/></a></td>
                             <td><t t-out="sub.subscription_plan_id.name"/></td>
+                            <td class="text-end">
+                                <span t-if="sub.pending_plan_change_id" class="badge text-bg-info">
+                                    <t t-out="sub.pending_plan_change_id.name"/>
+                                </span>
+                                <span t-if="not sub.pending_plan_change_id" class="text-muted">None</span>
+                            </td>
                             <td class="text-end"><span t-field="sub.next_invoice_date"/></td>
                             <td class="text-center">
                                 <span t-if="sub.subscription_state == 'draft'" class="badge text-bg-light"><i class="fa fa-fw fa-pencil"/> Draft</span>
@@ -134,6 +141,12 @@
 
                         <div class="row g-3 mb-4">
                             <div class="col-12 col-md-4">
+                                <div class="text-muted small">Current Plan</div>
+                                <div>
+                                    <span t-field="subscription.subscription_plan_id"/>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
                                 <div class="text-muted small">Current Period</div>
                                 <div>
                                     <span t-field="subscription.current_period_start"/>
@@ -156,6 +169,218 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div t-if="subscription.pending_plan_change_id" class="alert alert-info d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-calendar-check-o mt-1"/>
+                            <div>
+                                <div class="fw-semibold">Scheduled Plan Change</div>
+                                <div>
+                                    <span t-field="subscription.pending_plan_change_type"/>
+                                    to <span t-field="subscription.pending_plan_change_id"/>
+                                    on <span t-field="subscription.pending_plan_change_date"/>.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div t-if="subscription.pending_cancellation" class="alert alert-warning d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-calendar-times-o mt-1"/>
+                            <div>
+                                <div class="fw-semibold">Scheduled Cancellation</div>
+                                <div>
+                                    This subscription is scheduled to cancel on
+                                    <span t-field="subscription.cancellation_effective_date"/>.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div t-if="plan_change_status == 'requested'" class="alert alert-success d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-check mt-1"/>
+                            <div>Plan change request submitted.</div>
+                        </div>
+
+                        <div t-if="plan_change_error" class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+                            <i class="fa fa-fw fa-exclamation-triangle mt-1"/>
+                            <div><t t-out="plan_change_error"/></div>
+                        </div>
+
+                        <div t-if="cancellation_status == 'requested'" class="alert alert-success d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-check mt-1"/>
+                            <div>Cancellation request submitted.</div>
+                        </div>
+
+                        <div t-if="cancellation_error" class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+                            <i class="fa fa-fw fa-exclamation-triangle mt-1"/>
+                            <div><t t-out="cancellation_error"/></div>
+                        </div>
+
+                        <div t-if="lifecycle_status == 'requested'" class="alert alert-success d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-check mt-1"/>
+                            <div>Lifecycle request submitted.</div>
+                        </div>
+
+                        <div t-if="lifecycle_error" class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+                            <i class="fa fa-fw fa-exclamation-triangle mt-1"/>
+                            <div><t t-out="lifecycle_error"/></div>
+                        </div>
+
+                        <div
+                            t-if="subscription.subscription_state == 'active' and available_plan_change_ids and not subscription.pending_plan_change_id and not pending_plan_change_request and not subscription.pending_cancellation and not pending_cancellation_request and not pending_lifecycle_request"
+                            class="border rounded p-3 mb-4"
+                        >
+                            <h3 class="h5">Request Plan Change</h3>
+                            <form method="post" t-att-action="'/my/subscription/%s/plan-change/request' % subscription.id" class="row g-2 align-items-end">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <div class="col-12 col-md-8">
+                                    <label for="new_plan_id" class="form-label">New Plan</label>
+                                    <select id="new_plan_id" name="new_plan_id" class="form-select" required="required">
+                                        <option value="">Select a plan</option>
+                                        <option t-foreach="available_plan_change_ids" t-as="available_plan" t-att-value="available_plan.id">
+                                            <t t-out="available_plan.name"/>
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fa fa-fw fa-exchange"/>
+                                        Request Change
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div
+                            t-if="subscription.subscription_state in ['active', 'paused'] and not pending_lifecycle_request and not subscription.pending_cancellation and not pending_cancellation_request and not pending_plan_change_request"
+                            class="border rounded p-3 mb-4"
+                        >
+                            <h3 class="h5">
+                                <t t-if="subscription.subscription_state == 'active'">Request Pause</t>
+                                <t t-if="subscription.subscription_state == 'paused'">Request Resume</t>
+                            </h3>
+                            <form method="post" t-att-action="'/my/subscription/%s/lifecycle/request' % subscription.id" class="row g-2 align-items-end">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <input t-if="subscription.subscription_state == 'active'" type="hidden" name="request_type" value="pause"/>
+                                <input t-if="subscription.subscription_state == 'paused'" type="hidden" name="request_type" value="resume"/>
+                                <div class="col-12 col-md-8">
+                                    <label for="lifecycle_feedback" class="form-label">Feedback</label>
+                                    <textarea id="lifecycle_feedback" name="feedback" class="form-control" rows="1"></textarea>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <button type="submit" class="btn btn-outline-primary w-100">
+                                        <i t-if="subscription.subscription_state == 'active'" class="fa fa-fw fa-pause"/>
+                                        <i t-if="subscription.subscription_state == 'paused'" class="fa fa-fw fa-play"/>
+                                        Submit Request
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div
+                            t-if="subscription.subscription_state in ['active', 'trial', 'paused', 'past_due'] and cancellation_reason_ids and not subscription.pending_cancellation and not pending_cancellation_request and not pending_lifecycle_request"
+                            class="border rounded p-3 mb-4"
+                        >
+                            <h3 class="h5">Request Cancellation</h3>
+                            <form method="post" t-att-action="'/my/subscription/%s/cancellation/request' % subscription.id" class="row g-2 align-items-end">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <div class="col-12 col-md-5">
+                                    <label for="reason_id" class="form-label">Reason</label>
+                                    <select id="reason_id" name="reason_id" class="form-select" required="required">
+                                        <option value="">Select a reason</option>
+                                        <option t-foreach="cancellation_reason_ids" t-as="cancel_reason" t-att-value="cancel_reason.id">
+                                            <t t-out="cancel_reason.name"/>
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    <label for="feedback" class="form-label">Feedback</label>
+                                    <textarea id="feedback" name="feedback" class="form-control" rows="1"></textarea>
+                                </div>
+                                <div class="col-12 col-md-2">
+                                    <button type="submit" class="btn btn-outline-danger w-100">
+                                        <i class="fa fa-fw fa-times"/>
+                                        Request
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <h3 t-if="lifecycle_requests" class="h5 mt-4">Lifecycle Requests</h3>
+                        <table t-if="lifecycle_requests" class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Request</th>
+                                    <th class="text-center">Action</th>
+                                    <th class="text-end">Requested On</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="lifecycle_requests" t-as="lifecycle_request">
+                                    <td><span t-field="lifecycle_request.name"/></td>
+                                    <td class="text-center"><span t-field="lifecycle_request.request_type"/></td>
+                                    <td class="text-end"><span t-field="lifecycle_request.requested_on"/></td>
+                                    <td class="text-center">
+                                        <span t-if="lifecycle_request.state == 'pending'" class="badge text-bg-info">Pending</span>
+                                        <span t-if="lifecycle_request.state == 'approved'" class="badge text-bg-success">Approved</span>
+                                        <span t-if="lifecycle_request.state == 'rejected'" class="badge text-bg-danger">Rejected</span>
+                                        <span t-if="lifecycle_request.state == 'cancelled'" class="badge text-bg-secondary">Cancelled</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3 t-if="plan_change_requests" class="h5 mt-4">Plan Change Requests</h3>
+                        <table t-if="plan_change_requests" class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Request</th>
+                                    <th>Requested Plan</th>
+                                    <th class="text-center">Type</th>
+                                    <th class="text-end">Effective Date</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="plan_change_requests" t-as="plan_request">
+                                    <td><span t-field="plan_request.name"/></td>
+                                    <td><span t-field="plan_request.requested_plan_id"/></td>
+                                    <td class="text-center"><span t-field="plan_request.change_type"/></td>
+                                    <td class="text-end"><span t-field="plan_request.requested_effective_date"/></td>
+                                    <td class="text-center">
+                                        <span t-if="plan_request.state == 'pending'" class="badge text-bg-info">Pending</span>
+                                        <span t-if="plan_request.state == 'approved'" class="badge text-bg-success">Approved</span>
+                                        <span t-if="plan_request.state == 'rejected'" class="badge text-bg-danger">Rejected</span>
+                                        <span t-if="plan_request.state == 'cancelled'" class="badge text-bg-secondary">Cancelled</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3 t-if="cancellation_requests" class="h5 mt-4">Cancellation Requests</h3>
+                        <table t-if="cancellation_requests" class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Request</th>
+                                    <th>Reason</th>
+                                    <th class="text-end">Effective Date</th>
+                                    <th class="text-center">Policy</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="cancellation_requests" t-as="cancel_request">
+                                    <td><span t-field="cancel_request.name"/></td>
+                                    <td><span t-field="cancel_request.reason_id"/></td>
+                                    <td class="text-end"><span t-field="cancel_request.requested_effective_date"/></td>
+                                    <td class="text-center"><span t-field="cancel_request.requested_policy"/></td>
+                                    <td class="text-center">
+                                        <span t-if="cancel_request.state == 'pending'" class="badge text-bg-info">Pending</span>
+                                        <span t-if="cancel_request.state == 'approved'" class="badge text-bg-success">Approved</span>
+                                        <span t-if="cancel_request.state == 'rejected'" class="badge text-bg-danger">Rejected</span>
+                                        <span t-if="cancel_request.state == 'cancelled'" class="badge text-bg-secondary">Cancelled</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
 
                         <!-- Product Lines -->
                         <h3 class="h5">Subscription Items</h3>

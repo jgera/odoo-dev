@@ -3,6 +3,9 @@ from . import subscription_plan_line
 from . import subscription_log
 from . import subscription_mrr_movement
 from . import subscription_cancel_reason
+from . import subscription_request_mixin
+from . import subscription_cancellation_request
+from . import subscription_lifecycle_request
 from . import sale_order
 from . import sale_order_line
 from . import product_template

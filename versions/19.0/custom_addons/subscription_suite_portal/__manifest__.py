@@ -15,7 +15,7 @@ Allows customers to:
     'author': 'Subscription Suite Contributors',
     'website': 'https://github.com/subscription-suite',
     'license': 'LGPL-3',
-    'depends': ['subscription_suite', 'portal'],
+    'depends': ['subscription_suite_billing', 'portal'],
     'data': [
         'views/portal_templates.xml',
     ],

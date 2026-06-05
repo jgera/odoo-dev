@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_plan_form_inherit_billing_approval" model="ir.ui.view">
+        <field name="name">subscription.plan.form.billing.approval</field>
+        <field name="model">subscription.plan</field>
+        <field name="inherit_id" ref="subscription_suite.view_subscription_plan_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='paths']/group" position="inside">
+                <group string="Approvals">
+                    <field name="approval_required_for_upgrade"/>
+                    <field name="approval_required_for_downgrade"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

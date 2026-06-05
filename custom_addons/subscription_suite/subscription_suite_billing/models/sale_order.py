@@ -15,6 +15,16 @@ class SaleOrder(models.Model):
     billing_locked_at = fields.Datetime(string='Billing Locked At', copy=False, readonly=True)
     billing_locked_by_run_id = fields.Many2one('subscription.billing.run', string='Billing Locked by Run', copy=False, readonly=True)
     setup_fee_invoice_id = fields.Many2one('account.move', string='Setup Fee Invoice')
+    pending_plan_change_id = fields.Many2one('subscription.plan', string='Pending Plan Change', copy=False)
+    pending_plan_change_date = fields.Date(string='Pending Plan Change Date', copy=False, index=True)
+    pending_plan_change_type = fields.Selection([
+        ('upgrade', 'Upgrade'),
+        ('downgrade', 'Downgrade'),
+    ], string='Pending Plan Change Type', copy=False)
+    plan_change_request_count = fields.Integer(
+        string='Plan Change Requests',
+        compute='_compute_plan_change_request_count',
+    )
 
     def _compute_proration_count(self):
         for record in self:
@@ -23,6 +33,16 @@ class SaleOrder(models.Model):
     def _compute_billing_attempt_count(self):
         for record in self:
             record.billing_attempt_count = len(record.billing_attempt_ids)
+
+    def _compute_plan_change_request_count(self):
+        grouped = self.env['subscription.plan.change.request']._read_group(
+            [('subscription_id', 'in', self.ids)],
+            ['subscription_id'],
+            ['__count'],
+        )
+        counts = {subscription.id: count for subscription, count in grouped}
+        for record in self:
+            record.plan_change_request_count = counts.get(record.id, 0)
 
     def action_change_plan(self):
         self.ensure_one()
@@ -45,6 +65,17 @@ class SaleOrder(models.Model):
             'type': 'ir.actions.act_window',
             'res_model': 'subscription.billing.attempt',
             'view_mode': 'list,form',
+            'domain': [('subscription_id', '=', self.id)],
+            'context': {'default_subscription_id': self.id},
+        }
+
+    def action_view_subscription_plan_change_requests(self):
+        self.ensure_one()
+        return {
+            'name': _('Plan Change Requests'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.plan.change.request',
+            'view_mode': 'list,form,activity',
             'domain': [('subscription_id', '=', self.id)],
             'context': {'default_subscription_id': self.id},
         }
@@ -130,6 +161,9 @@ class SaleOrder(models.Model):
 
     def _generate_subscription_invoice(self, billing_run=None):
         self.ensure_one()
+        if self.pending_plan_change_id and self.pending_plan_change_date and self.pending_plan_change_date <= fields.Date.today():
+            self._apply_pending_plan_change()
+
         attempt = self._get_or_create_billing_attempt(run=billing_run)
         if billing_run and not attempt.run_id:
             attempt.run_id = billing_run.id
@@ -196,7 +230,10 @@ class SaleOrder(models.Model):
         # Calculate daily rates
         old_plan = self.subscription_plan_id
         old_mrr = self.mrr
-        self._check_plan_change_allowed(old_plan, new_plan, old_mrr)
+        self._check_plan_change_allowed(old_plan, new_plan, old_mrr, effective_date=effective_date)
+        if self._plan_change_requires_approval(old_plan, new_plan, old_mrr=old_mrr):
+            raise ValidationError(_("This plan change requires manager approval. Use the Change Plan wizard to request approval."))
+        self._clear_pending_plan_change()
         period_start = self.current_period_start or self.subscription_start_date
         period_end = self.current_period_end or self.next_invoice_date
         if not period_start or not period_end:
@@ -239,7 +276,253 @@ class SaleOrder(models.Model):
         )
         return proration
 
-    def _check_plan_change_allowed(self, old_plan, new_plan, old_mrr=None):
+    def _get_plan_change_type(self, new_plan, old_mrr=None):
+        self.ensure_one()
+        old_mrr = old_mrr if old_mrr is not None else self.mrr
+        new_mrr = new_plan._get_plan_mrr()
+        return 'upgrade' if new_mrr > old_mrr else 'downgrade'
+
+    def _plan_change_requires_approval(self, old_plan, new_plan, old_mrr=None):
+        self.ensure_one()
+        if self.env.context.get('bypass_plan_change_approval'):
+            return False
+        if not old_plan or not new_plan or old_plan == new_plan:
+            return False
+
+        change_type = self._get_plan_change_type(new_plan, old_mrr=old_mrr)
+        plan_policy_requires_approval = (
+            (change_type == 'upgrade' and old_plan.approval_required_for_upgrade)
+            or (change_type == 'downgrade' and old_plan.approval_required_for_downgrade)
+        )
+        if plan_policy_requires_approval:
+            return True
+        return not self.env.user.has_group('subscription_suite.group_subscription_manager')
+
+    def _request_plan_change_approval(self, new_plan, effective_date=None, change_timing='immediate'):
+        self.ensure_one()
+        new_plan.ensure_one()
+        effective_date = effective_date or self.next_invoice_date or fields.Date.today()
+        old_plan = self.subscription_plan_id
+        old_mrr = self.mrr
+        self._check_plan_change_allowed(old_plan, new_plan, old_mrr, effective_date=effective_date)
+        if not self._plan_change_requires_approval(old_plan, new_plan, old_mrr=old_mrr):
+            return False
+
+        existing_request = self.env['subscription.plan.change.request'].search([
+            ('subscription_id', '=', self.id),
+            ('state', '=', 'pending'),
+        ], limit=1)
+        if existing_request:
+            raise ValidationError(_("This subscription already has a pending plan change request."))
+
+        change_type = self._get_plan_change_type(new_plan, old_mrr=old_mrr)
+        request = self.env['subscription.plan.change.request'].create({
+            'subscription_id': self.id,
+            'current_plan_id': old_plan.id,
+            'requested_plan_id': new_plan.id,
+            'requested_effective_date': effective_date,
+            'requested_timing': change_timing,
+            'change_type': change_type,
+            'old_mrr': old_mrr,
+            'new_mrr': new_plan._get_plan_mrr(),
+        })
+        self.sudo()._log_subscription_event(
+            'plan_changed',
+            _('Plan change request %(request)s created for %(plan)s', request=request.name, plan=new_plan.display_name),
+            old_values={'plan': old_plan.display_name, 'mrr': old_mrr},
+            new_values={
+                'request_id': request.id,
+                'plan': new_plan.display_name,
+                'effective_date': effective_date,
+                'timing': change_timing,
+                'change_type': change_type,
+            },
+        )
+        return request
+
+    def _get_portal_plan_change_options(self):
+        self.ensure_one()
+        current_plan = self.subscription_plan_id
+        if not current_plan:
+            return self.env['subscription.plan'].browse()
+
+        plans = current_plan.upgrade_plan_ids | current_plan.downgrade_plan_ids
+        return plans.filtered(
+            lambda plan: plan.active
+            and plan != current_plan
+            and (not plan.company_id or plan.company_id == self.company_id)
+        )
+
+    def _portal_request_plan_change(self, new_plan, requester):
+        self.ensure_one()
+        new_plan.ensure_one()
+        requester.ensure_one()
+
+        if not self.is_subscription:
+            raise ValidationError(_("Only subscriptions can request plan changes."))
+        if self.subscription_state != 'active':
+            raise ValidationError(_("Only active subscriptions can request plan changes."))
+        if self.pending_plan_change_id:
+            raise ValidationError(_("This subscription already has a scheduled plan change."))
+        if self.pending_cancellation:
+            raise ValidationError(_("This subscription already has a scheduled cancellation."))
+        if not self.next_invoice_date:
+            raise ValidationError(_("A next invoice date is required before requesting a portal plan change."))
+        if new_plan not in self._get_portal_plan_change_options():
+            raise ValidationError(_("Select an allowed plan change option."))
+
+        pending_lifecycle_request = self.env['subscription.lifecycle.request'].search([
+            ('subscription_id', '=', self.id),
+            ('state', '=', 'pending'),
+        ], limit=1)
+        if pending_lifecycle_request:
+            raise ValidationError(_("This subscription already has a pending lifecycle request."))
+
+        pending_cancellation_request = self.env['subscription.cancellation.request'].search([
+            ('subscription_id', '=', self.id),
+            ('state', '=', 'pending'),
+        ], limit=1)
+        if pending_cancellation_request:
+            raise ValidationError(_("This subscription already has a pending cancellation request."))
+
+        existing_request = self.env['subscription.plan.change.request'].search([
+            ('subscription_id', '=', self.id),
+            ('state', '=', 'pending'),
+        ], limit=1)
+        if existing_request:
+            raise ValidationError(_("This subscription already has a pending plan change request."))
+
+        old_plan = self.subscription_plan_id
+        old_mrr = self.mrr
+        effective_date = self.next_invoice_date
+        self._check_plan_change_allowed(
+            old_plan,
+            new_plan,
+            old_mrr,
+            effective_date=effective_date,
+        )
+        change_type = self._get_plan_change_type(new_plan, old_mrr=old_mrr)
+        plan_request = self.env['subscription.plan.change.request'].create({
+            'subscription_id': self.id,
+            'current_plan_id': old_plan.id,
+            'requested_plan_id': new_plan.id,
+            'requested_effective_date': effective_date,
+            'requested_timing': 'next_period',
+            'change_type': change_type,
+            'requested_by_id': requester.id,
+            'old_mrr': old_mrr,
+            'new_mrr': new_plan._get_plan_mrr(),
+        })
+        self.sudo()._log_subscription_event(
+            'plan_changed',
+            _('Portal plan change request %(request)s created for %(plan)s', request=plan_request.name, plan=new_plan.display_name),
+            old_values={'plan': old_plan.display_name, 'mrr': old_mrr},
+            new_values={
+                'request_id': plan_request.id,
+                'plan': new_plan.display_name,
+                'effective_date': effective_date,
+                'timing': 'next_period',
+                'change_type': change_type,
+                'requested_by': requester.display_name,
+            },
+        )
+        return plan_request
+
+    def _clear_pending_plan_change(self):
+        self.write({
+            'pending_plan_change_id': False,
+            'pending_plan_change_date': False,
+            'pending_plan_change_type': False,
+        })
+
+    def action_cancel_pending_plan_change(self):
+        for subscription in self:
+            if not subscription.pending_plan_change_id:
+                continue
+            old_values = {
+                'pending_plan_change_id': subscription.pending_plan_change_id.display_name,
+                'pending_plan_change_date': subscription.pending_plan_change_date,
+                'pending_plan_change_type': subscription.pending_plan_change_type,
+            }
+            subscription._clear_pending_plan_change()
+            subscription._log_subscription_event(
+                'plan_changed',
+                _('Scheduled plan change cancelled'),
+                old_values=old_values,
+            )
+
+    def _schedule_plan_change(self, new_plan, effective_date=None):
+        self.ensure_one()
+        new_plan.ensure_one()
+        if not self.is_subscription:
+            raise ValidationError(_("Only subscriptions can schedule plan changes."))
+        if self.subscription_state != 'active':
+            raise ValidationError(_("Only active subscriptions can schedule plan changes."))
+        if new_plan == self.subscription_plan_id:
+            raise ValidationError(_("The new plan must be different from the current plan."))
+
+        effective_date = effective_date or self.next_invoice_date
+        if not effective_date:
+            raise ValidationError(_("Set a next invoice date before scheduling a next-period plan change."))
+
+        old_mrr = self.mrr
+        self._check_plan_change_allowed(
+            self.subscription_plan_id,
+            new_plan,
+            old_mrr,
+            effective_date=effective_date,
+        )
+        if self._plan_change_requires_approval(self.subscription_plan_id, new_plan, old_mrr=old_mrr):
+            raise ValidationError(_("This plan change requires manager approval. Use the Change Plan wizard to request approval."))
+        change_type = self._get_plan_change_type(new_plan, old_mrr=old_mrr)
+        self.write({
+            'pending_plan_change_id': new_plan.id,
+            'pending_plan_change_date': effective_date,
+            'pending_plan_change_type': change_type,
+        })
+        self._log_subscription_event(
+            'plan_changed',
+            _('Plan change to %(plan)s scheduled for %(date)s', plan=new_plan.display_name, date=effective_date),
+            old_values={'plan': self.subscription_plan_id.display_name, 'mrr': old_mrr},
+            new_values={'plan': new_plan.display_name, 'effective_date': effective_date, 'change_type': change_type},
+        )
+        return True
+
+    def _apply_pending_plan_change(self):
+        self.ensure_one()
+        new_plan = self.pending_plan_change_id
+        if not new_plan:
+            return False
+
+        effective_date = self.pending_plan_change_date or fields.Date.today()
+        old_plan = self.subscription_plan_id
+        old_mrr = self.mrr
+        self._check_plan_change_allowed(old_plan, new_plan, old_mrr, effective_date=effective_date)
+        self._apply_subscription_plan(new_plan)
+        self.invalidate_recordset(['recurring_total', 'mrr'])
+        new_mrr = self.mrr
+        change_type = 'expansion' if new_mrr > old_mrr else 'contraction'
+        self._clear_pending_plan_change()
+        self._log_subscription_event(
+            'plan_changed',
+            _('Scheduled plan change applied from %(old_plan)s to %(new_plan)s', old_plan=old_plan.display_name, new_plan=new_plan.display_name),
+            old_values={'plan': old_plan.display_name, 'mrr': old_mrr},
+            new_values={'plan': new_plan.display_name, 'mrr': new_mrr, 'effective_date': effective_date},
+        )
+        self._log_mrr_movement(
+            change_type,
+            old_mrr,
+            new_mrr,
+            _('MRR %s from scheduled plan change: %s to %s') % (
+                'expansion' if change_type == 'expansion' else 'contraction',
+                old_plan.display_name,
+                new_plan.display_name,
+            ),
+            movement_date=effective_date,
+        )
+        return True
+
+    def _check_plan_change_allowed(self, old_plan, new_plan, old_mrr=None, effective_date=None):
         self.ensure_one()
         if not old_plan or not new_plan or old_plan == new_plan:
             return True
@@ -260,6 +543,8 @@ class SaleOrder(models.Model):
                     'old_plan': old_plan.display_name,
                 }
             )
+        if new_mrr < old_mrr:
+            self._check_minimum_commitment(_('Downgrade'), effective_date=effective_date or fields.Date.today())
         return True
 
     def _create_upsell_proration(self, subscription, old_mrr, new_mrr):
@@ -285,15 +570,20 @@ class SaleOrder(models.Model):
             'period_end': period_end,
             'old_daily_rate': old_mrr / 30.0,
             'new_daily_rate': new_mrr / 30.0,
-            'state': 'applied',
         })
+        proration.action_apply_proration()
         return proration
 
     def _apply_subscription_plan(self, plan):
         self.ensure_one()
         plan.ensure_one()
 
-        self.order_line.filtered('is_recurring').unlink()
+        recurring_lines = self.order_line.filtered('is_recurring')
+        if self.state in ('sale', 'done'):
+            recurring_lines.write({'product_uom_qty': 0.0})
+        else:
+            recurring_lines.unlink()
+
         order_lines = []
         for plan_line in plan.plan_line_ids:
             order_lines.append((0, 0, {

@@ -92,7 +92,14 @@ After an upgrade, validate:
 - Dunning policies open when dunning is installed.
 - Billing Runs, Billing Attempts, Failed Billing, and Repeated Failures menus open when billing is installed.
 - Failed Billing list has Retryable, Needs Manual Fix, Recovery Required, Retry Exhausted, and Repeated Failures filters.
+- Plan Change Requests, Lifecycle Requests, and Cancellation Requests open in list/form/activity views with pending filters, request age, activity assignment, and Open Subscription actions.
+- Subscription forms show manager stat buttons for lifecycle, cancellation, and plan-change request history when those modules are installed.
 - Portal `/my/subscriptions` redirects to login when unauthenticated.
+- Portal subscription list shows plan change status when a subscription has a scheduled plan change.
+- Portal subscription detail shows the current plan, scheduled plan change banner, plan change request statuses, recurring items, and invoice history.
+- Portal subscription detail shows **Request Plan Change** when the subscription is active and its current plan has configured upgrade or downgrade paths.
+- Portal subscription detail shows scheduled cancellation status, cancellation request history, and **Request Cancellation** when cancellation is allowed.
+- Portal subscription detail shows lifecycle request history and **Request Pause** or **Request Resume** when the subscription state allows it.
 
 ## 7. Phase 1 Billing Demo
 
@@ -161,6 +168,58 @@ Immediate cancellation:
 2. Click **Cancel Subscription** and confirm.
 3. Confirm the subscription moves to Cancelled immediately.
 
+Minimum commitment:
+
+1. Configure a plan with **Minimum Commitment Periods** greater than zero.
+2. Open a subscription whose start date is still inside that commitment window.
+3. Attempt to cancel the subscription.
+4. Confirm Odoo blocks the cancellation and shows the commitment end date.
+5. With `subscription_suite_billing` installed, attempt a downgrade before the commitment end date.
+6. Confirm Odoo blocks the downgrade.
+7. Move the subscription start date outside the commitment window in a test database and confirm cancellation is allowed.
+
+Next-period plan change:
+
+1. Open an active subscription with a future **Next Invoice Date**, or use demo record `demo_subscription_pending_plan_change`.
+2. Click **Change Plan**.
+3. Select a different plan and set **Apply** to **Next Billing Period**.
+4. Confirm the change.
+5. Confirm the subscription still shows the current plan and also shows the pending plan, date, and type.
+6. Run the subscription invoice cron on or after the pending date.
+7. Confirm the pending plan is now the active plan, no proration record was created, and the renewal invoice uses the new plan line.
+8. Repeat the setup and click **Cancel Plan Change** to confirm the pending fields are cleared.
+
+Plan change approval:
+
+1. Open `Basic Monthly` or `Enterprise Monthly` and confirm **Require Approval for Upgrades** or **Require Approval for Downgrades** is enabled.
+2. Open an active subscription on that plan.
+3. Click **Change Plan** and choose a plan that matches the restricted direction.
+4. Confirm the change.
+5. Confirm a **Plan Change Request** opens in Pending state and the subscription plan has not changed.
+6. As a subscription manager, approve the request.
+7. For immediate changes, confirm the plan change and proration document were created.
+8. For next-period changes, confirm the subscription now shows the pending plan change and the renewal cron later applies it.
+9. Repeat with **Reject** and **Cancel** to confirm rejected/cancelled requests do not change the subscription.
+
+Demo approval records:
+
+- `demo_plan_change_request_pending`: pending upgrade request from Basic Monthly to Enterprise Monthly.
+- `demo_plan_change_request_rejected`: rejected downgrade request from Enterprise Monthly to Basic Monthly.
+- `demo_plan_change_request_cancelled`: cancelled upgrade request.
+- `demo_subscription_pending_plan_change`: active subscription with an already scheduled next-period upgrade.
+- `demo_cancellation_request_pending`: pending customer cancellation request for the paused demo subscription.
+- `demo_lifecycle_request_resume_pending`: pending customer resume request for the pause/resume demo subscription.
+
+Portal read-only plan change visibility:
+
+1. Log in as a portal customer that can access the demo subscription, or create portal access for the customer on `demo_subscription_pending_plan_change`.
+2. Open `/my/subscriptions`.
+3. Confirm the list shows the subscription and its scheduled target plan in the **Plan Change** column.
+4. Open the subscription detail page.
+5. Confirm the scheduled plan change banner shows the target plan, change type, and effective date.
+6. Confirm **Plan Change Requests** shows pending, rejected, or cancelled request statuses when the subscription has matching request records.
+7. Confirm portal users cannot access another customer's subscription detail URL.
+
 Renewal quotation:
 
 1. Open `demo_subscription_active`.
@@ -181,9 +240,92 @@ Upsell quotation:
 6. Return to the original subscription and confirm the upsell line was added to the subscription.
 7. Confirm MRR increased and the subscription log includes an **Upsold** event.
 8. When `subscription_suite_billing` is installed, confirm a related proration record exists under the subscription proration smart button.
-9. Confirm **Sales History** includes the upsell quotation.
+9. Open the proration record and confirm **Adjustment Invoice** is set for a positive net amount or **Credit Note** is set for a negative net amount.
+10. Confirm **Sales History** includes the upsell quotation.
 
-## 9. Phase Result Log
+## 9. Phase 3 Portal Demo
+
+Read-only portal:
+
+1. Log in as a portal customer that can access a subscription.
+2. Open `/my/subscriptions`.
+3. Confirm each subscription row shows reference, current plan, plan-change status, next invoice, status, and MRR.
+4. Open a subscription detail page.
+5. Confirm current plan, billing period, payment method, auto-pay status, recurring items, invoice history, scheduled plan change, and plan change request history render correctly.
+
+Portal plan change request:
+
+1. Configure the current plan with at least one **Upgrade Plans** or **Downgrade Plans** option.
+2. Open an active subscription for a portal customer on that plan.
+3. Log in as that portal customer and open the subscription detail page.
+4. In **Request Plan Change**, select an allowed target plan and click **Request Change**.
+5. Confirm the portal shows **Plan change request submitted**.
+6. In the backend, open **Subscriptions -> Subscriptions -> Plan Change Requests**.
+7. Confirm a pending request exists with **Apply** set to **Next Billing Period**.
+8. Confirm the subscription itself has not changed plan and has no scheduled plan change yet.
+9. Approve the request as a subscription manager.
+10. Confirm the subscription now shows the scheduled next-period plan change.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover the shared portal request helper, including success, inactive subscriptions, unconfigured paths, duplicate pending requests, and already scheduled plan changes.
+- `subscription_suite_portal` tests cover portal subscription filtering and plan-change visibility context.
+
+Portal pause/resume request:
+
+1. Open an active subscription whose plan allows pausing.
+2. Confirm the subscription does not already have a pending lifecycle, plan change, or cancellation request.
+3. Log in as that portal customer and open the subscription detail page.
+4. In **Request Pause**, optionally enter feedback and submit.
+5. Confirm the portal shows **Lifecycle request submitted**.
+6. In the backend, open **Subscriptions -> Subscriptions -> Lifecycle Requests**.
+7. Approve the request as a subscription manager.
+8. Confirm the subscription moves to Paused.
+9. Open the paused subscription in the portal and submit **Request Resume**.
+10. Approve the resume request and confirm the subscription moves back to Active.
+
+Automated coverage:
+
+- `subscription_suite` lifecycle tests cover portal pause/resume request creation, approval, duplicate blocking, and plan pause-policy enforcement.
+- `subscription_suite` lifecycle tests cover manager request queues, automatic review activities, request age, and subscription stat-button actions.
+- `subscription_suite_portal` tests cover portal lifecycle request status data.
+
+Portal cancellation request:
+
+1. Open an active, trial, paused, or past-due subscription for a portal customer.
+2. Confirm the subscription does not already have **Pending Cancellation** or a pending cancellation request.
+3. Log in as that portal customer and open the subscription detail page.
+4. In **Request Cancellation**, select a reason and optionally enter feedback.
+5. Confirm the portal shows **Cancellation request submitted**.
+6. In the backend, open **Subscriptions -> Subscriptions -> Cancellation Requests**.
+7. Confirm a pending request exists with the selected reason and the plan cancellation policy.
+8. Confirm the subscription itself is not immediately cancelled by the portal request.
+9. Approve the request as a subscription manager.
+10. Confirm immediate policies cancel immediately and end-of-period policies schedule cancellation.
+
+Automated coverage:
+
+- `subscription_suite` lifecycle tests cover the shared portal cancellation helper, duplicate blocking, scheduled-cancellation blocking, minimum commitment enforcement, and manager approval.
+- `subscription_suite_portal` tests cover portal cancellation request status data.
+- `subscription_suite` lifecycle tests cover cancellation request review activities and subscription stat-button actions.
+
+Security checks:
+
+1. Log in as a different portal customer.
+2. Try to open another customer's subscription detail URL.
+3. Confirm Odoo redirects away from the record.
+4. Try to POST a plan-change request for another customer's subscription.
+5. Try to POST a lifecycle request for another customer's subscription.
+6. Try to POST a cancellation request for another customer's subscription.
+7. Confirm no plan change, lifecycle, or cancellation request is created.
+
+Current limitation:
+
+- Portal plan changes are intentionally next-period approval requests only. Immediate prorated changes remain backend-only until payment recovery and customer payment-method flows are stronger.
+- Portal pause/resume requests are approval-gated. The customer portal does not directly change lifecycle state.
+- Portal cancellation requests are approval-gated. The customer portal does not directly cancel subscriptions.
+
+## 10. Phase Result Log
 
 Record phase results in the phase notes or pull request description:
 

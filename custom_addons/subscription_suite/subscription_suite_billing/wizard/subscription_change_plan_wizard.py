@@ -8,6 +8,10 @@ class SubscriptionChangePlanWizard(models.TransientModel):
     subscription_id = fields.Many2one('sale.order', string='Subscription', required=True, readonly=True)
     current_plan_id = fields.Many2one('subscription.plan', string='Current Plan', readonly=True)
     new_plan_id = fields.Many2one('subscription.plan', string='New Plan', required=True)
+    change_timing = fields.Selection([
+        ('immediate', 'Immediately with Proration'),
+        ('next_period', 'Next Billing Period'),
+    ], string='Apply', default='immediate', required=True)
     
     change_type = fields.Selection([
         ('upgrade', 'Upgrade'),
@@ -24,6 +28,14 @@ class SubscriptionChangePlanWizard(models.TransientModel):
     proration_preview = fields.Html(string='Proration Summary', compute='_compute_proration_preview')
     
     currency_id = fields.Many2one('res.currency', related='subscription_id.currency_id')
+
+    @api.onchange('change_timing', 'subscription_id')
+    def _onchange_change_timing(self):
+        for wizard in self:
+            if wizard.change_timing == 'next_period' and wizard.subscription_id:
+                wizard.effective_date = wizard.subscription_id.next_invoice_date or fields.Date.today()
+            elif wizard.change_timing == 'immediate' and not wizard.effective_date:
+                wizard.effective_date = fields.Date.today()
 
     @api.depends('subscription_id', 'current_plan_id')
     def _compute_available_plans(self):
@@ -70,10 +82,17 @@ class SubscriptionChangePlanWizard(models.TransientModel):
                 wizard.charge_amount = 0.0
                 wizard.net_amount = 0.0
 
-    @api.depends('credit_amount', 'charge_amount', 'net_amount', 'change_type')
+    @api.depends('credit_amount', 'charge_amount', 'net_amount', 'change_type', 'change_timing', 'effective_date')
     def _compute_proration_preview(self):
         for wizard in self:
             if wizard.new_plan_id:
+                if wizard.change_timing == 'next_period':
+                    wizard.proration_preview = _(
+                        "<p>The plan change will be scheduled for <b>%(date)s</b>. "
+                        "No proration document is generated because the change applies at the billing boundary.</p>",
+                        date=wizard.effective_date,
+                    )
+                    continue
                 symbol = wizard.currency_id.symbol or '$'
                 if wizard.change_type == 'upgrade':
                     wizard.proration_preview = f"""
@@ -100,6 +119,24 @@ class SubscriptionChangePlanWizard(models.TransientModel):
         self.ensure_one()
         if self.new_plan_id == self.current_plan_id:
             raise ValidationError(_("The new plan must be different from the current plan."))
-            
-        self.subscription_id._execute_plan_change(self.new_plan_id, self.effective_date)
+
+        request = self.subscription_id._request_plan_change_approval(
+            self.new_plan_id,
+            effective_date=self.effective_date,
+            change_timing=self.change_timing,
+        )
+        if request:
+            return {
+                'name': _('Plan Change Request'),
+                'type': 'ir.actions.act_window',
+                'res_model': 'subscription.plan.change.request',
+                'res_id': request.id,
+                'view_mode': 'form',
+                'target': 'current',
+            }
+
+        if self.change_timing == 'next_period':
+            self.subscription_id._schedule_plan_change(self.new_plan_id, self.effective_date)
+        else:
+            self.subscription_id._execute_plan_change(self.new_plan_id, self.effective_date)
         return {'type': 'ir.actions.act_window_close'}

@@ -1,5 +1,6 @@
 from odoo.tests.common import TransactionCase
 from odoo import fields
+from odoo.exceptions import UserError, ValidationError
 from dateutil.relativedelta import relativedelta
 
 class TestSubscriptionLifecycle(TransactionCase):
@@ -121,6 +122,117 @@ class TestSubscriptionLifecycle(TransactionCase):
         self.assertEqual(sub.resume_date, fields.Date.today())
         self.assertEqual(sub.next_invoice_date, original_next_invoice_date + relativedelta(days=10))
 
+    def test_portal_pause_request_creates_pending_request(self):
+        sub = self._create_active_subscription()
+
+        request = sub.sudo()._portal_request_lifecycle_action(
+            'pause',
+            'Need a short break',
+            self.env.user,
+        )
+
+        self.assertTrue(request)
+        self.assertEqual(request.state, 'pending')
+        self.assertEqual(request.subscription_id, sub)
+        self.assertEqual(request.request_type, 'pause')
+        self.assertEqual(request.feedback, 'Need a short break')
+        self.assertEqual(request.requested_by_id, self.env.user)
+        self.assertEqual(sub.subscription_state, 'active')
+
+    def test_portal_pause_request_approval_pauses_subscription(self):
+        sub = self._create_active_subscription()
+        request = sub.sudo()._portal_request_lifecycle_action(
+            'pause',
+            'Pause requested',
+            self.env.user,
+        )
+
+        request.with_user(self.env.ref('base.user_admin')).action_approve()
+        request.invalidate_recordset()
+        sub.invalidate_recordset()
+
+        self.assertEqual(request.state, 'approved')
+        self.assertEqual(sub.subscription_state, 'paused')
+        self.assertEqual(sub.pause_date, fields.Date.today())
+
+    def test_manager_lifecycle_queue_activity_and_subscription_actions(self):
+        sub = self._create_active_subscription()
+        request = sub.sudo()._portal_request_lifecycle_action(
+            'pause',
+            'Pause requested',
+            self.env.user,
+        )
+
+        activity = self.env['mail.activity'].search([
+            ('res_model', '=', 'subscription.lifecycle.request'),
+            ('res_id', '=', request.id),
+            ('summary', '=', 'Review subscription request'),
+        ])
+        self.assertTrue(activity)
+        self.assertEqual(request.request_age_days, 0)
+
+        action = sub.action_view_subscription_lifecycle_requests()
+        self.assertEqual(action['res_model'], 'subscription.lifecycle.request')
+        self.assertIn(('subscription_id', '=', sub.id), action['domain'])
+        self.assertEqual(sub.lifecycle_request_count, 1)
+
+        open_action = request.action_open_subscription()
+        self.assertEqual(open_action['res_model'], 'sale.order')
+        self.assertEqual(open_action['res_id'], sub.id)
+
+        request.with_user(self.env.ref('base.user_admin')).action_approve()
+        self.assertFalse(self.env['mail.activity'].search([
+            ('res_model', '=', 'subscription.lifecycle.request'),
+            ('res_id', '=', request.id),
+            ('summary', '=', 'Review subscription request'),
+        ]))
+
+    def test_portal_resume_request_approval_resumes_subscription(self):
+        sub = self._create_active_subscription()
+        original_next_invoice_date = sub.next_invoice_date
+        sub.action_pause_subscription()
+        sub.write({'pause_date': fields.Date.today() - relativedelta(days=5)})
+
+        request = sub.sudo()._portal_request_lifecycle_action(
+            'resume',
+            'Resume requested',
+            self.env.user,
+        )
+        request.with_user(self.env.ref('base.user_admin')).action_approve()
+        request.invalidate_recordset()
+        sub.invalidate_recordset()
+
+        self.assertEqual(request.state, 'approved')
+        self.assertEqual(sub.subscription_state, 'active')
+        self.assertEqual(sub.resume_date, fields.Date.today())
+        self.assertEqual(sub.next_invoice_date, original_next_invoice_date + relativedelta(days=5))
+
+    def test_portal_lifecycle_request_blocks_duplicate_pending_request(self):
+        sub = self._create_active_subscription()
+        sub.sudo()._portal_request_lifecycle_action(
+            'pause',
+            'First request',
+            self.env.user,
+        )
+
+        with self.assertRaises(ValidationError):
+            sub.sudo()._portal_request_lifecycle_action(
+                'pause',
+                'Second request',
+                self.env.user,
+            )
+
+    def test_portal_pause_request_respects_plan_pause_policy(self):
+        self.plan.pause_allowed = False
+        sub = self._create_active_subscription()
+
+        with self.assertRaises(ValidationError):
+            sub.sudo()._portal_request_lifecycle_action(
+                'pause',
+                'Pause not allowed',
+                self.env.user,
+            )
+
     def test_end_of_period_cancellation_is_scheduled_then_processed(self):
         sub = self._create_active_subscription()
         effective_date = sub.next_invoice_date
@@ -184,6 +296,159 @@ class TestSubscriptionLifecycle(TransactionCase):
         self.assertEqual(sub.subscription_state, 'cancelled')
         self.assertFalse(sub.pending_cancellation)
         self.assertEqual(sub.cancellation_date, fields.Date.today())
+
+    def test_minimum_commitment_blocks_early_cancellation(self):
+        committed_plan = self.env['subscription.plan'].create({
+            'name': 'Committed Monthly',
+            'code': 'COMMITTED-MONTHLY',
+            'billing_interval_count': 1,
+            'billing_interval_unit': 'month',
+            'trial_days': 0,
+            'min_commitment_periods': 3,
+        })
+        sub = self._create_active_subscription(plan=committed_plan)
+        sub.write({
+            'subscription_start_date': fields.Date.today() - relativedelta(months=1),
+            'next_invoice_date': fields.Date.today() + relativedelta(days=15),
+        })
+
+        with self.assertRaises(UserError):
+            sub._action_cancel(reason_id=self.cancel_reason.id)
+
+        self.assertEqual(sub.subscription_state, 'active')
+
+    def test_minimum_commitment_allows_cancellation_after_commitment_end(self):
+        committed_plan = self.env['subscription.plan'].create({
+            'name': 'Expired Commitment Monthly',
+            'code': 'EXPIRED-COMMITMENT-MONTHLY',
+            'billing_interval_count': 1,
+            'billing_interval_unit': 'month',
+            'trial_days': 0,
+            'min_commitment_periods': 3,
+        })
+        sub = self._create_active_subscription(plan=committed_plan)
+        sub.write({
+            'subscription_start_date': fields.Date.today() - relativedelta(months=4),
+        })
+
+        sub._action_cancel(reason_id=self.cancel_reason.id)
+
+        self.assertEqual(sub.subscription_state, 'cancelled')
+
+    def test_portal_cancellation_request_creates_pending_request(self):
+        sub = self._create_active_subscription()
+
+        request = sub.sudo()._portal_request_cancellation(
+            self.cancel_reason,
+            'Too expensive',
+            self.env.user,
+        )
+
+        self.assertTrue(request)
+        self.assertEqual(request.state, 'pending')
+        self.assertEqual(request.subscription_id, sub)
+        self.assertEqual(request.reason_id, self.cancel_reason)
+        self.assertEqual(request.feedback, 'Too expensive')
+        self.assertEqual(request.requested_policy, 'end_of_period')
+        self.assertEqual(request.requested_effective_date, sub.next_invoice_date)
+        self.assertEqual(request.requested_by_id, self.env.user)
+        self.assertEqual(sub.subscription_state, 'active')
+        self.assertFalse(sub.pending_cancellation)
+
+    def test_portal_cancellation_request_approval_schedules_cancellation(self):
+        sub = self._create_active_subscription()
+        request = sub.sudo()._portal_request_cancellation(
+            self.cancel_reason,
+            'Cancel at renewal',
+            self.env.user,
+        )
+
+        request.with_user(self.env.ref('base.user_admin')).action_approve()
+        request.invalidate_recordset()
+        sub.invalidate_recordset()
+
+        self.assertEqual(request.state, 'approved')
+        self.assertEqual(sub.subscription_state, 'active')
+        self.assertTrue(sub.pending_cancellation)
+        self.assertEqual(sub.cancellation_effective_date, request.requested_effective_date)
+        self.assertEqual(sub.cancellation_reason_id, self.cancel_reason)
+
+    def test_manager_cancellation_queue_activity_and_subscription_actions(self):
+        sub = self._create_active_subscription()
+        request = sub.sudo()._portal_request_cancellation(
+            self.cancel_reason,
+            'Cancel at renewal',
+            self.env.user,
+        )
+
+        self.assertTrue(self.env['mail.activity'].search([
+            ('res_model', '=', 'subscription.cancellation.request'),
+            ('res_id', '=', request.id),
+            ('summary', '=', 'Review subscription request'),
+        ]))
+        self.assertEqual(request.request_age_days, 0)
+
+        action = sub.action_view_subscription_cancellation_requests()
+        self.assertEqual(action['res_model'], 'subscription.cancellation.request')
+        self.assertIn(('subscription_id', '=', sub.id), action['domain'])
+        self.assertEqual(sub.cancellation_request_count, 1)
+
+        open_action = request.action_open_subscription()
+        self.assertEqual(open_action['res_model'], 'sale.order')
+        self.assertEqual(open_action['res_id'], sub.id)
+
+    def test_portal_cancellation_request_blocks_duplicate_pending_request(self):
+        sub = self._create_active_subscription()
+        sub.sudo()._portal_request_cancellation(
+            self.cancel_reason,
+            'First request',
+            self.env.user,
+        )
+
+        with self.assertRaises(ValidationError):
+            sub.sudo()._portal_request_cancellation(
+                self.cancel_reason,
+                'Second request',
+                self.env.user,
+            )
+
+    def test_portal_cancellation_request_blocks_scheduled_cancellation(self):
+        sub = self._create_active_subscription()
+        sub._action_schedule_cancel(
+            reason_id=self.cancel_reason.id,
+            feedback='Already scheduled',
+            effective_date=sub.next_invoice_date,
+            policy='end_of_period',
+        )
+
+        with self.assertRaises(ValidationError):
+            sub.sudo()._portal_request_cancellation(
+                self.cancel_reason,
+                'Cancel again',
+                self.env.user,
+            )
+
+    def test_portal_cancellation_request_respects_minimum_commitment(self):
+        committed_plan = self.env['subscription.plan'].create({
+            'name': 'Portal Committed Monthly',
+            'code': 'PORTAL-COMMITTED-MONTHLY',
+            'billing_interval_count': 1,
+            'billing_interval_unit': 'month',
+            'trial_days': 0,
+            'min_commitment_periods': 3,
+        })
+        sub = self._create_active_subscription(plan=committed_plan)
+        sub.write({
+            'subscription_start_date': fields.Date.today() - relativedelta(months=1),
+            'next_invoice_date': fields.Date.today() + relativedelta(days=15),
+        })
+
+        with self.assertRaises(UserError):
+            sub.sudo()._portal_request_cancellation(
+                self.cancel_reason,
+                'Still committed',
+                self.env.user,
+            )
 
     def test_renewal_quote_creation_and_confirmation_extends_subscription(self):
         sub = self._create_active_subscription()

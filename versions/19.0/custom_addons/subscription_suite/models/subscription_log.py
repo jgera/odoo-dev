@@ -27,6 +27,8 @@ class SubscriptionLog(models.Model):
         ('renewal_quote_created', 'Renewal Quote Created'),
         ('upsell_quote_created', 'Upsell Quote Created'),
         ('upsold', 'Upsold'),
+        ('lifecycle_requested', 'Lifecycle Requested'),
+        ('cancellation_requested', 'Cancellation Requested'),
         ('cancellation_scheduled', 'Cancellation Scheduled'),
         ('cancellation_reversed', 'Cancellation Reversed'),
         ('cancelled', 'Cancelled'),

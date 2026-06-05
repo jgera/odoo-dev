@@ -49,6 +49,14 @@
                         invisible="not is_subscription">
                     <field name="subscription_quote_count" widget="statinfo" string="Sales History"/>
                 </button>
+                <button name="action_view_subscription_lifecycle_requests" type="object" class="oe_stat_button" icon="fa-exchange"
+                        invisible="not is_subscription">
+                    <field name="lifecycle_request_count" widget="statinfo" string="Lifecycle"/>
+                </button>
+                <button name="action_view_subscription_cancellation_requests" type="object" class="oe_stat_button" icon="fa-ban"
+                        invisible="not is_subscription">
+                    <field name="cancellation_request_count" widget="statinfo" string="Cancellations"/>
+                </button>
             </xpath>
 
             <xpath expr="//field[@name='partner_id']" position="after">

@@ -29,6 +29,18 @@
               parent="menu_subscriptions_main"
               action="action_sale_order_subscription"
               sequence="10"/>
+
+    <menuitem id="menu_subscription_cancellation_request"
+              name="Cancellation Requests"
+              parent="menu_subscriptions_main"
+              action="action_subscription_cancellation_request"
+              sequence="30"/>
+
+    <menuitem id="menu_subscription_lifecycle_request"
+              name="Lifecycle Requests"
+              parent="menu_subscriptions_main"
+              action="action_subscription_lifecycle_request"
+              sequence="40"/>
               
     <menuitem id="menu_subscription_plan"
               name="Subscription Plans"
