@@ -32,6 +32,8 @@
                     <button name="action_open_subscription" type="object" string="Open Subscription"/>
                     <button name="action_open_invoice" type="object" string="Open Invoice" invisible="not invoice_id"/>
                     <button name="action_open_payment_attempt" type="object" string="Open Payment Attempt" invisible="not payment_attempt_id"/>
+                    <button name="action_retry_payment" type="object" string="Retry Payment" class="btn-primary"
+                            invisible="not invoice_id or action_type in ['final_cancel', 'final_pause', 'final_none']"/>
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
@@ -50,6 +52,10 @@
                             <field name="email_template_id"/>
                             <field name="mail_mail_id"/>
                         </group>
+                    </group>
+                    <group string="Manual Retry">
+                        <field name="manual_retry_count"/>
+                        <field name="last_manual_retry_at"/>
                     </group>
                     <group string="Recovery">
                         <field name="recovery_url"/>

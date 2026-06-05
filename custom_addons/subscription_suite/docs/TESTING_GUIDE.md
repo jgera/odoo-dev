@@ -426,3 +426,20 @@ Automated coverage:
 
 - `subscription_suite_dunning` tests compare recovery dashboard KPIs against their source domains.
 - `subscription_suite_dunning` tests verify the dashboard drilldown domains for active dunning, failed payments, pending dunning attempts, and final actions.
+
+## 16. Manual Dunning Retry Demo
+
+1. Open **Subscriptions > Billing > Dunning Attempts**.
+2. Open a non-final dunning attempt linked to an unpaid or partially paid invoice.
+3. Confirm the subscription has a saved payment method.
+4. Click **Retry Payment**.
+5. Confirm the dunning attempt shows **Manual Retries**, **Last Manual Retry At**, and a linked **Payment Attempt**.
+6. Open the linked payment attempt and confirm it records source **Manual**.
+7. If the payment succeeds, confirm the subscription moves from **Past Due** back to **Active**.
+8. Try **Retry Payment** on a final cancel/pause/no-action attempt and confirm it is blocked.
+
+Automated coverage:
+
+- `subscription_suite_dunning` tests cover manual retry from a dunning attempt.
+- `subscription_suite_dunning` tests cover missing payment method and final-action retry guards.
+- `subscription_suite_dunning` tests cover final dunning action idempotency.

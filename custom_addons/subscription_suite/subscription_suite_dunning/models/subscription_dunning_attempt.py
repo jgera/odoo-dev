@@ -1,4 +1,5 @@
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 
 class SubscriptionDunningAttempt(models.Model):
@@ -25,6 +26,8 @@ class SubscriptionDunningAttempt(models.Model):
     email_template_id = fields.Many2one('mail.template', string='Email Template', readonly=True)
     mail_mail_id = fields.Many2one('mail.mail', string='Email', readonly=True)
     payment_attempt_id = fields.Many2one('subscription.payment.attempt', string='Payment Attempt', readonly=True)
+    manual_retry_count = fields.Integer(string='Manual Retries', readonly=True)
+    last_manual_retry_at = fields.Datetime(string='Last Manual Retry At', readonly=True)
     action_type = fields.Selection([
         ('email', 'Email'),
         ('email_and_retry', 'Email and Retry'),
@@ -80,6 +83,62 @@ class SubscriptionDunningAttempt(models.Model):
             'res_id': self.payment_attempt_id.id,
             'view_mode': 'form',
         }
+
+    def action_retry_payment(self):
+        self.ensure_one()
+        self._check_manual_retry_allowed()
+
+        previous_attempt = self.env['subscription.payment.attempt'].search(
+            [
+                ('subscription_id', '=', self.subscription_id.id),
+                ('invoice_id', '=', self.invoice_id.id),
+            ],
+            order='attempt_date desc, id desc',
+            limit=1,
+        )
+        transaction = self.subscription_id._auto_collect_payment(
+            self.invoice_id,
+            source='manual',
+            requested_by=self.env.user,
+        )
+        payment_attempt = self.env['subscription.payment.attempt'].search(
+            [
+                ('subscription_id', '=', self.subscription_id.id),
+                ('invoice_id', '=', self.invoice_id.id),
+            ],
+            order='attempt_date desc, id desc',
+            limit=1,
+        )
+        if payment_attempt == previous_attempt:
+            payment_attempt = False
+
+        note = _('Manual payment retry requested by %s.') % self.env.user.display_name
+        if transaction and transaction.state == 'done':
+            note = _('Manual payment retry recovered the subscription.')
+        elif transaction:
+            note = _('Manual payment retry returned provider state: %s') % transaction.state
+
+        values = {
+            'last_manual_retry_at': fields.Datetime.now(),
+            'manual_retry_count': self.manual_retry_count + 1,
+            'note': note,
+        }
+        if payment_attempt:
+            values['payment_attempt_id'] = payment_attempt.id
+        self.write(values)
+        return self.action_open_payment_attempt() if payment_attempt else False
+
+    def _check_manual_retry_allowed(self):
+        self.ensure_one()
+        if self.action_type in ('final_cancel', 'final_pause', 'final_none'):
+            raise UserError(_('Final dunning actions cannot be retried.'))
+        if not self.invoice_id:
+            raise UserError(_('A dunning attempt needs an invoice before payment can be retried.'))
+        if self.invoice_id.payment_state not in ('not_paid', 'partial'):
+            raise UserError(_('Only unpaid or partially paid invoices can be retried.'))
+        if not self.subscription_id.payment_token_id:
+            raise UserError(_('The subscription does not have a saved payment method.'))
+        return True
 
     @api.model_create_multi
     def create(self, vals_list):

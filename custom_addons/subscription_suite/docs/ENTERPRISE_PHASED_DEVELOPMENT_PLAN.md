@@ -590,7 +590,7 @@ For every phase, update or create:
 3. Improve retry strategy
    - Configurable retry schedule.
    - Retry count.
-   - Manual retry action.
+   - Manual retry action from dunning attempts - initial version done.
    - Optional backup payment method field.
 
 4. Customer recovery flow
@@ -633,7 +633,7 @@ For every phase, update or create:
 - Failed transaction creates payment attempt and starts dunning.
 - Dunning steps create attempt records.
 - Successful retry resolves dunning.
-- Final action idempotency.
+- Final action idempotency - initial version done.
 - Recovery report numbers.
 
 **Continuous validation:**

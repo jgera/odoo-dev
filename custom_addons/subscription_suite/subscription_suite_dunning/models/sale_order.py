@@ -199,6 +199,16 @@ class SaleOrder(models.Model):
 
     def _execute_final_dunning_action(self, policy):
         self.ensure_one()
+        existing_attempt = self.env['subscription.dunning.attempt'].search([
+            ('subscription_id', '=', self.id),
+            ('policy_id', '=', policy.id),
+            ('action_type', '=', 'final_%s' % policy.final_action),
+            ('state', '!=', 'failed'),
+        ], limit=1)
+        if existing_attempt:
+            self.next_dunning_date = False
+            return existing_attempt
+
         invoice = self._get_dunning_recovery_invoice()
         attempt = self._create_dunning_attempt(
             policy,
@@ -222,3 +232,4 @@ class SaleOrder(models.Model):
             raise
         
         self.next_dunning_date = False
+        return attempt
