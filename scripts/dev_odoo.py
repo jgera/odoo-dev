@@ -119,7 +119,7 @@ def ensure_paths(paths, config_path):
         (paths.odoo_bin, "Odoo entry point"),
         (config_path, "Odoo config"),
         (paths.core_addons, "Odoo addons path"),
-        (paths.shared_addons, "shared custom addons path"),
+        (paths.version_addons, "version custom addons path"),
         (paths.data_dir, "Odoo data directory"),
     ]
     missing = [f"{label}: {path}" for path, label in required if not path.exists()]

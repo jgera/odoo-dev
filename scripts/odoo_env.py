@@ -72,8 +72,6 @@ def addons_paths(paths):
             paths_to_use.append(path)
     if paths.version_addons.exists() and any(paths.version_addons.iterdir()):
         paths_to_use.append(paths.version_addons)
-    if paths.shared_addons.exists():
-        paths_to_use.append(paths.shared_addons)
     return paths_to_use
 
 
