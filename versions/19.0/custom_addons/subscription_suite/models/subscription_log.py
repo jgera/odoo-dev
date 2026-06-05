@@ -24,6 +24,7 @@ class SubscriptionLog(models.Model):
         ('payment_success', 'Payment Successful'),
         ('payment_failed', 'Payment Failed'),
         ('dunning_started', 'Dunning Started'),
+        ('dunning_step', 'Dunning Step'),
         ('dunning_success', 'Dunning Recovery'),
         ('renewal_quote_created', 'Renewal Quote Created'),
         ('upsell_quote_created', 'Upsell Quote Created'),

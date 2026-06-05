@@ -5,6 +5,12 @@
         <field name="model">sale.order</field>
         <field name="inherit_id" ref="subscription_suite.view_order_form_inherit_subscription"/>
         <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_subscription_dunning_attempts" type="object" class="oe_stat_button" icon="fa-envelope-open-o"
+                        invisible="not is_subscription">
+                    <field name="dunning_attempt_count" widget="statinfo" string="Dunning"/>
+                </button>
+            </xpath>
             <xpath expr="//page[@name='subscription_details']//group[@name='sub_dates']" position="inside">
                 <field name="dunning_start_date" invisible="subscription_state != 'past_due'"/>
                 <field name="next_dunning_date" invisible="subscription_state != 'past_due'"/>

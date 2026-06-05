@@ -28,7 +28,7 @@
                                 <list editable="bottom" default_order="delay_days asc">
                                     <field name="delay_days"/>
                                     <field name="action_type"/>
-                                    <field name="email_template_id" invisible="action_type != 'email'" required="action_type == 'email'"/>
+                                    <field name="email_template_id" invisible="action_type not in ('email', 'email_and_retry')" required="action_type in ('email', 'email_and_retry')"/>
                                 </list>
                             </field>
                             <p class="text-muted mt-2">

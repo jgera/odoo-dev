@@ -28,5 +28,5 @@ class DunningPolicyLine(models.Model):
     @api.constrains('action_type', 'email_template_id')
     def _check_email_template(self):
         for line in self:
-            if line.action_type == 'email' and not line.email_template_id:
-                raise ValidationError(_('Email template is required when action type is Email.'))
+            if line.action_type in ('email', 'email_and_retry') and not line.email_template_id:
+                raise ValidationError(_('Email template is required when the dunning step sends an email.'))

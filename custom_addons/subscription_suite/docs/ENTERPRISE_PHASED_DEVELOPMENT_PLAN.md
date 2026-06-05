@@ -584,7 +584,7 @@ For every phase, update or create:
    - Portal and cron saved-token retries create audit rows.
    - Failed payment attempts feed the manager operations queue.
 
-2. Add `subscription.dunning.attempt`
+2. Add `subscription.dunning.attempt` - initial version done.
    - Links policy, step, subscription, invoice, email, action taken, recovery result.
 
 3. Improve retry strategy
@@ -597,7 +597,7 @@ For every phase, update or create:
    - Portal banner for failed payment - initial open-invoice recovery banner done.
    - Update payment method action - initial portal selector and native validation flow done.
    - Retry payment action - initial saved-token retry route done.
-   - Dunning emails link to portal recovery page.
+   - Dunning emails link to portal recovery page - initial version done.
 
 5. Recovery analytics
    - Open amount at risk.

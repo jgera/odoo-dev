@@ -10,10 +10,33 @@ class SaleOrder(models.Model):
     dunning_start_date = fields.Date(string='Dunning Start Date', copy=False)
     next_dunning_date = fields.Date(string='Next Dunning Date', copy=False)
     dunning_step_id = fields.Many2one('subscription.dunning.policy.line', string='Last Dunning Step', copy=False)
+    dunning_attempt_ids = fields.One2many('subscription.dunning.attempt', 'subscription_id', string='Dunning Attempts')
+    dunning_attempt_count = fields.Integer(string='Dunning Count', compute='_compute_dunning_attempt_count')
 
-    def _auto_collect_payment(self, invoice):
+    def _compute_dunning_attempt_count(self):
+        grouped = self.env['subscription.dunning.attempt']._read_group(
+            [('subscription_id', 'in', self.ids)],
+            ['subscription_id'],
+            ['__count'],
+        )
+        counts = {subscription.id: count for subscription, count in grouped}
+        for order in self:
+            order.dunning_attempt_count = counts.get(order.id, 0)
+
+    def action_view_subscription_dunning_attempts(self):
+        self.ensure_one()
+        return {
+            'name': _('Dunning Attempts'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.dunning.attempt',
+            'view_mode': 'list,form',
+            'domain': [('subscription_id', '=', self.id)],
+            'context': {'default_subscription_id': self.id},
+        }
+
+    def _auto_collect_payment(self, invoice, source='cron', requested_by=None):
         # Override to trigger dunning on failure or resolve on success
-        tx = super()._auto_collect_payment(invoice)
+        tx = super()._auto_collect_payment(invoice, source=source, requested_by=requested_by)
         if tx:
             if tx.state == 'done':
                 self._resolve_dunning()
@@ -36,6 +59,87 @@ class SaleOrder(models.Model):
                 self.next_dunning_date = False
                 
             self._log_subscription_event('dunning_started', 'Payment failed, subscription entered dunning')
+
+    def _get_dunning_recovery_url(self):
+        self.ensure_one()
+        return '%s/my/subscription/%s' % (self.get_base_url(), self.id)
+
+    def _get_dunning_recovery_invoice(self):
+        self.ensure_one()
+        if hasattr(self, '_get_portal_payment_recovery_invoice'):
+            return self._get_portal_payment_recovery_invoice()
+        return self.env['account.move'].sudo().search([
+            ('subscription_id', '=', self.id),
+            ('move_type', '=', 'out_invoice'),
+            ('state', '=', 'posted'),
+            ('payment_state', 'in', ['not_paid', 'partial']),
+        ], order='invoice_date_due asc, invoice_date asc, id asc', limit=1)
+
+    def _prepare_dunning_attempt_values(self, policy, step=False, invoice=False, action_type=False):
+        self.ensure_one()
+        today = fields.Date.today()
+        days_since_start = (today - self.dunning_start_date).days if self.dunning_start_date else 0
+        action_type = action_type or (step.action_type if step else 'final_none')
+        return {
+            'subscription_id': self.id,
+            'invoice_id': invoice.id if invoice else False,
+            'policy_id': policy.id if policy else False,
+            'policy_line_id': step.id if step else False,
+            'email_template_id': step.email_template_id.id if step and step.email_template_id else False,
+            'action_type': action_type,
+            'days_since_start': days_since_start,
+            'amount_at_risk': invoice.amount_residual if invoice else 0.0,
+            'recovery_url': self._get_dunning_recovery_url(),
+            'state': 'pending',
+        }
+
+    def _create_dunning_attempt(self, policy, step=False, invoice=False, action_type=False):
+        return self.env['subscription.dunning.attempt'].create(
+            self._prepare_dunning_attempt_values(policy, step=step, invoice=invoice, action_type=action_type)
+        )
+
+    def _execute_dunning_step(self, policy, step):
+        self.ensure_one()
+        invoice = self._get_dunning_recovery_invoice()
+        attempt = self._create_dunning_attempt(policy, step=step, invoice=invoice)
+        try:
+            mail_id = False
+            if step.email_template_id:
+                mail_id = step.email_template_id.with_context(
+                    dunning_recovery_url=attempt.recovery_url,
+                    dunning_attempt_id=attempt.id,
+                ).send_mail(self.id, force_send=True)
+                attempt.write({'mail_mail_id': mail_id or False, 'state': 'sent'})
+
+            payment_attempt = False
+            if step.action_type == 'email_and_retry' and invoice and self.payment_token_id:
+                previous_attempt = self.env['subscription.payment.attempt'].search(
+                    [('subscription_id', '=', self.id)],
+                    order='attempt_date desc, id desc',
+                    limit=1,
+                )
+                self._auto_collect_payment(invoice, source='cron')
+                payment_attempt = self.env['subscription.payment.attempt'].search(
+                    [('subscription_id', '=', self.id)],
+                    order='attempt_date desc, id desc',
+                    limit=1,
+                )
+                if payment_attempt == previous_attempt:
+                    payment_attempt = False
+
+            values = {
+                'state': 'done',
+                'completed_at': fields.Datetime.now(),
+                'note': _('Dunning step executed.'),
+            }
+            if payment_attempt:
+                values['payment_attempt_id'] = payment_attempt.id
+            attempt.write(values)
+            self._log_subscription_event('dunning_step', _('Sent dunning email (Step: %s days)') % step.delay_days)
+        except Exception as error:
+            attempt.mark_failed(error)
+            _logger.exception('Failed to execute dunning step for subscription %s', self.name)
+        return attempt
 
     def _resolve_dunning(self):
         self.ensure_one()
@@ -72,11 +176,9 @@ class SaleOrder(models.Model):
                     break
                         
             if next_step:
-                # Execute step
-                if next_step.action_type == 'email' and next_step.email_template_id:
-                    next_step.email_template_id.send_mail(sub.id, force_send=True)
-                    sub._log_subscription_event('dunning_step', f'Sent dunning email (Step: {next_step.delay_days} days)')
-                
+                attempt = sub._execute_dunning_step(policy, next_step)
+                if attempt.state == 'failed':
+                    continue
                 sub.dunning_step_id = next_step.id
                 
                 # Determine next dunning date
@@ -97,11 +199,26 @@ class SaleOrder(models.Model):
 
     def _execute_final_dunning_action(self, policy):
         self.ensure_one()
-        if policy.final_action == 'cancel':
-            self._action_cancel(feedback="Automated cancellation due to failed dunning")
-        elif policy.final_action == 'pause':
-            self.subscription_state = 'paused'
-            self.pause_date = fields.Date.today()
-            self._log_subscription_event('paused', 'Automated pause due to failed dunning')
+        invoice = self._get_dunning_recovery_invoice()
+        attempt = self._create_dunning_attempt(
+            policy,
+            invoice=invoice,
+            action_type='final_%s' % policy.final_action,
+        )
+        try:
+            if policy.final_action == 'cancel':
+                self._action_cancel(feedback="Automated cancellation due to failed dunning")
+                attempt.mark_done(_('Automated cancellation due to failed dunning.'))
+            elif policy.final_action == 'pause':
+                self.subscription_state = 'paused'
+                self.pause_date = fields.Date.today()
+                self._log_subscription_event('paused', 'Automated pause due to failed dunning')
+                attempt.mark_done(_('Automated pause due to failed dunning.'))
+            else:
+                attempt.mark_done(_('No final action configured.'), state='skipped')
+        except Exception as error:
+            attempt.mark_failed(error)
+            _logger.exception('Failed to execute final dunning action for subscription %s', self.name)
+            raise
         
         self.next_dunning_date = False

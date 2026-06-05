@@ -389,3 +389,23 @@ This slice intentionally reuses Odoo's invoice portal payment page instead of cr
 5. Click **Add Method** and confirm Odoo's native payment-method validation form opens.
 6. Complete validation with a tokenizing provider and confirm the return page assigns the newly saved token to the subscription.
 7. Try assigning a token owned by another customer through a crafted request and confirm the server rejects it.
+
+## 14. Dunning Attempt Ledger Demo
+
+1. Configure a dunning policy with email templates for every email or email-and-retry step.
+2. Put a subscription into **Past Due** with **Dunning Start Date** in the past and **Next Dunning Date** due today.
+3. Run scheduled action **Subscription: Process Dunning** or execute `sale.order._cron_process_dunning()` from an Odoo shell/test context.
+4. Open **Subscriptions > Billing > Dunning Attempts**.
+5. Confirm a row exists for the subscription with the policy, step, action type, status, amount at risk, and recovery URL.
+6. Open the attempt and confirm **Open Subscription**, **Open Invoice** when available, and **Open Payment Attempt** when a retry was attempted.
+7. Open the subscription and confirm the **Dunning** stat button filters attempts for that subscription.
+8. Confirm dunning emails contain a portal recovery link to `/my/subscription/<id>`.
+9. Move the subscription beyond the final-action delay and rerun dunning.
+10. Confirm a final-action attempt is created and the subscription is cancelled, paused, or skipped according to the policy.
+
+Automated coverage:
+
+- `subscription_suite_dunning` tests cover dunning attempt creation for email steps.
+- `subscription_suite_dunning` tests cover final cancellation attempt creation.
+- `subscription_suite_dunning` tests cover email template validation for email-and-retry steps.
+- `subscription_suite_dunning` tests cover the payment override signature used by portal and cron payment recovery.
