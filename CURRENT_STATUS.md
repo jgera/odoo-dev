@@ -4,8 +4,6 @@ Last updated: 2026-06-05
 
 ## Branch
 
-Current branch should be renamed from `codex-subscription-suite-enterprise-slices` to:
-
 `subscription-suite-odoo19-enterprise`
 
 ## Source Of Truth
@@ -29,6 +27,7 @@ Launcher/config no longer include root `custom_addons` in the Odoo 19 addons pat
 - Portal request flows for plan change, lifecycle, and cancellation.
 - Billing retry/recovery hardening.
 - Manager Operations queue combining pending requests and failed billing recovery.
+- Operations Dashboard with manager KPIs and drilldowns.
 
 ## Latest Validation
 
@@ -38,11 +37,4 @@ Launcher/config no longer include root `custom_addons` in the Odoo 19 addons pat
 
 ## Next Careful Slice
 
-Operations dashboard metrics and drilldowns:
-
-- counts for pending plan changes, lifecycle requests, cancellations, failed billing, critical recovery
-- oldest pending age
-- filtered drilldown actions
-- tests and docs
-
-After that: payment recovery portal flow, designed carefully because it touches payment and customer self-service.
+Payment recovery portal flow, designed carefully because it touches payment and customer self-service.

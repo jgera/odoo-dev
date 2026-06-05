@@ -121,3 +121,33 @@ class TestManagerOperations(TransactionCase):
         subscription_action = plan_operation.action_open_subscription()
         self.assertEqual(subscription_action['res_model'], 'sale.order')
         self.assertEqual(subscription_action['res_id'], self.subscription.id)
+
+        dashboard = self.env.ref('subscription_suite_billing.subscription_manager_operation_dashboard_main')
+        Operation = self.env['subscription.manager.operation']
+        domains = dashboard._operation_domains()
+        self.assertEqual(dashboard.total_open_count, Operation.search_count(domains['all']))
+        self.assertEqual(dashboard.pending_request_count, Operation.search_count(domains['pending_requests']))
+        self.assertEqual(dashboard.pending_plan_change_count, Operation.search_count(domains['pending_plan_changes']))
+        self.assertEqual(dashboard.pending_lifecycle_count, Operation.search_count(domains['pending_lifecycle']))
+        self.assertEqual(dashboard.pending_cancellation_count, Operation.search_count(domains['pending_cancellations']))
+        self.assertEqual(dashboard.failed_billing_count, Operation.search_count(domains['failed_billing']))
+        self.assertEqual(dashboard.critical_count, Operation.search_count(domains['critical']))
+        self.assertEqual(
+            Operation.search_count([('subscription_id', '=', self.subscription.id)] + domains['pending_requests']),
+            3,
+        )
+        self.assertEqual(
+            Operation.search_count([('subscription_id', '=', self.subscription.id)] + domains['failed_billing']),
+            1,
+        )
+        self.assertTrue(dashboard.oldest_operation_id)
+
+        plan_action = dashboard.action_open_pending_plan_changes()
+        self.assertEqual(plan_action['res_model'], 'subscription.manager.operation')
+        self.assertEqual(
+            plan_action['domain'],
+            [('operation_type', '=', 'plan_change'), ('action_state', '=', 'pending')],
+        )
+
+        oldest_action = dashboard.action_open_oldest_pending()
+        self.assertEqual(oldest_action['domain'], [('id', '=', dashboard.oldest_operation_id.id)])

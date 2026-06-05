@@ -296,6 +296,7 @@ For every phase, update or create:
 - Done: settings UI for retry policy tuning.
 - Done: richer logs and reporting for repeated failures.
 - Done: Manager Operations queue combining pending customer requests and failed billing recovery items.
+- Done: Operations Dashboard with manager KPI counts and filtered drilldowns.
 
 **Build items:**
 
@@ -327,8 +328,10 @@ For every phase, update or create:
    - Failed Billing menu.
    - Repeated Failures menu.
    - Manager Operations queue for pending requests and failed billing recovery.
+   - Operations Dashboard with open, pending, critical, oldest pending, request-type, and failed-billing KPIs.
    - Smart button on subscription.
    - Filters for failed, retryable, retry exhausted, recovery required, repeated failures, success, skipped.
+   - Filters for plan changes, lifecycle requests, cancellations, billing recovery, and critical operations.
 
 6. Add indexes
    - `sale_order(is_subscription, subscription_state, next_invoice_date, company_id)`.
@@ -356,6 +359,7 @@ For every phase, update or create:
 - Invoice period start/end is always set.
 - Managers can see failed billing attempts from the UI.
 - Managers can see pending plan-change, lifecycle, cancellation, and billing recovery work in one operations queue.
+- Managers can start from an operations dashboard and drill into each actionable category.
 
 **Tests:**
 
