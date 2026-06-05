@@ -599,7 +599,7 @@ For every phase, update or create:
    - Retry payment action - initial saved-token retry route done.
    - Dunning emails link to portal recovery page - initial version done.
 
-5. Recovery analytics
+5. Recovery analytics - initial dashboard version done.
    - Open amount at risk.
    - Recovered amount.
    - Recovery rate by policy.

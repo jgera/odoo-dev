@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_manager_operation_dashboard_form_inherit_dunning" model="ir.ui.view">
+        <field name="name">subscription.manager.operation.dashboard.form.dunning</field>
+        <field name="model">subscription.manager.operation.dashboard</field>
+        <field name="inherit_id" ref="subscription_suite_billing.view_subscription_manager_operation_dashboard_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_open_failed_billing']/ancestor::group[1]" position="after">
+                <group string="Payment Recovery">
+                    <field name="company_currency_id" invisible="1"/>
+                    <button name="action_open_active_dunning" type="object" class="oe_stat_button" icon="fa-exclamation-circle">
+                        <field name="active_dunning_count" widget="statinfo" string="Active Dunning"/>
+                    </button>
+                    <button name="action_open_active_dunning" type="object" class="oe_stat_button" icon="fa-line-chart">
+                        <field name="past_due_mrr_at_risk" widget="statinfo" string="MRR at Risk"/>
+                    </button>
+                    <button name="action_open_failed_payments" type="object" class="oe_stat_button" icon="fa-credit-card">
+                        <field name="failed_payment_count" widget="statinfo" string="Failed Payments"/>
+                    </button>
+                    <button name="action_open_recovered_this_month" type="object" class="oe_stat_button" icon="fa-check-circle">
+                        <field name="recovered_this_month_count" widget="statinfo" string="Recovered"/>
+                    </button>
+                </group>
+                <group string="Dunning Attempts">
+                    <button name="action_open_pending_dunning_attempts" type="object" class="oe_stat_button" icon="fa-envelope">
+                        <field name="pending_dunning_attempt_count" widget="statinfo" string="Pending"/>
+                    </button>
+                    <button name="action_open_failed_dunning_attempts" type="object" class="oe_stat_button" icon="fa-warning">
+                        <field name="failed_dunning_attempt_count" widget="statinfo" string="Failed"/>
+                    </button>
+                    <button name="action_open_final_dunning_actions" type="object" class="oe_stat_button" icon="fa-gavel">
+                        <field name="final_dunning_action_count" widget="statinfo" string="Final Actions"/>
+                    </button>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -24,6 +24,7 @@ Handles failed payments and collections:
         'data/cron_data.xml',
         'data/default_dunning_policy.xml',
         'views/dunning_attempt_views.xml',
+        'views/subscription_manager_operation_dashboard_views.xml',
         'views/dunning_policy_views.xml',
         'views/subscription_plan_views.xml',
         'views/sale_order_views.xml',
