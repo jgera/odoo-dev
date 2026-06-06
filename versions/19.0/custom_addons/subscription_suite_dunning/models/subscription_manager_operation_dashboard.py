@@ -13,6 +13,8 @@ class SubscriptionManagerOperationDashboard(models.Model):
     failed_payment_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
     pending_dunning_attempt_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
     failed_dunning_attempt_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
+    retryable_dunning_attempt_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
+    retry_exhausted_dunning_attempt_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
     final_dunning_action_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
     recovered_this_month_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
     company_currency_id = fields.Many2one(
@@ -35,6 +37,8 @@ class SubscriptionManagerOperationDashboard(models.Model):
             'failed_payment_count': PaymentAttempt.search_count(domains['failed_payments']),
             'pending_dunning_attempt_count': DunningAttempt.search_count(domains['pending_dunning_attempts']),
             'failed_dunning_attempt_count': DunningAttempt.search_count(domains['failed_dunning_attempts']),
+            'retryable_dunning_attempt_count': DunningAttempt.search_count(domains['retryable_dunning_attempts']),
+            'retry_exhausted_dunning_attempt_count': DunningAttempt.search_count(domains['retry_exhausted_dunning_attempts']),
             'final_dunning_action_count': DunningAttempt.search_count(domains['final_dunning_actions']),
             'recovered_this_month_count': len(recovered_subscription_ids),
             'company_currency_id': self.env.company.currency_id,
@@ -55,6 +59,12 @@ class SubscriptionManagerOperationDashboard(models.Model):
             ],
             'pending_dunning_attempts': [('state', 'in', ['pending', 'sent'])],
             'failed_dunning_attempts': [('state', '=', 'failed')],
+            'retryable_dunning_attempts': [
+                ('auto_retry_enabled', '=', True),
+                ('retry_exhausted', '=', False),
+                ('next_auto_retry_at', '!=', False),
+            ],
+            'retry_exhausted_dunning_attempts': [('retry_exhausted', '=', True)],
             'final_dunning_actions': [
                 ('action_type', 'in', ['final_cancel', 'final_pause', 'final_none']),
             ],
@@ -107,6 +117,20 @@ class SubscriptionManagerOperationDashboard(models.Model):
             'subscription_suite_dunning.action_subscription_dunning_attempt',
             _('Failed Dunning Attempts'),
             self._dunning_recovery_domains()['failed_dunning_attempts'],
+        )
+
+    def action_open_retryable_dunning_attempts(self):
+        return self._open_action(
+            'subscription_suite_dunning.action_subscription_dunning_attempt',
+            _('Retryable Dunning Attempts'),
+            self._dunning_recovery_domains()['retryable_dunning_attempts'],
+        )
+
+    def action_open_retry_exhausted_dunning_attempts(self):
+        return self._open_action(
+            'subscription_suite_dunning.action_subscription_dunning_attempt',
+            _('Retry Exhausted Dunning Attempts'),
+            self._dunning_recovery_domains()['retry_exhausted_dunning_attempts'],
         )
 
     def action_open_final_dunning_actions(self):

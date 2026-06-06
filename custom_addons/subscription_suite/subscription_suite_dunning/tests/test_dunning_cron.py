@@ -152,6 +152,16 @@ class TestDunningCron(TransactionCase):
                 'action_type': 'email_and_retry',
             })
 
+    def test_02b_retry_settings_reject_negative_values(self):
+        with self.assertRaises(ValidationError):
+            self.env['subscription.dunning.policy.line'].create({
+                'policy_id': self.policy.id,
+                'delay_days': 5,
+                'action_type': 'email',
+                'email_template_id': self.template.id,
+                'retry_delay_hours': -1,
+            })
+
     def test_03_dunning_payment_override_accepts_request_metadata(self):
         self.sub._start_dunning()
         tx = self.sub._auto_collect_payment(
@@ -245,3 +255,111 @@ class TestDunningCron(TransactionCase):
 
         self.assertEqual(first_attempt, second_attempt)
         self.assertEqual(len(second_attempt), 1)
+
+    def test_07_email_and_retry_step_schedules_auto_retry(self):
+        self.step_1.write({
+            'action_type': 'email_and_retry',
+            'retry_delay_hours': 2,
+            'max_auto_retries': 3,
+        })
+        self.sub._start_dunning()
+        invoice = self._create_retry_invoice()
+        self._create_payment_token()
+        self.sub.dunning_start_date = fields.Date.today() - timedelta(days=1)
+        self.sub.next_dunning_date = fields.Date.today()
+
+        def fake_recovery_invoice(subscription):
+            return invoice
+
+        with patch.object(self.env.registry['sale.order'], '_get_dunning_recovery_invoice', fake_recovery_invoice):
+            self.env['sale.order']._cron_process_dunning()
+
+        attempt = self.env['subscription.dunning.attempt'].search([
+            ('subscription_id', '=', self.sub.id),
+            ('policy_line_id', '=', self.step_1.id),
+        ], limit=1)
+        self.assertTrue(attempt.auto_retry_enabled)
+        self.assertEqual(attempt.max_auto_retries, 3)
+        self.assertTrue(attempt.next_auto_retry_at)
+        self.assertFalse(attempt.payment_attempt_id)
+        self.assertIn('scheduled', attempt.note)
+
+    def test_08_auto_retry_cron_links_payment_attempt(self):
+        self.sub._start_dunning()
+        invoice = self._create_retry_invoice()
+        self._create_payment_token()
+        attempt = self.env['subscription.dunning.attempt'].create({
+            'subscription_id': self.sub.id,
+            'invoice_id': invoice.id,
+            'policy_id': self.policy.id,
+            'policy_line_id': self.step_1.id,
+            'action_type': 'email_and_retry',
+            'state': 'done',
+            'auto_retry_enabled': True,
+            'max_auto_retries': 2,
+            'next_auto_retry_at': fields.Datetime.now(),
+        })
+
+        class DummyTransaction:
+            state = 'pending'
+
+        def fake_auto_collect(subscription, retry_invoice, source='cron', requested_by=None):
+            self.env['subscription.payment.attempt'].create({
+                'name': 'DUNNING-AUTO-PAY-001',
+                'subscription_id': subscription.id,
+                'invoice_id': retry_invoice.id,
+                'source': source,
+                'state': 'pending',
+                'amount': 100.0,
+            })
+            self.assertEqual(source, 'cron')
+            self.assertFalse(requested_by)
+            return DummyTransaction()
+
+        with patch.object(self.env.registry['sale.order'], '_auto_collect_payment', fake_auto_collect):
+            self.env['subscription.dunning.attempt']._cron_retry_dunning_attempts()
+
+        self.assertEqual(attempt.auto_retry_count, 1)
+        self.assertTrue(attempt.last_auto_retry_at)
+        self.assertTrue(attempt.next_auto_retry_at)
+        self.assertEqual(attempt.payment_attempt_id.name, 'DUNNING-AUTO-PAY-001')
+        self.assertFalse(attempt.retry_exhausted)
+
+    def test_09_auto_retry_exhaustion_is_recorded(self):
+        self.sub._start_dunning()
+        invoice = self._create_retry_invoice()
+        self._create_payment_token()
+        attempt = self.env['subscription.dunning.attempt'].create({
+            'subscription_id': self.sub.id,
+            'invoice_id': invoice.id,
+            'policy_id': self.policy.id,
+            'policy_line_id': self.step_1.id,
+            'action_type': 'email_and_retry',
+            'state': 'done',
+            'auto_retry_enabled': True,
+            'max_auto_retries': 1,
+            'next_auto_retry_at': fields.Datetime.now(),
+        })
+
+        class DummyTransaction:
+            state = 'error'
+
+        def fake_auto_collect(subscription, retry_invoice, source='cron', requested_by=None):
+            self.env['subscription.payment.attempt'].create({
+                'name': 'DUNNING-AUTO-PAY-FAILED',
+                'subscription_id': subscription.id,
+                'invoice_id': retry_invoice.id,
+                'source': source,
+                'state': 'failed',
+                'amount': 100.0,
+                'recovery_required': True,
+            })
+            return DummyTransaction()
+
+        with patch.object(self.env.registry['sale.order'], '_auto_collect_payment', fake_auto_collect):
+            attempt._run_auto_retry()
+
+        self.assertEqual(attempt.auto_retry_count, 1)
+        self.assertTrue(attempt.retry_exhausted)
+        self.assertFalse(attempt.next_auto_retry_at)
+        self.assertIn('exhausted', attempt.note)

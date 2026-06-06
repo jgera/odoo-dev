@@ -588,8 +588,8 @@ For every phase, update or create:
    - Links policy, step, subscription, invoice, email, action taken, recovery result.
 
 3. Improve retry strategy
-   - Configurable retry schedule.
-   - Retry count.
+   - Configurable retry schedule - initial policy-line delay and max retry fields done.
+   - Retry count - auto/manual retry counts done on dunning attempts.
    - Manual retry action from dunning attempts - initial version done.
    - Optional backup payment method field.
 

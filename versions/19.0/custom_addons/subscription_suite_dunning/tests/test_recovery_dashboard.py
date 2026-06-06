@@ -88,6 +88,27 @@ class TestRecoveryDashboard(TransactionCase):
             'amount_at_risk': 100.0,
             'error_message': 'mail gateway unavailable',
         })
+        retryable_attempt = self.env['subscription.dunning.attempt'].create({
+            'subscription_id': self.subscription.id,
+            'invoice_id': self.invoice.id,
+            'policy_id': self.policy.id,
+            'action_type': 'email_and_retry',
+            'state': 'done',
+            'auto_retry_enabled': True,
+            'max_auto_retries': 2,
+            'next_auto_retry_at': fields.Datetime.now(),
+        })
+        retry_exhausted_attempt = self.env['subscription.dunning.attempt'].create({
+            'subscription_id': self.subscription.id,
+            'invoice_id': self.invoice.id,
+            'policy_id': self.policy.id,
+            'action_type': 'email_and_retry',
+            'state': 'done',
+            'auto_retry_enabled': True,
+            'max_auto_retries': 1,
+            'auto_retry_count': 1,
+            'retry_exhausted': True,
+        })
         final_attempt = self.env['subscription.dunning.attempt'].create({
             'subscription_id': self.subscription.id,
             'invoice_id': self.invoice.id,
@@ -122,6 +143,14 @@ class TestRecoveryDashboard(TransactionCase):
             DunningAttempt.search_count(domains['failed_dunning_attempts']),
         )
         self.assertEqual(
+            dashboard.retryable_dunning_attempt_count,
+            DunningAttempt.search_count(domains['retryable_dunning_attempts']),
+        )
+        self.assertEqual(
+            dashboard.retry_exhausted_dunning_attempt_count,
+            DunningAttempt.search_count(domains['retry_exhausted_dunning_attempts']),
+        )
+        self.assertEqual(
             dashboard.final_dunning_action_count,
             DunningAttempt.search_count(domains['final_dunning_actions']),
         )
@@ -133,6 +162,8 @@ class TestRecoveryDashboard(TransactionCase):
         self.assertIn(payment_attempt, PaymentAttempt.search(domains['failed_payments']))
         self.assertIn(pending_attempt, DunningAttempt.search(domains['pending_dunning_attempts']))
         self.assertIn(failed_attempt, DunningAttempt.search(domains['failed_dunning_attempts']))
+        self.assertIn(retryable_attempt, DunningAttempt.search(domains['retryable_dunning_attempts']))
+        self.assertIn(retry_exhausted_attempt, DunningAttempt.search(domains['retry_exhausted_dunning_attempts']))
         self.assertIn(final_attempt, DunningAttempt.search(domains['final_dunning_actions']))
         self.assertIn(recovered_subscription.id, dashboard._get_recovered_this_month_subscription_ids())
 
@@ -145,4 +176,8 @@ class TestRecoveryDashboard(TransactionCase):
         self.assertEqual(
             dashboard.action_open_final_dunning_actions()['domain'],
             domains['final_dunning_actions'],
+        )
+        self.assertEqual(
+            dashboard.action_open_retryable_dunning_attempts()['domain'],
+            domains['retryable_dunning_attempts'],
         )

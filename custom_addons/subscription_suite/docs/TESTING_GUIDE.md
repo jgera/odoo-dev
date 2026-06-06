@@ -443,3 +443,23 @@ Automated coverage:
 - `subscription_suite_dunning` tests cover manual retry from a dunning attempt.
 - `subscription_suite_dunning` tests cover missing payment method and final-action retry guards.
 - `subscription_suite_dunning` tests cover final dunning action idempotency.
+
+## 17. Automated Dunning Retry Demo
+
+1. Open **Subscriptions > Configuration > Dunning Policies**.
+2. Configure a dunning step with **Action** set to **Send Email & Retry Payment**.
+3. Set **Retry Delay (Hours)** and **Max Auto Retries**.
+4. Trigger the dunning step for a past-due subscription with a saved payment method and an unpaid posted invoice.
+5. Open **Subscriptions > Billing > Dunning Attempts**.
+6. Confirm the attempt shows **Auto Retry Enabled**, **Next Auto Retry At**, and **Max Auto Retries**.
+7. Run scheduled action **Subscription: Retry Dunning Payments**.
+8. Confirm the dunning attempt links a payment attempt and increments **Auto Retries**.
+9. If the retry fails until the maximum is reached, confirm **Retry Exhausted** is enabled and **Next Auto Retry At** is cleared.
+10. If the retry succeeds, confirm the subscription is recovered to **Active**.
+
+Automated coverage:
+
+- `subscription_suite_dunning` tests cover scheduled retry creation for email-and-retry steps.
+- `subscription_suite_dunning` tests cover auto retry cron linking payment attempts.
+- `subscription_suite_dunning` tests cover retry exhaustion.
+- `subscription_suite_dunning` tests cover retry setting validation.

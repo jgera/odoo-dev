@@ -91,6 +91,23 @@ class SaleOrder(models.Model):
             'amount_at_risk': invoice.amount_residual if invoice else 0.0,
             'recovery_url': self._get_dunning_recovery_url(),
             'state': 'pending',
+            'auto_retry_enabled': bool(
+                step
+                and step.action_type == 'email_and_retry'
+                and step.max_auto_retries
+                and invoice
+                and self.payment_token_id
+            ),
+            'max_auto_retries': step.max_auto_retries if step and step.action_type == 'email_and_retry' else 0,
+            'next_auto_retry_at': (
+                fields.Datetime.add(fields.Datetime.now(), hours=step.retry_delay_hours)
+                if step
+                and step.action_type == 'email_and_retry'
+                and step.max_auto_retries
+                and invoice
+                and self.payment_token_id
+                else False
+            ),
         }
 
     def _create_dunning_attempt(self, policy, step=False, invoice=False, action_type=False):
@@ -111,29 +128,13 @@ class SaleOrder(models.Model):
                 ).send_mail(self.id, force_send=True)
                 attempt.write({'mail_mail_id': mail_id or False, 'state': 'sent'})
 
-            payment_attempt = False
-            if step.action_type == 'email_and_retry' and invoice and self.payment_token_id:
-                previous_attempt = self.env['subscription.payment.attempt'].search(
-                    [('subscription_id', '=', self.id)],
-                    order='attempt_date desc, id desc',
-                    limit=1,
-                )
-                self._auto_collect_payment(invoice, source='cron')
-                payment_attempt = self.env['subscription.payment.attempt'].search(
-                    [('subscription_id', '=', self.id)],
-                    order='attempt_date desc, id desc',
-                    limit=1,
-                )
-                if payment_attempt == previous_attempt:
-                    payment_attempt = False
-
             values = {
                 'state': 'done',
                 'completed_at': fields.Datetime.now(),
                 'note': _('Dunning step executed.'),
             }
-            if payment_attempt:
-                values['payment_attempt_id'] = payment_attempt.id
+            if attempt.auto_retry_enabled:
+                values['note'] = _('Dunning step executed. Automatic payment retry scheduled.')
             attempt.write(values)
             self._log_subscription_event('dunning_step', _('Sent dunning email (Step: %s days)') % step.delay_days)
         except Exception as error:

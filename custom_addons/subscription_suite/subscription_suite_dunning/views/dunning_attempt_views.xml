@@ -14,6 +14,9 @@
                 <field name="action_type"/>
                 <field name="state" widget="badge" decoration-success="state == 'done'" decoration-danger="state == 'failed'" decoration-warning="state in ('pending', 'sent')" decoration-muted="state == 'skipped'"/>
                 <field name="amount_at_risk" widget="monetary"/>
+                <field name="auto_retry_enabled" optional="show"/>
+                <field name="next_auto_retry_at" optional="show"/>
+                <field name="retry_exhausted" optional="show"/>
                 <field name="days_since_start" optional="show"/>
                 <field name="attempt_date"/>
                 <field name="completed_at" optional="show"/>
@@ -57,6 +60,14 @@
                         <field name="manual_retry_count"/>
                         <field name="last_manual_retry_at"/>
                     </group>
+                    <group string="Automatic Retry">
+                        <field name="auto_retry_enabled"/>
+                        <field name="auto_retry_count"/>
+                        <field name="max_auto_retries"/>
+                        <field name="next_auto_retry_at"/>
+                        <field name="last_auto_retry_at"/>
+                        <field name="retry_exhausted"/>
+                    </group>
                     <group string="Recovery">
                         <field name="recovery_url"/>
                         <field name="amount_at_risk" widget="monetary"/>
@@ -91,11 +102,14 @@
                 <filter string="Pending" name="pending" domain="[('state', 'in', ['pending', 'sent'])]"/>
                 <filter string="Done" name="done" domain="[('state', '=', 'done')]"/>
                 <filter string="Failed" name="failed" domain="[('state', '=', 'failed')]"/>
+                <filter string="Retryable" name="retryable" domain="[('auto_retry_enabled', '=', True), ('retry_exhausted', '=', False), ('next_auto_retry_at', '!=', False)]"/>
+                <filter string="Retry Exhausted" name="retry_exhausted" domain="[('retry_exhausted', '=', True)]"/>
                 <filter string="Final Actions" name="final_actions" domain="[('action_type', 'in', ['final_cancel', 'final_pause', 'final_none'])]"/>
                 <filter string="Email Steps" name="email_steps" domain="[('action_type', 'in', ['email', 'email_and_retry'])]"/>
                 <group>
                     <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
                     <filter string="Action" name="group_action_type" context="{'group_by': 'action_type'}"/>
+                    <filter string="Retry Exhausted" name="group_retry_exhausted" context="{'group_by': 'retry_exhausted'}"/>
                     <filter string="Policy" name="group_policy" context="{'group_by': 'policy_id'}"/>
                     <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
                     <filter string="Attempt Date" name="group_attempt_date" context="{'group_by': 'attempt_date:day'}"/>

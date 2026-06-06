@@ -28,6 +28,12 @@ class SubscriptionDunningAttempt(models.Model):
     payment_attempt_id = fields.Many2one('subscription.payment.attempt', string='Payment Attempt', readonly=True)
     manual_retry_count = fields.Integer(string='Manual Retries', readonly=True)
     last_manual_retry_at = fields.Datetime(string='Last Manual Retry At', readonly=True)
+    auto_retry_enabled = fields.Boolean(string='Auto Retry Enabled', readonly=True, index=True)
+    auto_retry_count = fields.Integer(string='Auto Retries', readonly=True)
+    max_auto_retries = fields.Integer(string='Max Auto Retries', readonly=True)
+    next_auto_retry_at = fields.Datetime(string='Next Auto Retry At', readonly=True, index=True)
+    last_auto_retry_at = fields.Datetime(string='Last Auto Retry At', readonly=True)
+    retry_exhausted = fields.Boolean(string='Retry Exhausted', readonly=True, index=True)
     action_type = fields.Selection([
         ('email', 'Email'),
         ('email_and_retry', 'Email and Retry'),
@@ -86,31 +92,8 @@ class SubscriptionDunningAttempt(models.Model):
 
     def action_retry_payment(self):
         self.ensure_one()
-        self._check_manual_retry_allowed()
-
-        previous_attempt = self.env['subscription.payment.attempt'].search(
-            [
-                ('subscription_id', '=', self.subscription_id.id),
-                ('invoice_id', '=', self.invoice_id.id),
-            ],
-            order='attempt_date desc, id desc',
-            limit=1,
-        )
-        transaction = self.subscription_id._auto_collect_payment(
-            self.invoice_id,
-            source='manual',
-            requested_by=self.env.user,
-        )
-        payment_attempt = self.env['subscription.payment.attempt'].search(
-            [
-                ('subscription_id', '=', self.subscription_id.id),
-                ('invoice_id', '=', self.invoice_id.id),
-            ],
-            order='attempt_date desc, id desc',
-            limit=1,
-        )
-        if payment_attempt == previous_attempt:
-            payment_attempt = False
+        self._check_retry_allowed(manual=True)
+        payment_attempt, transaction = self._retry_payment(source='manual', requested_by=self.env.user)
 
         note = _('Manual payment retry requested by %s.') % self.env.user.display_name
         if transaction and transaction.state == 'done':
@@ -128,7 +111,34 @@ class SubscriptionDunningAttempt(models.Model):
         self.write(values)
         return self.action_open_payment_attempt() if payment_attempt else False
 
-    def _check_manual_retry_allowed(self):
+    def _retry_payment(self, source='manual', requested_by=None):
+        self.ensure_one()
+        previous_attempt = self.env['subscription.payment.attempt'].search(
+            [
+                ('subscription_id', '=', self.subscription_id.id),
+                ('invoice_id', '=', self.invoice_id.id),
+            ],
+            order='attempt_date desc, id desc',
+            limit=1,
+        )
+        transaction = self.subscription_id._auto_collect_payment(
+            self.invoice_id,
+            source=source,
+            requested_by=requested_by,
+        )
+        payment_attempt = self.env['subscription.payment.attempt'].search(
+            [
+                ('subscription_id', '=', self.subscription_id.id),
+                ('invoice_id', '=', self.invoice_id.id),
+            ],
+            order='attempt_date desc, id desc',
+            limit=1,
+        )
+        if payment_attempt == previous_attempt:
+            payment_attempt = False
+        return payment_attempt, transaction
+
+    def _check_retry_allowed(self, manual=False):
         self.ensure_one()
         if self.action_type in ('final_cancel', 'final_pause', 'final_none'):
             raise UserError(_('Final dunning actions cannot be retried.'))
@@ -138,6 +148,59 @@ class SubscriptionDunningAttempt(models.Model):
             raise UserError(_('Only unpaid or partially paid invoices can be retried.'))
         if not self.subscription_id.payment_token_id:
             raise UserError(_('The subscription does not have a saved payment method.'))
+        if not manual and self.retry_exhausted:
+            raise UserError(_('Automatic retries are exhausted for this dunning attempt.'))
+        if not manual and self.auto_retry_count >= self.max_auto_retries:
+            raise UserError(_('The maximum automatic retry count has been reached.'))
+        return True
+
+    @api.model
+    def _cron_retry_dunning_attempts(self, limit=50):
+        now = fields.Datetime.now()
+        attempts = self.search([
+            ('auto_retry_enabled', '=', True),
+            ('retry_exhausted', '=', False),
+            ('next_auto_retry_at', '!=', False),
+            ('next_auto_retry_at', '<=', now),
+            ('action_type', '=', 'email_and_retry'),
+            ('state', 'in', ['done', 'sent']),
+        ], order='next_auto_retry_at asc, id asc', limit=limit)
+        for attempt in attempts:
+            attempt._run_auto_retry()
+        return True
+
+    def _run_auto_retry(self):
+        self.ensure_one()
+        try:
+            self._check_retry_allowed(manual=False)
+        except UserError as error:
+            self.write({
+                'retry_exhausted': True,
+                'next_auto_retry_at': False,
+                'note': str(error),
+            })
+            return False
+
+        payment_attempt, transaction = self._retry_payment(source='cron')
+        retry_count = self.auto_retry_count + 1
+        values = {
+            'auto_retry_count': retry_count,
+            'last_auto_retry_at': fields.Datetime.now(),
+            'next_auto_retry_at': False,
+            'note': _('Automatic payment retry executed.'),
+        }
+        if payment_attempt:
+            values['payment_attempt_id'] = payment_attempt.id
+        if transaction and transaction.state == 'done':
+            values['note'] = _('Automatic payment retry recovered the subscription.')
+            values['retry_exhausted'] = False
+        elif retry_count >= self.max_auto_retries:
+            values['retry_exhausted'] = True
+            values['note'] = _('Automatic payment retries are exhausted.')
+        else:
+            delay = self.policy_line_id.retry_delay_hours if self.policy_line_id else 1
+            values['next_auto_retry_at'] = fields.Datetime.add(fields.Datetime.now(), hours=delay)
+        self.write(values)
         return True
 
     @api.model_create_multi

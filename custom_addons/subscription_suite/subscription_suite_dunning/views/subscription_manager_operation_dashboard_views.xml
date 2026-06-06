@@ -28,6 +28,12 @@
                     <button name="action_open_failed_dunning_attempts" type="object" class="oe_stat_button" icon="fa-warning">
                         <field name="failed_dunning_attempt_count" widget="statinfo" string="Failed"/>
                     </button>
+                    <button name="action_open_retryable_dunning_attempts" type="object" class="oe_stat_button" icon="fa-refresh">
+                        <field name="retryable_dunning_attempt_count" widget="statinfo" string="Retryable"/>
+                    </button>
+                    <button name="action_open_retry_exhausted_dunning_attempts" type="object" class="oe_stat_button" icon="fa-stop-circle">
+                        <field name="retry_exhausted_dunning_attempt_count" widget="statinfo" string="Exhausted"/>
+                    </button>
                     <button name="action_open_final_dunning_actions" type="object" class="oe_stat_button" icon="fa-gavel">
                         <field name="final_dunning_action_count" widget="statinfo" string="Final Actions"/>
                     </button>
