@@ -515,3 +515,24 @@ class TestPortalAccess(TransactionCase):
             ('operation_type', '=', 'payment_recovery'),
         ], limit=1)
         self.assertTrue(operation)
+
+    def test_18_portal_payment_recovery_demo_data_creates_expected_scenarios(self):
+        """Demo data helper creates saved-method, no-method, clear, and isolation scenarios."""
+        self.env['sale.order']._create_portal_recovery_demo_data()
+
+        saved = self.env['sale.order'].search([('client_order_ref', '=', 'PORTAL-RECOVERY-SAVED')], limit=1)
+        no_method = self.env['sale.order'].search([('client_order_ref', '=', 'PORTAL-RECOVERY-NOMETHOD')], limit=1)
+        clear = self.env['sale.order'].search([('client_order_ref', '=', 'PORTAL-RECOVERY-CLEAR')], limit=1)
+        other = self.env['sale.order'].search([('client_order_ref', '=', 'PORTAL-RECOVERY-OTHER')], limit=1)
+
+        self.assertEqual(saved._get_portal_payment_recovery_context()['state'], 'retry_available')
+        self.assertEqual(no_method._get_portal_payment_recovery_context()['state'], 'missing_payment_method')
+        self.assertEqual(clear._get_portal_payment_recovery_context()['state'], 'clear')
+        self.assertEqual(other._get_portal_payment_recovery_context()['state'], 'missing_payment_method')
+        for login in [
+            'portal.recovery.saved@example.com',
+            'portal.recovery.nomethod@example.com',
+            'portal.recovery.clear@example.com',
+            'portal.recovery.other@example.com',
+        ]:
+            self.assertTrue(self.env['res.users'].search([('login', '=', login)], limit=1))

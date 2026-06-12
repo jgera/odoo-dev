@@ -19,6 +19,9 @@ Allows customers to:
     'data': [
         'views/portal_templates.xml',
     ],
+    'demo': [
+        'demo/payment_recovery_demo.xml',
+    ],
     'installable': True,
     'application': False,
     'auto_install': False,

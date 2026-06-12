@@ -367,6 +367,13 @@ Known limitations:
 
 This slice intentionally reuses Odoo's invoice portal payment page instead of creating a separate card-management flow.
 
+Demo portal users use password `portal`:
+
+- `portal.recovery.saved@example.com`: `PORTAL-RECOVERY-SAVED`, past due with an unpaid invoice and saved payment method.
+- `portal.recovery.nomethod@example.com`: `PORTAL-RECOVERY-NOMETHOD`, past due with an unpaid invoice and no saved payment method.
+- `portal.recovery.clear@example.com`: `PORTAL-RECOVERY-CLEAR`, active subscription with no recovery banner.
+- `portal.recovery.other@example.com`: `PORTAL-RECOVERY-OTHER`, second portal customer for access isolation checks.
+
 1. Generate or open a posted customer invoice linked to a subscription.
 2. Leave the invoice unpaid or partially paid.
 3. Open the subscription as the portal customer.
@@ -377,6 +384,10 @@ This slice intentionally reuses Odoo's invoice portal payment page instead of cr
 8. Confirm the page returns with a submitted/completed payment message.
 9. If no saved payment method exists, confirm the page explains that a saved method is required and directs the customer to pay the invoice or add a method.
 10. Confirm paid invoices do not appear as payment recovery work.
+11. Log in as `portal.recovery.saved@example.com` and confirm the saved-method retry action is available.
+12. Log in as `portal.recovery.nomethod@example.com` and confirm the banner blocks retry until a method is saved.
+13. Log in as `portal.recovery.clear@example.com` and confirm no recovery banner appears.
+14. Log in as `portal.recovery.other@example.com` and confirm this customer cannot access the other recovery subscriptions.
 
 ## 12. Payment Attempt Ledger Demo
 
