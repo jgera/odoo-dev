@@ -675,6 +675,38 @@ class SaleOrder(models.Model):
         self.ensure_one()
         return self._get_payment_recovery_invoices()[:1]
 
+    def _get_portal_payment_recovery_context(self):
+        self.ensure_one()
+        invoice = self._get_portal_payment_recovery_invoice()
+        has_saved_method = bool(self.payment_token_id)
+        if not invoice:
+            return {
+                'invoice': invoice,
+                'state': 'clear',
+                'has_saved_method': has_saved_method,
+                'can_retry': False,
+                'message': _('No payment recovery action is needed.'),
+                'next_action': False,
+            }
+
+        if has_saved_method:
+            state = 'retry_available'
+            message = _('A saved payment method is available for this subscription.')
+            next_action = _('Open the invoice or retry the saved payment method.')
+        else:
+            state = 'missing_payment_method'
+            message = _('No saved payment method is assigned to this subscription.')
+            next_action = _('Open the invoice to pay now, or add a saved payment method before retrying.')
+
+        return {
+            'invoice': invoice,
+            'state': state,
+            'has_saved_method': has_saved_method,
+            'can_retry': bool(has_saved_method),
+            'message': message,
+            'next_action': next_action,
+        }
+
     def _get_portal_available_payment_tokens(self, requester_partner):
         self.ensure_one()
         requester_partner.ensure_one()

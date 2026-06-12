@@ -225,7 +225,7 @@
 
                         <div t-if="payment_status == 'success'" class="alert alert-success d-flex align-items-start gap-2" role="status">
                             <i class="fa fa-fw fa-check mt-1"/>
-                            <div>Payment retry completed.</div>
+                            <div>Payment retry completed. No recovery action is needed for this invoice.</div>
                         </div>
 
                         <div t-if="payment_status == 'pending'" class="alert alert-info d-flex align-items-start gap-2" role="status">
@@ -253,6 +253,15 @@
                             <div><t t-out="payment_method_error"/></div>
                         </div>
 
+                        <div t-if="payment_recovery and payment_recovery.get('state') == 'missing_payment_method'" class="alert alert-warning d-flex align-items-start gap-2" role="status">
+                            <i class="fa fa-fw fa-credit-card mt-1"/>
+                            <div>
+                                <div class="fw-semibold">Saved payment method required</div>
+                                <div><t t-out="payment_recovery.get('message')"/></div>
+                                <div class="small text-muted"><t t-out="payment_recovery.get('next_action')"/></div>
+                            </div>
+                        </div>
+
                         <div t-if="payment_recovery_invoice" class="alert alert-danger d-flex flex-column flex-lg-row gap-3 align-items-lg-center justify-content-between" role="alert">
                             <div class="d-flex align-items-start gap-2">
                                 <i class="fa fa-fw fa-credit-card mt-1"/>
@@ -260,9 +269,22 @@
                                     <div class="fw-semibold">Payment Recovery Needed</div>
                                     <div>
                                         Invoice <a t-att-href="payment_recovery_invoice.get_portal_url()"><span t-field="payment_recovery_invoice.name"/></a>
-                                        has
+                                        has an outstanding balance of
                                         <span t-field="payment_recovery_invoice.amount_residual" t-options='{"widget": "monetary", "display_currency": payment_recovery_invoice.currency_id}'/>
                                         due.
+                                    </div>
+                                    <div class="small text-muted">
+                                        Due date:
+                                        <span t-if="payment_recovery_invoice.invoice_date_due" t-field="payment_recovery_invoice.invoice_date_due"/>
+                                        <span t-if="not payment_recovery_invoice.invoice_date_due">Not set</span>
+                                        <span class="mx-1">|</span>
+                                        Status:
+                                        <span t-if="payment_recovery_invoice.payment_state == 'not_paid'">Open</span>
+                                        <span t-if="payment_recovery_invoice.payment_state == 'partial'">Partially paid</span>
+                                        <span t-if="payment_recovery_invoice.payment_state not in ['not_paid', 'partial']" t-field="payment_recovery_invoice.payment_state"/>
+                                    </div>
+                                    <div t-if="payment_recovery and payment_recovery.get('next_action')" class="small text-muted">
+                                        <t t-out="payment_recovery.get('next_action')"/>
                                     </div>
                                 </div>
                             </div>
@@ -271,7 +293,7 @@
                                     <i class="fa fa-fw fa-file-text-o"/>
                                     Open Invoice
                                 </a>
-                                <form t-if="subscription.payment_token_id" method="post" t-att-action="'/my/subscription/%s/payment/retry' % subscription.id">
+                                <form t-if="payment_recovery and payment_recovery.get('can_retry')" method="post" t-att-action="'/my/subscription/%s/payment/retry' % subscription.id">
                                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                     <input type="hidden" name="invoice_id" t-att-value="payment_recovery_invoice.id"/>
                                     <button type="submit" class="btn btn-primary">

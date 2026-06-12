@@ -104,13 +104,15 @@ class SubscriptionPortal(CustomerPortal):
             ('subscription_id', '=', subscription_sudo.id),
         ], order='requested_on desc, id desc')
         pending_lifecycle_request = lifecycle_requests.filtered(lambda lifecycle_request: lifecycle_request.state == 'pending')[:1]
-        payment_recovery_invoice = subscription_sudo.sudo()._get_portal_payment_recovery_invoice()
+        payment_recovery = subscription_sudo.sudo()._get_portal_payment_recovery_context()
+        payment_recovery_invoice = payment_recovery['invoice']
         payment_tokens = subscription_sudo.sudo()._get_portal_available_payment_tokens(request.env.user.partner_id)
 
         values = {
             'sale_order': subscription_sudo,
             'subscription': subscription_sudo,
             'invoices': invoices,
+            'payment_recovery': payment_recovery,
             'payment_recovery_invoice': payment_recovery_invoice,
             'plan_change_requests': plan_change_requests,
             'pending_plan_change_request': pending_plan_change_request,

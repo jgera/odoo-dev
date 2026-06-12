@@ -185,6 +185,45 @@ class TestPortalAccess(TransactionCase):
         self.assertEqual(recovery_invoice.payment_state, 'not_paid')
         self.assertEqual(recovery_invoice.subscription_id, self.sub)
 
+    def test_06b_portal_payment_recovery_context_blocks_retry_without_token(self):
+        """Portal recovery context explains when no saved method exists."""
+        invoice = self._create_subscription_invoice()
+        self.sub.subscription_state = 'past_due'
+
+        recovery = self.sub._get_portal_payment_recovery_context()
+
+        self.assertEqual(recovery['invoice'], invoice)
+        self.assertEqual(recovery['state'], 'missing_payment_method')
+        self.assertFalse(recovery['can_retry'])
+        self.assertIn('No saved payment method', recovery['message'])
+
+    def test_06c_portal_payment_recovery_context_allows_saved_token_retry(self):
+        """Portal recovery context exposes retry availability when a saved method exists."""
+        invoice = self._create_subscription_invoice()
+        token = self._create_payment_token(self.partner)
+        self.sub.write({
+            'subscription_state': 'past_due',
+            'payment_token_id': token.id,
+        })
+
+        recovery = self.sub._get_portal_payment_recovery_context()
+
+        self.assertEqual(recovery['invoice'], invoice)
+        self.assertEqual(recovery['state'], 'retry_available')
+        self.assertTrue(recovery['can_retry'])
+
+    def test_06d_portal_payment_recovery_context_is_clear_for_paid_invoice(self):
+        """Portal recovery context does not expose paid invoices as recovery work."""
+        invoice = self._create_subscription_invoice()
+        invoice.payment_state = 'paid'
+        self.sub.subscription_state = 'active'
+
+        recovery = self.sub._get_portal_payment_recovery_context()
+
+        self.assertFalse(recovery['invoice'])
+        self.assertEqual(recovery['state'], 'clear')
+        self.assertFalse(recovery['can_retry'])
+
     def test_07_portal_payment_retry_requires_saved_payment_method(self):
         """Portal retry cannot run token collection without a saved payment method."""
         invoice = self._create_subscription_invoice()

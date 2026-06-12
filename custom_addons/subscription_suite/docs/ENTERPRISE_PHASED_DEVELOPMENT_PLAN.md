@@ -494,7 +494,8 @@ For every phase, update or create:
    - Request plan change - done for next-period approval requests.
    - Download invoices through Odoo portal URLs.
    - Update payment method or route to payment-token setup - native Odoo validation route done.
-   - Payment recovery banner for open subscription invoices - initial version done.
+- Payment recovery banner for open subscription invoices - initial version done.
+- Payment recovery banner clarity for invoice status, due date, residual amount, saved-method availability, and next action - initial version done.
    - Retry saved payment method for open subscription invoices - initial guarded route done.
 
 3. Action safety

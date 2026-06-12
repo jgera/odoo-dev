@@ -371,10 +371,12 @@ This slice intentionally reuses Odoo's invoice portal payment page instead of cr
 2. Leave the invoice unpaid or partially paid.
 3. Open the subscription as the portal customer.
 4. Confirm the subscription detail page shows **Payment Recovery Needed**.
-5. Click **Open Invoice** and confirm it opens the Odoo invoice portal payment page.
-6. If the subscription has a saved payment token, click **Retry Saved Method**.
-7. Confirm the page returns with a submitted/completed payment message.
-8. If no saved payment method exists, confirm retry is blocked and the customer is directed to open the invoice.
+5. Confirm the banner shows invoice number, due date, payment status, and residual amount.
+6. Click **Open Invoice** and confirm it opens the Odoo invoice portal payment page.
+7. If the subscription has a saved payment token, confirm **Retry Saved Method** is available and submit it.
+8. Confirm the page returns with a submitted/completed payment message.
+9. If no saved payment method exists, confirm the page explains that a saved method is required and directs the customer to pay the invoice or add a method.
+10. Confirm paid invoices do not appear as payment recovery work.
 
 ## 12. Payment Attempt Ledger Demo
 
