@@ -1,6 +1,8 @@
 import logging
 from odoo import models, fields, api, _
+from odoo.addons.payment import utils as payment_utils
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import consteq
 
 _logger = logging.getLogger(__name__)
 
@@ -714,6 +716,31 @@ class SaleOrder(models.Model):
         )
         return True
 
+    def _portal_assign_payment_token_from_validation_transaction(self, transaction, access_token, requester):
+        self.ensure_one()
+        transaction.ensure_one()
+        requester.ensure_one()
+
+        expected_access_token = payment_utils.generate_access_token(
+            transaction.partner_id.id,
+            transaction.amount,
+            transaction.currency_id.id,
+            env=self.env,
+        )
+        if not access_token or not consteq(access_token, expected_access_token):
+            raise ValidationError(_('Payment method validation could not be verified.'))
+        if transaction.operation != 'validation':
+            raise ValidationError(_('Only payment method validation transactions can update a subscription payment method.'))
+        if transaction.partner_id.commercial_partner_id != requester.partner_id.commercial_partner_id:
+            raise ValidationError(_('You do not have access to this payment method validation.'))
+        if transaction.state == 'pending':
+            return 'pending'
+        if transaction.state not in ('authorized', 'done') or not transaction.token_id:
+            raise ValidationError(_('Payment method was not saved. Try again or use another method.'))
+
+        self._portal_assign_payment_token(transaction.token_id, requester)
+        return 'saved'
+
     def _portal_retry_payment_recovery(self, invoice, requester):
         self.ensure_one()
         requester.ensure_one()
@@ -721,6 +748,8 @@ class SaleOrder(models.Model):
 
         if not self.is_subscription:
             raise ValidationError(_('Only subscriptions can retry payment recovery.'))
+        if requester.partner_id.commercial_partner_id != self.partner_id.commercial_partner_id:
+            raise ValidationError(_('You can only retry payments for your own subscription.'))
         if invoice.subscription_id != self:
             raise ValidationError(_('The selected invoice does not belong to this subscription.'))
         if invoice.move_type != 'out_invoice' or invoice.state != 'posted':

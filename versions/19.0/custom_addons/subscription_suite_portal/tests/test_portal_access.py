@@ -1,4 +1,5 @@
 from odoo import fields
+from odoo.addons.payment import utils as payment_utils
 from odoo.exceptions import UserError, ValidationError
 from odoo.fields import Command
 from odoo.tests.common import TransactionCase
@@ -241,3 +242,126 @@ class TestPortalAccess(TransactionCase):
 
         with self.assertRaises(ValidationError):
             self.sub._portal_assign_payment_token(token, portal_user)
+
+    def test_11_portal_payment_retry_rejects_other_customer_requester(self):
+        """The payment retry helper cannot be used for another customer's subscription."""
+        invoice = self._create_subscription_invoice()
+        token = self._create_payment_token(self.partner)
+        self.sub.write({
+            'subscription_state': 'past_due',
+            'payment_token_id': token.id,
+        })
+        other_partner = self.env['res.partner'].create({'name': 'Other Retry Requester'})
+        other_user = self.env['res.users'].create({
+            'name': 'Other Retry User',
+            'login': 'portal-other-retry-user@example.com',
+            'partner_id': other_partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+
+        with self.assertRaises(ValidationError):
+            self.sub._portal_retry_payment_recovery(invoice, other_user)
+
+    def test_12_portal_payment_retry_rejects_unrelated_invoice(self):
+        """Portal payment retry cannot collect payment for an invoice from another subscription."""
+        token = self._create_payment_token(self.partner)
+        self.sub.write({
+            'subscription_state': 'past_due',
+            'payment_token_id': token.id,
+        })
+        other_partner = self.env['res.partner'].create({'name': 'Other Invoice Owner'})
+        other_sub = self.env['sale.order'].create({
+            'partner_id': other_partner.id,
+            'is_subscription': True,
+            'subscription_state': 'past_due',
+            'subscription_plan_id': self.plan.id,
+        })
+        other_sub.write({
+            'order_line': [(0, 0, {
+                'product_id': self.product.id,
+                'name': self.product.name,
+                'product_uom_qty': 1.0,
+                'price_unit': 75.0,
+                'is_recurring': True,
+            })],
+        })
+        other_sub.action_confirm()
+        other_invoice = other_sub._create_invoices()[:1]
+        other_invoice.write({'subscription_id': other_sub.id})
+        other_invoice.action_post()
+
+        with self.assertRaises(ValidationError):
+            self.sub._portal_retry_payment_recovery(other_invoice, self.env.user)
+
+    def test_13_portal_payment_validation_rejects_other_customer_transaction(self):
+        """Payment-method return cannot assign another customer's validation token."""
+        other_partner = self.env['res.partner'].create({'name': 'Other Validation Owner'})
+        token = self._create_payment_token(other_partner)
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Validation User',
+            'login': 'portal-validation-user@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+        tx = self.env['payment.transaction'].sudo().create({
+            'provider_id': token.provider_id.id,
+            'token_id': token.id,
+            'payment_method_id': token.payment_method_id.id,
+            'operation': 'validation',
+            'amount': 0.0,
+            'currency_id': self.env.company.currency_id.id,
+            'partner_id': other_partner.id,
+            'reference': 'portal-validation-other-customer',
+        })
+        tx._set_done()
+        access_token = payment_utils.generate_access_token(
+            tx.partner_id.id,
+            tx.amount,
+            tx.currency_id.id,
+            env=self.env,
+        )
+
+        with self.assertRaises(ValidationError):
+            self.sub._portal_assign_payment_token_from_validation_transaction(
+                tx,
+                access_token,
+                portal_user,
+            )
+
+        self.assertFalse(self.sub.payment_token_id)
+
+    def test_14_portal_payment_validation_assigns_owned_token(self):
+        """A valid payment-method validation transaction assigns the saved token."""
+        token = self._create_payment_token(self.partner)
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Validation Owner',
+            'login': 'portal-validation-owner@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+        tx = self.env['payment.transaction'].sudo().create({
+            'provider_id': token.provider_id.id,
+            'token_id': token.id,
+            'payment_method_id': token.payment_method_id.id,
+            'operation': 'validation',
+            'amount': 0.0,
+            'currency_id': self.env.company.currency_id.id,
+            'partner_id': self.partner.id,
+            'reference': 'portal-validation-owned-token',
+        })
+        tx._set_done()
+        access_token = payment_utils.generate_access_token(
+            tx.partner_id.id,
+            tx.amount,
+            tx.currency_id.id,
+            env=self.env,
+        )
+
+        result = self.sub._portal_assign_payment_token_from_validation_transaction(
+            tx,
+            access_token,
+            portal_user,
+        )
+
+        self.assertEqual(result, 'saved')
+        self.assertEqual(self.sub.payment_token_id, token)

@@ -349,22 +349,13 @@ class SubscriptionPortal(CustomerPortal):
             tx_sudo = request.env['payment.transaction'].sudo().browse(transaction_id).exists()
             if not tx_sudo:
                 raise ValidationError(_('Payment method validation was not found.'))
-            if not payment_utils.check_access_token(
+            result = subscription_sudo.sudo()._portal_assign_payment_token_from_validation_transaction(
+                tx_sudo,
                 access_token,
-                tx_sudo.partner_id.id,
-                tx_sudo.amount,
-                tx_sudo.currency_id.id,
-            ):
-                raise ValidationError(_('Payment method validation could not be verified.'))
-            if tx_sudo.operation != 'validation':
-                raise ValidationError(_('Only payment method validation transactions can update a subscription payment method.'))
-            if tx_sudo.partner_id.commercial_partner_id != request.env.user.partner_id.commercial_partner_id:
-                raise ValidationError(_('You do not have access to this payment method validation.'))
-            if tx_sudo.state == 'pending':
+                request.env.user,
+            )
+            if result == 'pending':
                 return self._redirect_to_subscription(subscription_sudo.id, payment_method_status='pending')
-            if tx_sudo.state not in ('authorized', 'done') or not tx_sudo.token_id:
-                raise ValidationError(_('Payment method was not saved. Try again or use another method.'))
-            subscription_sudo.sudo()._portal_assign_payment_token(tx_sudo.token_id, request.env.user)
         except (UserError, ValidationError) as error:
             return self._redirect_to_subscription(subscription_sudo.id, payment_method_error=error.args[0])
 

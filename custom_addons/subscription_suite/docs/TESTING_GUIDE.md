@@ -287,6 +287,7 @@ Automated coverage:
 - `subscription_suite_billing` tests cover the shared portal request helper, including success, inactive subscriptions, unconfigured paths, duplicate pending requests, and already scheduled plan changes.
 - `subscription_suite_billing` tests cover the manager operations queue across pending requests and failed billing recovery items.
 - `subscription_suite_portal` tests cover portal subscription filtering and plan-change visibility context.
+- `subscription_suite_portal` tests cover payment recovery ownership for invoice retry, saved-token selection, and validation-return handling.
 
 Portal pause/resume request:
 
@@ -335,6 +336,10 @@ Security checks:
 5. Try to POST a lifecycle request for another customer's subscription.
 6. Try to POST a cancellation request for another customer's subscription.
 7. Confirm no plan change, lifecycle, or cancellation request is created.
+8. Try to POST payment retry for another customer's invoice.
+9. Try to assign another customer's saved payment token.
+10. Try to return from payment-method validation using another customer's transaction.
+11. Confirm no payment attempt or payment-method update is created for rejected requests.
 
 Current limitation:
 

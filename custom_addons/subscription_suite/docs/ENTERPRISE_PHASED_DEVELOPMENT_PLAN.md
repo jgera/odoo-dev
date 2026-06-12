@@ -558,6 +558,7 @@ For every phase, update or create:
 - CSRF-protected POST actions.
 - Cancel/pause/resume/change-plan permission cases.
 - Portal invoice visibility.
+- Payment recovery security tests for retry, saved-token selection, and validation-return ownership - initial coverage done.
 
 **Continuous validation:**
 
