@@ -111,6 +111,11 @@ class SubscriptionPaymentAttempt(models.Model):
             'recovery_note': self._get_recovery_note(state, transaction),
         }
         self.write(values)
+        self.message_post(body=_(
+            'Payment attempt %(state)s for invoice %(invoice)s.',
+            state=dict(self._fields['state'].selection).get(state, state),
+            invoice=self.invoice_id.display_name,
+        ))
         return state
 
     def _record_exception(self, error):
@@ -142,9 +147,13 @@ class SubscriptionPaymentAttempt(models.Model):
 
     def _get_recovery_note(self, state, transaction):
         if state == 'success':
-            return False
+            return _('Payment was recovered successfully.')
         if state == 'pending':
+            if self.source == 'portal':
+                return _('Customer payment retry was submitted and is waiting for provider confirmation.')
             return _('Payment request is waiting for provider confirmation.')
         if state == 'cancelled':
             return _('Payment was cancelled by the provider or customer. Ask the customer to retry or use the invoice payment page.')
+        if self.source == 'portal':
+            return _('Customer payment retry failed. Ask the customer to update the payment method or pay the invoice directly.')
         return _('Payment failed at the provider. Review the transaction and retry after the payment method or provider issue is resolved.')

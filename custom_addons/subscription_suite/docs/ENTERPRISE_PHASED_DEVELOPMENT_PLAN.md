@@ -58,6 +58,7 @@ These are not criticisms; they are the exact next enterprise work.
 | --- | --- | --- |
 | Billing cron | Billing run, billing attempt, idempotency key, duplicate-period guard, processing lock, retry classification, manual retry, automated retry scheduling, retry exhaustion activities, failed-billing queue, and retry settings now exist | Duplicate invoices are reduced and failed billing recovery is visible; remaining work is deeper operational reporting |
 | Invoice generation | Billing attempts now track success, failure, skipped state, invoice link, period, amount, error message, failure category, retryability, retry timing, retry exhaustion, failure counts, first/last failure times, recovery notes, and chatter logs | Auditability is improved; remaining reporting work belongs in broader analytics |
+| Payment recovery ledger | Portal retries now record pending, success, and failed attempt outcomes with clearer recovery notes, subscription logs, and manager recovery visibility | Customer recovery is more auditable; provider-specific mapping remains deferred |
 | Payment collection | Basic token transaction creation exists, but no retry campaign, provider-specific result handling, attempt ledger, or backup payment method | Payment failures become opaque |
 | Dunning | Policy cron exists, but no attempt model, no recovery metrics, limited customer recovery workflow | Hard to operate at scale |
 | Portal | Subscription, invoice, pending plan change, lifecycle, cancellation, and approval visibility exists; customers can request next-period plan changes, pause/resume, and cancellations through approval-gated requests | Update-payment still requires support |
@@ -496,6 +497,7 @@ For every phase, update or create:
    - Update payment method or route to payment-token setup - native Odoo validation route done.
 - Payment recovery banner for open subscription invoices - initial version done.
 - Payment recovery banner clarity for invoice status, due date, residual amount, saved-method availability, and next action - initial version done.
+- Portal retry feedback loop for pending, success, failed, and manager-visible recovery attempts - initial version done.
    - Retry saved payment method for open subscription invoices - initial guarded route done.
 
 3. Action safety

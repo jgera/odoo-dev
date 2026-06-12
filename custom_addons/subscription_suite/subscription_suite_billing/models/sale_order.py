@@ -656,7 +656,7 @@ class SaleOrder(models.Model):
         if payment_state == 'success':
             self._log_subscription_event('payment_success', _('Auto-payment collected for %s') % invoice.name)
         elif payment_state == 'pending':
-            self._log_subscription_event('payment_failed', _('Auto-payment is pending provider confirmation for %s') % invoice.name)
+            self._log_subscription_event('payment_pending', _('Auto-payment is pending provider confirmation for %s') % invoice.name)
         else:
             self._log_subscription_event('payment_failed', _('Auto-payment failed for %s') % invoice.name)
 
@@ -792,10 +792,18 @@ class SaleOrder(models.Model):
             raise UserError(_('No saved payment method is available. Open the invoice to pay or add a payment method.'))
 
         transaction = self._auto_collect_payment(invoice, source='portal', requested_by=requester)
-        event_type = 'payment_success' if transaction and transaction.state == 'done' else 'payment_failed'
+        if transaction and transaction.state == 'done':
+            event_type = 'payment_success'
+            description = _('Portal payment retry completed for invoice %(invoice)s by %(user)s.')
+        elif transaction and transaction.state == 'pending':
+            event_type = 'payment_pending'
+            description = _('Portal payment retry was submitted for invoice %(invoice)s by %(user)s and is waiting for provider confirmation.')
+        else:
+            event_type = 'payment_failed'
+            description = _('Portal payment retry failed for invoice %(invoice)s by %(user)s.')
         self._log_subscription_event(
             event_type,
-            _('Portal payment retry requested for invoice %(invoice)s by %(user)s.', invoice=invoice.name, user=requester.display_name),
+            description % {'invoice': invoice.name, 'user': requester.display_name},
             new_values={
                 'invoice_id': invoice.id,
                 'transaction_id': transaction.id if transaction else False,

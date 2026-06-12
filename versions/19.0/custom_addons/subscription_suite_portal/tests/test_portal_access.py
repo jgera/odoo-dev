@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from odoo import fields
 from odoo.addons.payment import utils as payment_utils
 from odoo.exceptions import UserError, ValidationError
@@ -404,3 +406,112 @@ class TestPortalAccess(TransactionCase):
 
         self.assertEqual(result, 'saved')
         self.assertEqual(self.sub.payment_token_id, token)
+
+    def test_15_portal_payment_retry_records_pending_attempt_and_log(self):
+        """A pending portal retry remains traceable through the payment attempt ledger."""
+        invoice = self._create_subscription_invoice()
+        token = self._create_payment_token(self.partner)
+        self.sub.write({
+            'subscription_state': 'past_due',
+            'payment_token_id': token.id,
+        })
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Pending Retry User',
+            'login': 'portal-pending-retry@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+
+        def fake_send_payment_request(transactions):
+            transactions._set_pending()
+
+        with patch.object(self.env.registry['payment.transaction'], '_send_payment_request', fake_send_payment_request):
+            transaction = self.sub._portal_retry_payment_recovery(invoice, portal_user)
+
+        attempt = self.env['subscription.payment.attempt'].search([
+            ('subscription_id', '=', self.sub.id),
+            ('invoice_id', '=', invoice.id),
+            ('source', '=', 'portal'),
+        ], limit=1)
+        self.assertTrue(attempt)
+        self.assertEqual(attempt.requested_by_id, portal_user)
+        self.assertEqual(attempt.transaction_id, transaction)
+        self.assertEqual(attempt.state, 'pending')
+        self.assertIn('waiting for provider confirmation', attempt.recovery_note)
+        event = self.env['subscription.log'].search([
+            ('subscription_id', '=', self.sub.id),
+            ('event_type', '=', 'payment_pending'),
+        ], limit=1)
+        self.assertTrue(event)
+
+    def test_16_portal_payment_retry_records_success_attempt_and_log(self):
+        """A successful portal retry is visible from the payment attempt and subscription log."""
+        invoice = self._create_subscription_invoice()
+        token = self._create_payment_token(self.partner)
+        self.sub.write({
+            'subscription_state': 'past_due',
+            'payment_token_id': token.id,
+        })
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Success Retry User',
+            'login': 'portal-success-retry@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+
+        def fake_send_payment_request(transactions):
+            transactions._set_done()
+
+        with patch.object(self.env.registry['payment.transaction'], '_send_payment_request', fake_send_payment_request):
+            transaction = self.sub._portal_retry_payment_recovery(invoice, portal_user)
+
+        attempt = self.env['subscription.payment.attempt'].search([
+            ('subscription_id', '=', self.sub.id),
+            ('invoice_id', '=', invoice.id),
+            ('source', '=', 'portal'),
+        ], limit=1)
+        self.assertEqual(attempt.transaction_id, transaction)
+        self.assertEqual(attempt.state, 'success')
+        self.assertEqual(attempt.recovery_note, 'Payment was recovered successfully.')
+        event = self.env['subscription.log'].search([
+            ('subscription_id', '=', self.sub.id),
+            ('event_type', '=', 'payment_success'),
+        ], limit=1)
+        self.assertTrue(event)
+
+    def test_17_failed_portal_payment_retry_is_manager_recovery_work(self):
+        """A failed portal retry appears as payment recovery work for managers."""
+        invoice = self._create_subscription_invoice()
+        token = self._create_payment_token(self.partner)
+        self.sub.write({
+            'subscription_state': 'past_due',
+            'payment_token_id': token.id,
+        })
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Failed Retry User',
+            'login': 'portal-failed-retry@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+
+        def fake_send_payment_request(transactions):
+            transactions._set_error('card declined')
+
+        with patch.object(self.env.registry['payment.transaction'], '_send_payment_request', fake_send_payment_request):
+            self.sub._portal_retry_payment_recovery(invoice, portal_user)
+
+        attempt = self.env['subscription.payment.attempt'].search([
+            ('subscription_id', '=', self.sub.id),
+            ('invoice_id', '=', invoice.id),
+            ('source', '=', 'portal'),
+        ], limit=1)
+        self.assertEqual(attempt.state, 'failed')
+        self.assertTrue(attempt.recovery_required)
+        self.assertIn('Customer payment retry failed', attempt.recovery_note)
+        self.env.flush_all()
+        operation = self.env['subscription.manager.operation'].search([
+            ('source_model', '=', 'subscription.payment.attempt'),
+            ('source_res_id', '=', attempt.id),
+            ('operation_type', '=', 'payment_recovery'),
+        ], limit=1)
+        self.assertTrue(operation)

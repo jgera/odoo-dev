@@ -22,6 +22,7 @@ class SubscriptionLog(models.Model):
         ('invoice_generated', 'Invoice Generated'),
         ('payment_method_updated', 'Payment Method Updated'),
         ('payment_success', 'Payment Successful'),
+        ('payment_pending', 'Payment Pending'),
         ('payment_failed', 'Payment Failed'),
         ('dunning_started', 'Dunning Started'),
         ('dunning_step', 'Dunning Step'),

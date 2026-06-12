@@ -386,6 +386,7 @@ This slice intentionally reuses Odoo's invoice portal payment page instead of cr
 4. Open **Subscriptions > Billing > Failed Payments** and confirm recovery-required rows are visible.
 5. Open **Subscriptions > Operations > Manager Operations** and confirm failed payment attempts appear as payment recovery work.
 6. From a subscription, use the **Payments** stat button and confirm it filters attempts for that subscription only.
+7. For portal retries, confirm the attempt source is **Portal** and recovery notes distinguish pending provider confirmation, successful recovery, and failed customer retry.
 
 ## 13. Portal Payment Method Demo
 
