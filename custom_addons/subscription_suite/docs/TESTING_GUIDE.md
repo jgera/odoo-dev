@@ -245,6 +245,9 @@ Renewal quotation:
 5. Confirm the quotation.
 6. Return to the original subscription and confirm **Sales History** includes the renewal quotation.
 7. Confirm the subscription log includes a **Renewed** event.
+8. On the subscription plan, disable **Allow Renewal Quotes** and confirm **Renew** is blocked.
+9. Set the subscription to past due, disable **Allow Past-Due Renewal Quotes**, and confirm **Renew** is blocked.
+10. Set the subscription to expired and confirm **Renew** can still create a renewal quotation.
 
 Upsell quotation:
 
@@ -258,6 +261,10 @@ Upsell quotation:
 8. When `subscription_suite_billing` is installed, confirm a related proration record exists under the subscription proration smart button.
 9. Open the proration record and confirm **Adjustment Invoice** is set for a positive net amount or **Credit Note** is set for a negative net amount.
 10. Confirm **Sales History** includes the upsell quotation.
+11. On the subscription plan, disable **Allow Upsell Quotes** and confirm **Upsell** is blocked.
+12. Set the subscription to past due, disable **Allow Past-Due Upsell Quotes**, and confirm **Upsell** is blocked.
+13. Set the subscription to expired and confirm **Upsell** is blocked while **Renew** remains available.
+14. Open the Sales search view and confirm **Renewal Quotes**, **Upsell Quotes**, and **Origin Subscription** grouping are available for quote visibility.
 
 ## 9. Phase 3 Portal Demo
 

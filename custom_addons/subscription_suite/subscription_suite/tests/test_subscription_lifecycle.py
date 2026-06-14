@@ -467,6 +467,21 @@ class TestSubscriptionLifecycle(TransactionCase):
         self.assertEqual(sub.subscription_end_date, quote.subscription_end_date)
         self.assertTrue(sub.subscription_log_ids.filtered(lambda log: log.event_type == 'renewed'))
 
+    def test_renewal_quote_respects_plan_policy(self):
+        sub = self._create_active_subscription()
+        sub.subscription_plan_id.allow_renewal_quote = False
+
+        with self.assertRaises(UserError):
+            sub.action_renew_subscription()
+
+    def test_past_due_renewal_quote_respects_plan_policy(self):
+        sub = self._create_active_subscription()
+        sub.write({'subscription_state': 'past_due'})
+        sub.subscription_plan_id.allow_past_due_renewal_quote = False
+
+        with self.assertRaises(UserError):
+            sub.action_renew_subscription()
+
     def test_upsell_quote_confirmation_adds_recurring_line_and_logs_mrr(self):
         sub = self._create_active_subscription()
         old_mrr = sub.mrr
@@ -493,3 +508,39 @@ class TestSubscriptionLifecycle(TransactionCase):
             ('subscription_id', '=', sub.id),
             ('movement_type', '=', 'expansion'),
         ]))
+
+    def test_upsell_quote_respects_plan_policy(self):
+        sub = self._create_active_subscription()
+        sub.subscription_plan_id.allow_upsell_quote = False
+
+        with self.assertRaises(UserError):
+            sub.action_upsell_subscription()
+
+    def test_past_due_upsell_quote_respects_plan_policy(self):
+        sub = self._create_active_subscription()
+        sub.write({'subscription_state': 'past_due'})
+        sub.subscription_plan_id.allow_past_due_upsell_quote = False
+
+        with self.assertRaises(UserError):
+            sub.action_upsell_subscription()
+
+    def test_expired_subscription_can_renew_but_not_upsell(self):
+        sub = self._create_active_subscription()
+        sub.write({'subscription_state': 'expired'})
+
+        action = sub.action_renew_subscription()
+        quote = self.env['sale.order'].browse(action['res_id'])
+
+        self.assertEqual(quote.subscription_quote_type, 'renewal')
+        self.assertEqual(quote.subscription_origin_id, sub)
+        with self.assertRaises(UserError):
+            sub.action_upsell_subscription()
+
+    def test_subscription_quote_cannot_create_nested_quotes(self):
+        sub = self._create_active_subscription()
+        quote = self.env['sale.order'].browse(sub.action_renew_subscription()['res_id'])
+
+        with self.assertRaises(UserError):
+            quote.action_renew_subscription()
+        with self.assertRaises(UserError):
+            quote.action_upsell_subscription()

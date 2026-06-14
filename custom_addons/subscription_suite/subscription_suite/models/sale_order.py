@@ -316,10 +316,7 @@ class SaleOrder(models.Model):
 
     def _create_subscription_quote(self, quote_type, copy_recurring_lines=False):
         self.ensure_one()
-        if not self.is_subscription:
-            raise UserError(_("Only subscriptions can create subscription quotations."))
-        if self.subscription_state in ['cancelled', 'expired']:
-            raise UserError(_("Cancelled or expired subscriptions cannot create new subscription quotations."))
+        self._check_subscription_quote_allowed(quote_type)
 
         values = self._prepare_subscription_quote_values(quote_type)
         recurring_lines = self.order_line.filtered(lambda line: line.is_recurring and not line.display_type)
@@ -336,6 +333,41 @@ class SaleOrder(models.Model):
             new_values={'quote_id': quote.id, 'quote_name': quote.name},
         )
         return quote
+
+    def _check_subscription_quote_allowed(self, quote_type):
+        self.ensure_one()
+        if quote_type not in ('renewal', 'upsell'):
+            raise UserError(_("Unsupported subscription quotation type."))
+        quote_label = _('renewal') if quote_type == 'renewal' else _('upsell')
+        if self.subscription_quote_type:
+            raise UserError(_("Subscription quotations cannot create another subscription quotation."))
+        if not self.is_subscription:
+            raise UserError(_("Only subscriptions can create subscription quotations."))
+        if not self.subscription_plan_id:
+            raise UserError(_("Set a subscription plan before creating a subscription quotation."))
+
+        allowed_states = {
+            'renewal': ['active', 'paused', 'past_due', 'expired'],
+            'upsell': ['active', 'paused', 'past_due'],
+        }[quote_type]
+        if self.subscription_state not in allowed_states:
+            raise UserError(
+                _("A %(quote_type)s quotation cannot be created for a subscription in %(state)s state.",
+                  quote_type=quote_label,
+                  state=dict(self._fields['subscription_state'].selection).get(self.subscription_state, self.subscription_state))
+            )
+
+        plan = self.subscription_plan_id
+        if quote_type == 'renewal' and not plan.allow_renewal_quote:
+            raise UserError(_("Renewal quotations are disabled for this subscription plan."))
+        if quote_type == 'upsell' and not plan.allow_upsell_quote:
+            raise UserError(_("Upsell quotations are disabled for this subscription plan."))
+        if self.subscription_state == 'past_due':
+            if quote_type == 'renewal' and not plan.allow_past_due_renewal_quote:
+                raise UserError(_("Past-due renewal quotations are disabled for this subscription plan."))
+            if quote_type == 'upsell' and not plan.allow_past_due_upsell_quote:
+                raise UserError(_("Past-due upsell quotations are disabled for this subscription plan."))
+        return True
 
     def _get_subscription_quote_action(self, quote):
         self.ensure_one()

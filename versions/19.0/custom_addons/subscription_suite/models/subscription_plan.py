@@ -26,6 +26,10 @@ class SubscriptionPlan(models.Model):
     
     trial_days = fields.Integer(string='Trial Days', default=0, help="0 means no trial")
     auto_renew = fields.Boolean(string='Auto Renew', default=True)
+    allow_renewal_quote = fields.Boolean(string='Allow Renewal Quotes', default=True)
+    allow_upsell_quote = fields.Boolean(string='Allow Upsell Quotes', default=True)
+    allow_past_due_renewal_quote = fields.Boolean(string='Allow Past-Due Renewal Quotes', default=True)
+    allow_past_due_upsell_quote = fields.Boolean(string='Allow Past-Due Upsell Quotes', default=True)
     setup_fee = fields.Monetary(string='Setup Fee', currency_field='currency_id', default=0.0)
     
     currency_id = fields.Many2one('res.currency', string='Currency', default=lambda self: self.env.company.currency_id)

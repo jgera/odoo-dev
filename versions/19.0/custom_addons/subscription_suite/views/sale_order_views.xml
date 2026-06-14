@@ -20,7 +20,7 @@
                         class="oe_highlight" invisible="subscription_state != 'paused'"/>
 
                 <button name="action_renew_subscription" type="object" string="Renew"
-                        invisible="not is_subscription or subscription_state not in ['active', 'paused', 'past_due']"/>
+                        invisible="not is_subscription or subscription_state not in ['active', 'paused', 'past_due', 'expired']"/>
 
                 <button name="action_upsell_subscription" type="object" string="Upsell"
                         invisible="not is_subscription or subscription_state not in ['active', 'paused', 'past_due']"/>
@@ -226,6 +226,9 @@
                 <field name="subscription_code"/>
                 <field name="partner_id"/>
                 <field name="subscription_plan_id"/>
+                <filter string="Subscription Quotes" name="subscription_quotes" domain="[('subscription_quote_type', '!=', False)]"/>
+                <filter string="Renewal Quotes" name="renewal_quotes" domain="[('subscription_quote_type', '=', 'renewal')]"/>
+                <filter string="Upsell Quotes" name="upsell_quotes" domain="[('subscription_quote_type', '=', 'upsell')]"/>
                 <filter string="Active" name="active_subscriptions" domain="[('subscription_state', '=', 'active')]"/>
                 <filter string="Trials" name="trial_subscriptions" domain="[('subscription_state', '=', 'trial')]"/>
                 <filter string="Paused" name="paused_subscriptions" domain="[('subscription_state', '=', 'paused')]"/>
@@ -236,9 +239,26 @@
                     <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
                     <filter string="Customer" name="group_customer" context="{'group_by': 'partner_id'}"/>
                     <filter string="Salesperson" name="group_salesperson" context="{'group_by': 'user_id'}"/>
+                    <filter string="Origin Subscription" name="group_origin_subscription" context="{'group_by': 'subscription_origin_id'}"/>
                     <filter string="Next Invoice" name="group_next_invoice" context="{'group_by': 'next_invoice_date'}"/>
                 </group>
             </search>
+        </field>
+    </record>
+
+    <record id="view_sales_order_filter_inherit_subscription_quotes" model="ir.ui.view">
+        <field name="name">sale.order.search.subscription.quotes</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='my_sale_orders_filter']" position="after">
+                <separator/>
+                <filter string="Renewal Quotes" name="renewal_quotes" domain="[('subscription_quote_type', '=', 'renewal')]"/>
+                <filter string="Upsell Quotes" name="upsell_quotes" domain="[('subscription_quote_type', '=', 'upsell')]"/>
+            </xpath>
+            <xpath expr="//filter[@name='customer']" position="after">
+                <filter string="Origin Subscription" name="origin_subscription" context="{'group_by': 'subscription_origin_id'}"/>
+            </xpath>
         </field>
     </record>
 

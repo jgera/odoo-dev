@@ -67,6 +67,12 @@
                                     <field name="cancellation_policy"/>
                                     <field name="min_commitment_periods"/>
                                 </group>
+                                <group name="quote_policy_settings" string="Sales Quote Policy">
+                                    <field name="allow_renewal_quote"/>
+                                    <field name="allow_upsell_quote"/>
+                                    <field name="allow_past_due_renewal_quote"/>
+                                    <field name="allow_past_due_upsell_quote"/>
+                                </group>
                                 <group string="Pause">
                                     <field name="pause_allowed"/>
                                     <field name="max_pause_days" invisible="not pause_allowed"/>

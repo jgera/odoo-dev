@@ -64,7 +64,7 @@ These are not criticisms; they are the exact next enterprise work.
 | Portal | Subscription, invoice, pending plan change, lifecycle, cancellation, and approval visibility exists; customers can request next-period plan changes, pause/resume, and cancellations through approval-gated requests | Update-payment still requires support |
 | Pause/resume | Pause/resume now adjusts the next invoice date by paused duration and respects max pause days | Remaining work is mostly portal self-service and support workflow polish |
 | Cancellation | Immediate and end-of-period cancellation now exist, including scheduled cancellation reversal and cron finalization | Remaining work is mostly renewal/upsell lifecycle parity and optional approvals |
-| Renewals/upsells | Linked renewal and upsell quotations, sales history, upsell effective date, proration ledger, draft adjustment invoices/credit notes, immediate and scheduled next-period plan changes, approval-gated plan change requests, upgrade/downgrade path checks, and minimum commitment enforcement now exist; remaining work is deeper sales-policy controls | Sales workflow parity is improving, but advanced policy depth is still needed |
+| Renewals/upsells | Linked renewal and upsell quotations, sales history, upsell effective date, proration ledger, draft adjustment invoices/credit notes, immediate and scheduled next-period plan changes, approval-gated plan change requests, upgrade/downgrade path checks, minimum commitment enforcement, and plan-level renewal/upsell quote guards now exist | Sales workflow parity is improving; remaining work is optional approval routing and deeper quote lifecycle automation |
 | Usage/seats | No usage-based billing, seat metering, tiered pricing, or quantity sync | Weak for SaaS and B2B subscriptions |
 | Analytics | Basic MRR/ARR exists; operational recovery dashboard now separates portal-originated recovery attempts by pending, failed, recovered, and manual-action buckets; no NRR, GRR, retention cohorts, forecast, LTV, or trial conversion yet | Management reporting is improving operationally, but executive revenue analytics remain incomplete |
 | Revenue recognition | Not implemented | Finance/compliance gap for annual/prepaid contracts |
@@ -392,6 +392,7 @@ For every phase, update or create:
    - Add generic subscription quote relationship fields - done.
    - Add sales history smart button - done.
    - Preserve start date, next invoice date, recurring plan, and chatter trail - done.
+   - Add plan-level renewal quote and past-due renewal quote policy guards - current slice.
 
 2. Upsell workflow
    - Add `action_upsell_subscription` - done.
@@ -399,6 +400,7 @@ For every phase, update or create:
    - Add recurring products to existing subscription after confirmation - done.
    - Apply prorated price for remaining period - draft adjustment invoice/credit-note generation done.
    - Log MRR expansion movement - done.
+   - Add plan-level upsell quote and past-due upsell quote policy guards - current slice.
 
 3. Structured plan change workflow
    - Strengthen current plan-change wizard.
@@ -437,6 +439,7 @@ For every phase, update or create:
 
 - Sales team can renew and upsell subscriptions using Odoo-style quotations - initial foundation done.
 - Sales history clearly shows related orders and statuses - initial foundation done.
+- Sales managers can disable renewal, upsell, and past-due quote creation per plan - current slice.
 - Plan changes cannot violate plan-defined upgrade/downgrade rules.
 - Cancellation and downgrade cannot violate minimum commitment periods.
 - Next-period plan changes apply before the renewal invoice and do not create proration documents.
