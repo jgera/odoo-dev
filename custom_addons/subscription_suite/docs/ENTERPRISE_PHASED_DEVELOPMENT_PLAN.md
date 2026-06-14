@@ -69,7 +69,7 @@ These are not criticisms; they are the exact next enterprise work.
 | Analytics | Basic MRR/ARR exists; operational recovery dashboard now separates portal-originated recovery attempts by pending, failed, recovered, and manual-action buckets; no NRR, GRR, retention cohorts, forecast, LTV, or trial conversion yet | Management reporting is improving operationally, but executive revenue analytics remain incomplete |
 | Revenue recognition | Not implemented | Finance/compliance gap for annual/prepaid contracts |
 | Multi-currency | Amounts remain in order currency; no normalized company-currency MRR ledger | Cross-currency analytics can mislead |
-| Security | Groups and multi-company rules exist, but portal route tests and full model coverage are limited | Access regressions may go unnoticed |
+| Security | Groups and multi-company rules exist; deterministic portal helper tests cover ownership-sensitive flows, but live portal route tests still need a stable local harness | Route-level access regressions may go unnoticed |
 | Performance | No explicit indexes or scale tests for 10K+ subscriptions | Cron/report performance unknown |
 | Packaging | No release checklist, migration notes, or full user/admin docs | Hard to deploy confidently |
 
@@ -559,16 +559,17 @@ For every phase, update or create:
 
 **Tests:**
 
-- `HttpCase` portal access tests.
-- Portal user cannot access another customer's subscription.
-- CSRF-protected POST actions.
+- Deterministic portal helper tests for portal user filtering and another-customer rejection.
+- Deterministic portal helper tests for CSRF-protected POST action handlers.
 - Cancel/pause/resume/change-plan permission cases.
 - Portal invoice visibility.
 - Payment recovery security tests for retry, saved-token selection, and validation-return ownership - initial coverage done.
+- Live `HttpCase` route coverage remains a Phase 8 hardening item until the local route-test harness is stable.
 
 **Continuous validation:**
 
-- Portal `HttpCase` tests must exist before new portal actions are considered complete.
+- Portal helper tests must cover ownership, policy, and blocked-state behavior before new portal actions are considered complete.
+- Stable live portal route tests should be introduced before broadening portal self-service beyond the current approval-gated actions.
 - Manual portal demo must verify list, detail, invoice history, and each allowed action.
 
 ---
@@ -885,7 +886,7 @@ For every phase, update or create:
 
 1. Security hardening
    - Full record-rule audit.
-   - Portal route audit.
+   - Portal route audit and stable `HttpCase` harness.
    - Multi-company tests.
    - Manager/user/portal permission matrix.
    - Read/write/delete access review for every model.

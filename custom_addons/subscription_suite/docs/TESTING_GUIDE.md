@@ -295,6 +295,7 @@ Automated coverage:
 - `subscription_suite_billing` tests cover the manager operations queue across pending requests and failed billing recovery items.
 - `subscription_suite_portal` tests cover portal subscription filtering and plan-change visibility context.
 - `subscription_suite_portal` tests cover payment recovery ownership for invoice retry, saved-token selection, and validation-return handling.
+- Live `HttpCase` route tests are not part of the passing checkpoint yet. A local route-test attempt hung after portal login, so route-level browser coverage remains a Phase 8 hardening task instead of being treated as validated.
 
 Portal pause/resume request:
 
@@ -353,6 +354,7 @@ Current limitation:
 - Portal plan changes are intentionally next-period approval requests only. Immediate prorated changes remain backend-only until payment recovery and customer payment-method flows are stronger.
 - Portal pause/resume requests are approval-gated. The customer portal does not directly change lifecycle state.
 - Portal cancellation requests are approval-gated. The customer portal does not directly cancel subscriptions.
+- Portal route-level `HttpCase` coverage is deferred until the local HTTP test harness is stable. Current automated coverage focuses on deterministic controller-helper and model behavior for ownership, policy, blocked states, and audit records.
 
 ## 10. Phase Result Log
 
