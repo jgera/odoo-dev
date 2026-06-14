@@ -71,6 +71,34 @@ class TestRecoveryDashboard(TransactionCase):
             'recovery_required': True,
             'recovery_note': 'Customer needs to update payment method.',
         })
+        pending_portal_attempt = self.env['subscription.payment.attempt'].create({
+            'name': 'RECOVERY-PAY-002',
+            'subscription_id': self.subscription.id,
+            'invoice_id': self.invoice.id,
+            'source': 'portal',
+            'state': 'pending',
+            'amount': 100.0,
+            'recovery_note': 'Customer retry is waiting for provider confirmation.',
+        })
+        recovered_portal_attempt = self.env['subscription.payment.attempt'].create({
+            'name': 'RECOVERY-PAY-003',
+            'subscription_id': self.subscription.id,
+            'invoice_id': self.invoice.id,
+            'source': 'portal',
+            'state': 'success',
+            'amount': 100.0,
+            'recovery_note': 'Customer retry recovered the invoice.',
+        })
+        cron_failed_attempt = self.env['subscription.payment.attempt'].create({
+            'name': 'RECOVERY-PAY-004',
+            'subscription_id': self.subscription.id,
+            'invoice_id': self.invoice.id,
+            'source': 'cron',
+            'state': 'failed',
+            'amount': 100.0,
+            'failure_message': 'cron provider decline',
+            'recovery_required': True,
+        })
         pending_attempt = self.env['subscription.dunning.attempt'].create({
             'subscription_id': self.subscription.id,
             'invoice_id': self.invoice.id,
@@ -135,6 +163,26 @@ class TestRecoveryDashboard(TransactionCase):
         self.assertEqual(dashboard.active_dunning_count, SaleOrder.search_count(domains['active_dunning']))
         self.assertEqual(dashboard.failed_payment_count, PaymentAttempt.search_count(domains['failed_payments']))
         self.assertEqual(
+            dashboard.portal_recovery_attempt_count,
+            PaymentAttempt.search_count(domains['portal_recovery_attempts']),
+        )
+        self.assertEqual(
+            dashboard.portal_recovery_pending_count,
+            PaymentAttempt.search_count(domains['portal_recovery_pending']),
+        )
+        self.assertEqual(
+            dashboard.portal_recovery_failed_count,
+            PaymentAttempt.search_count(domains['portal_recovery_failed']),
+        )
+        self.assertEqual(
+            dashboard.portal_recovery_recovered_count,
+            PaymentAttempt.search_count(domains['portal_recovery_recovered']),
+        )
+        self.assertEqual(
+            dashboard.portal_recovery_manual_action_count,
+            PaymentAttempt.search_count(domains['portal_recovery_manual_action']),
+        )
+        self.assertEqual(
             dashboard.pending_dunning_attempt_count,
             DunningAttempt.search_count(domains['pending_dunning_attempts']),
         )
@@ -160,6 +208,13 @@ class TestRecoveryDashboard(TransactionCase):
         )
         self.assertIn(self.subscription, SaleOrder.search(domains['active_dunning']))
         self.assertIn(payment_attempt, PaymentAttempt.search(domains['failed_payments']))
+        self.assertIn(cron_failed_attempt, PaymentAttempt.search(domains['failed_payments']))
+        self.assertIn(payment_attempt, PaymentAttempt.search(domains['portal_recovery_attempts']))
+        self.assertIn(pending_portal_attempt, PaymentAttempt.search(domains['portal_recovery_pending']))
+        self.assertIn(payment_attempt, PaymentAttempt.search(domains['portal_recovery_failed']))
+        self.assertIn(recovered_portal_attempt, PaymentAttempt.search(domains['portal_recovery_recovered']))
+        self.assertIn(payment_attempt, PaymentAttempt.search(domains['portal_recovery_manual_action']))
+        self.assertNotIn(cron_failed_attempt, PaymentAttempt.search(domains['portal_recovery_attempts']))
         self.assertIn(pending_attempt, DunningAttempt.search(domains['pending_dunning_attempts']))
         self.assertIn(failed_attempt, DunningAttempt.search(domains['failed_dunning_attempts']))
         self.assertIn(retryable_attempt, DunningAttempt.search(domains['retryable_dunning_attempts']))
@@ -169,6 +224,26 @@ class TestRecoveryDashboard(TransactionCase):
 
         self.assertEqual(dashboard.action_open_active_dunning()['domain'], domains['active_dunning'])
         self.assertEqual(dashboard.action_open_failed_payments()['domain'], domains['failed_payments'])
+        self.assertEqual(
+            dashboard.action_open_portal_recovery_attempts()['domain'],
+            domains['portal_recovery_attempts'],
+        )
+        self.assertEqual(
+            dashboard.action_open_portal_recovery_pending()['domain'],
+            domains['portal_recovery_pending'],
+        )
+        self.assertEqual(
+            dashboard.action_open_portal_recovery_failed()['domain'],
+            domains['portal_recovery_failed'],
+        )
+        self.assertEqual(
+            dashboard.action_open_portal_recovery_recovered()['domain'],
+            domains['portal_recovery_recovered'],
+        )
+        self.assertEqual(
+            dashboard.action_open_portal_recovery_manual_action()['domain'],
+            domains['portal_recovery_manual_action'],
+        )
         self.assertEqual(
             dashboard.action_open_pending_dunning_attempts()['domain'],
             domains['pending_dunning_attempts'],

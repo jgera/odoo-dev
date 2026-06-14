@@ -66,7 +66,7 @@ These are not criticisms; they are the exact next enterprise work.
 | Cancellation | Immediate and end-of-period cancellation now exist, including scheduled cancellation reversal and cron finalization | Remaining work is mostly renewal/upsell lifecycle parity and optional approvals |
 | Renewals/upsells | Linked renewal and upsell quotations, sales history, upsell effective date, proration ledger, draft adjustment invoices/credit notes, immediate and scheduled next-period plan changes, approval-gated plan change requests, upgrade/downgrade path checks, and minimum commitment enforcement now exist; remaining work is deeper sales-policy controls | Sales workflow parity is improving, but advanced policy depth is still needed |
 | Usage/seats | No usage-based billing, seat metering, tiered pricing, or quantity sync | Weak for SaaS and B2B subscriptions |
-| Analytics | Basic MRR/ARR exists; no NRR, GRR, retention cohorts, forecast, LTV, trial conversion, or dashboard | Management reporting is incomplete |
+| Analytics | Basic MRR/ARR exists; operational recovery dashboard now separates portal-originated recovery attempts by pending, failed, recovered, and manual-action buckets; no NRR, GRR, retention cohorts, forecast, LTV, or trial conversion yet | Management reporting is improving operationally, but executive revenue analytics remain incomplete |
 | Revenue recognition | Not implemented | Finance/compliance gap for annual/prepaid contracts |
 | Multi-currency | Amounts remain in order currency; no normalized company-currency MRR ledger | Cross-currency analytics can mislead |
 | Security | Groups and multi-company rules exist, but portal route tests and full model coverage are limited | Access regressions may go unnoticed |
@@ -644,6 +644,7 @@ For every phase, update or create:
 
 - Demo database must show at least one recoverable past-due subscription and one final-action path.
 - Portal demo data must include saved-method recovery, no-method blocked recovery, clear paid/active state, and another portal customer for isolation checks.
+- Recovery dashboard must separate portal-originated attempts into pending, failed, recovered, and manual-action drilldowns.
 - Tests must prove successful payment returns a subscription to active exactly once.
 
 ---

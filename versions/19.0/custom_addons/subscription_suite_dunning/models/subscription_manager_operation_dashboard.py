@@ -11,6 +11,11 @@ class SubscriptionManagerOperationDashboard(models.Model):
         compute='_compute_dunning_recovery_metrics',
     )
     failed_payment_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
+    portal_recovery_attempt_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
+    portal_recovery_pending_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
+    portal_recovery_failed_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
+    portal_recovery_recovered_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
+    portal_recovery_manual_action_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
     pending_dunning_attempt_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
     failed_dunning_attempt_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
     retryable_dunning_attempt_count = fields.Integer(compute='_compute_dunning_recovery_metrics')
@@ -35,6 +40,11 @@ class SubscriptionManagerOperationDashboard(models.Model):
             'active_dunning_count': len(past_due_subscriptions),
             'past_due_mrr_at_risk': sum(past_due_subscriptions.mapped('mrr')),
             'failed_payment_count': PaymentAttempt.search_count(domains['failed_payments']),
+            'portal_recovery_attempt_count': PaymentAttempt.search_count(domains['portal_recovery_attempts']),
+            'portal_recovery_pending_count': PaymentAttempt.search_count(domains['portal_recovery_pending']),
+            'portal_recovery_failed_count': PaymentAttempt.search_count(domains['portal_recovery_failed']),
+            'portal_recovery_recovered_count': PaymentAttempt.search_count(domains['portal_recovery_recovered']),
+            'portal_recovery_manual_action_count': PaymentAttempt.search_count(domains['portal_recovery_manual_action']),
             'pending_dunning_attempt_count': DunningAttempt.search_count(domains['pending_dunning_attempts']),
             'failed_dunning_attempt_count': DunningAttempt.search_count(domains['failed_dunning_attempts']),
             'retryable_dunning_attempt_count': DunningAttempt.search_count(domains['retryable_dunning_attempts']),
@@ -54,6 +64,24 @@ class SubscriptionManagerOperationDashboard(models.Model):
                 ('subscription_state', '=', 'past_due'),
             ],
             'failed_payments': [
+                ('recovery_required', '=', True),
+                ('state', 'in', ['failed', 'error', 'cancelled']),
+            ],
+            'portal_recovery_attempts': [('source', '=', 'portal')],
+            'portal_recovery_pending': [
+                ('source', '=', 'portal'),
+                ('state', '=', 'pending'),
+            ],
+            'portal_recovery_failed': [
+                ('source', '=', 'portal'),
+                ('state', 'in', ['failed', 'error', 'cancelled']),
+            ],
+            'portal_recovery_recovered': [
+                ('source', '=', 'portal'),
+                ('state', '=', 'success'),
+            ],
+            'portal_recovery_manual_action': [
+                ('source', '=', 'portal'),
                 ('recovery_required', '=', True),
                 ('state', 'in', ['failed', 'error', 'cancelled']),
             ],
@@ -103,6 +131,41 @@ class SubscriptionManagerOperationDashboard(models.Model):
             'subscription_suite_billing.action_subscription_failed_payment_attempt',
             _('Failed Payments'),
             self._dunning_recovery_domains()['failed_payments'],
+        )
+
+    def action_open_portal_recovery_attempts(self):
+        return self._open_action(
+            'subscription_suite_billing.action_subscription_payment_attempt',
+            _('Portal Recovery Attempts'),
+            self._dunning_recovery_domains()['portal_recovery_attempts'],
+        )
+
+    def action_open_portal_recovery_pending(self):
+        return self._open_action(
+            'subscription_suite_billing.action_subscription_payment_attempt',
+            _('Portal Recovery Pending'),
+            self._dunning_recovery_domains()['portal_recovery_pending'],
+        )
+
+    def action_open_portal_recovery_failed(self):
+        return self._open_action(
+            'subscription_suite_billing.action_subscription_failed_payment_attempt',
+            _('Portal Recovery Failed'),
+            self._dunning_recovery_domains()['portal_recovery_failed'],
+        )
+
+    def action_open_portal_recovery_recovered(self):
+        return self._open_action(
+            'subscription_suite_billing.action_subscription_payment_attempt',
+            _('Portal Recovery Recovered'),
+            self._dunning_recovery_domains()['portal_recovery_recovered'],
+        )
+
+    def action_open_portal_recovery_manual_action(self):
+        return self._open_action(
+            'subscription_suite_billing.action_subscription_failed_payment_attempt',
+            _('Portal Recovery Manual Action'),
+            self._dunning_recovery_domains()['portal_recovery_manual_action'],
         )
 
     def action_open_pending_dunning_attempts(self):

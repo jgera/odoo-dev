@@ -20,6 +20,21 @@
                     <button name="action_open_recovered_this_month" type="object" class="oe_stat_button" icon="fa-check-circle">
                         <field name="recovered_this_month_count" widget="statinfo" string="Recovered"/>
                     </button>
+                    <button name="action_open_portal_recovery_attempts" type="object" class="oe_stat_button" icon="fa-user-circle">
+                        <field name="portal_recovery_attempt_count" widget="statinfo" string="Portal Attempts"/>
+                    </button>
+                    <button name="action_open_portal_recovery_pending" type="object" class="oe_stat_button" icon="fa-clock-o">
+                        <field name="portal_recovery_pending_count" widget="statinfo" string="Portal Pending"/>
+                    </button>
+                    <button name="action_open_portal_recovery_failed" type="object" class="oe_stat_button" icon="fa-times-circle">
+                        <field name="portal_recovery_failed_count" widget="statinfo" string="Portal Failed"/>
+                    </button>
+                    <button name="action_open_portal_recovery_recovered" type="object" class="oe_stat_button" icon="fa-check">
+                        <field name="portal_recovery_recovered_count" widget="statinfo" string="Portal Recovered"/>
+                    </button>
+                    <button name="action_open_portal_recovery_manual_action" type="object" class="oe_stat_button" icon="fa-life-ring">
+                        <field name="portal_recovery_manual_action_count" widget="statinfo" string="Manual Action"/>
+                    </button>
                 </group>
                 <group string="Dunning Attempts">
                     <button name="action_open_pending_dunning_attempts" type="object" class="oe_stat_button" icon="fa-envelope">

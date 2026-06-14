@@ -432,19 +432,20 @@ Automated coverage:
 ## 15. Recovery Dashboard Demo
 
 1. Open **Subscriptions > Operations > Operations Dashboard**.
-2. Confirm **Payment Recovery** shows Active Dunning, MRR at Risk, Failed Payments, and Recovered.
+2. Confirm **Payment Recovery** shows Active Dunning, MRR at Risk, Failed Payments, Recovered, Portal Attempts, Portal Pending, Portal Failed, Portal Recovered, and Manual Action.
 3. Confirm **Dunning Attempts** shows Pending, Failed, and Final Actions.
 4. Click **Active Dunning** and confirm it opens past-due subscriptions.
 5. Click **MRR at Risk** and confirm it opens the same past-due subscriptions behind the at-risk MRR total.
 6. Click **Failed Payments** and confirm it opens recovery-required failed payment attempts.
-7. Click **Pending** or **Failed** under Dunning Attempts and confirm each opens filtered dunning attempts.
-8. Click **Final Actions** and confirm final pause/cancel/no-action dunning attempts are visible.
-9. Click **Recovered** and confirm subscriptions with a dunning recovery log this month are listed.
+7. Click **Portal Attempts**, **Portal Pending**, **Portal Failed**, **Portal Recovered**, and **Manual Action** and confirm each opens the matching portal-originated payment attempts.
+8. Click **Pending** or **Failed** under Dunning Attempts and confirm each opens filtered dunning attempts.
+9. Click **Final Actions** and confirm final pause/cancel/no-action dunning attempts are visible.
+10. Click **Recovered** and confirm subscriptions with a dunning recovery log this month are listed.
 
 Automated coverage:
 
 - `subscription_suite_dunning` tests compare recovery dashboard KPIs against their source domains.
-- `subscription_suite_dunning` tests verify the dashboard drilldown domains for active dunning, failed payments, pending dunning attempts, and final actions.
+- `subscription_suite_dunning` tests verify the dashboard drilldown domains for active dunning, failed payments, portal recovery buckets, pending dunning attempts, and final actions.
 
 ## 16. Manual Dunning Retry Demo
 
