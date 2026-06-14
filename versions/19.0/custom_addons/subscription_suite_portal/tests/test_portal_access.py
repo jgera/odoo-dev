@@ -226,6 +226,65 @@ class TestPortalAccess(TransactionCase):
         self.assertEqual(recovery['state'], 'clear')
         self.assertFalse(recovery['can_retry'])
 
+    def test_06e_portal_payment_recovery_context_blocks_pending_retry(self):
+        invoice = self._create_subscription_invoice()
+        token = self._create_payment_token(self.partner)
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Pending Context User',
+            'login': 'portal-pending-context@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+        self.sub.write({
+            'subscription_state': 'past_due',
+            'payment_token_id': token.id,
+        })
+        self.env['subscription.payment.attempt']._create_for_invoice(
+            self.sub,
+            invoice,
+            source='portal',
+            requested_by=portal_user,
+        )
+
+        recovery = self.sub._get_portal_payment_recovery_context()
+
+        self.assertEqual(recovery['state'], 'retry_pending')
+        self.assertFalse(recovery['can_retry'])
+        self.assertIn('waiting for provider confirmation', recovery['message'])
+        with self.assertRaises(UserError):
+            self.sub._portal_retry_payment_recovery(invoice, portal_user)
+
+    def test_06f_portal_payment_recovery_context_allows_failed_retry(self):
+        invoice = self._create_subscription_invoice()
+        token = self._create_payment_token(self.partner)
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Failed Context User',
+            'login': 'portal-failed-context@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+        self.sub.write({
+            'subscription_state': 'past_due',
+            'payment_token_id': token.id,
+        })
+        attempt = self.env['subscription.payment.attempt']._create_for_invoice(
+            self.sub,
+            invoice,
+            source='portal',
+            requested_by=portal_user,
+        )
+        attempt.write({
+            'state': 'failed',
+            'recovery_required': True,
+            'recovery_note': 'Customer payment retry failed.',
+        })
+
+        recovery = self.sub._get_portal_payment_recovery_context()
+
+        self.assertEqual(recovery['state'], 'retry_failed')
+        self.assertTrue(recovery['can_retry'])
+        self.assertEqual(recovery['payment_attempt'], attempt)
+
     def test_07_portal_payment_retry_requires_saved_payment_method(self):
         """Portal retry cannot run token collection without a saved payment method."""
         invoice = self._create_subscription_invoice()

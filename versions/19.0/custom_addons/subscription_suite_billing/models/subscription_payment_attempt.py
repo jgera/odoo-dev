@@ -1,4 +1,5 @@
 from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 
 
 class SubscriptionPaymentAttempt(models.Model):
@@ -77,6 +78,13 @@ class SubscriptionPaymentAttempt(models.Model):
             'view_mode': 'form',
         }
 
+    def action_refresh_transaction_state(self):
+        for attempt in self:
+            if not attempt.transaction_id:
+                raise UserError(_('Only payment attempts linked to a transaction can be refreshed.'))
+            attempt._sync_from_transaction(log_subscription=True)
+        return True
+
     @api.model
     def _create_for_invoice(self, subscription, invoice, source='manual', requested_by=None):
         subscription.ensure_one()
@@ -95,8 +103,16 @@ class SubscriptionPaymentAttempt(models.Model):
         })
 
     def _finalize_from_transaction(self, transaction):
+        return self._sync_from_transaction(transaction=transaction)
+
+    def _sync_from_transaction(self, transaction=None, log_subscription=False):
         self.ensure_one()
+        transaction = transaction or self.transaction_id
+        if not transaction:
+            raise UserError(_('Only payment attempts linked to a transaction can be refreshed.'))
         transaction.ensure_one()
+        previous_state = self.state
+        previous_provider_state = self.provider_state
         state = self._map_transaction_state(transaction.state)
         values = {
             'transaction_id': transaction.id,
@@ -111,11 +127,28 @@ class SubscriptionPaymentAttempt(models.Model):
             'recovery_note': self._get_recovery_note(state, transaction),
         }
         self.write(values)
-        self.message_post(body=_(
-            'Payment attempt %(state)s for invoice %(invoice)s.',
-            state=dict(self._fields['state'].selection).get(state, state),
-            invoice=self.invoice_id.display_name,
-        ))
+        if previous_state != state or previous_provider_state != transaction.state:
+            self.message_post(body=_(
+                'Payment attempt refreshed from provider state %(provider_state)s to %(state)s for invoice %(invoice)s.',
+                provider_state=transaction.state or _('Unknown'),
+                state=dict(self._fields['state'].selection).get(state, state),
+                invoice=self.invoice_id.display_name,
+            ))
+        if log_subscription and previous_state != state:
+            event_type = 'payment_success' if state == 'success' else 'payment_pending' if state == 'pending' else 'payment_failed'
+            self.subscription_id._log_subscription_event(
+                event_type,
+                _('Payment attempt %(attempt)s refreshed to %(state)s for invoice %(invoice)s.') % {
+                    'attempt': self.name,
+                    'state': dict(self._fields['state'].selection).get(state, state),
+                    'invoice': self.invoice_id.display_name,
+                },
+                new_values={
+                    'payment_attempt_id': self.id,
+                    'transaction_id': transaction.id,
+                    'transaction_state': transaction.state,
+                },
+            )
         return state
 
     def _record_exception(self, error):

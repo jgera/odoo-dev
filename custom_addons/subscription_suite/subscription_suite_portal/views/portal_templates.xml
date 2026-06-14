@@ -262,11 +262,15 @@
                             </div>
                         </div>
 
-                        <div t-if="payment_recovery_invoice" class="alert alert-danger d-flex flex-column flex-lg-row gap-3 align-items-lg-center justify-content-between" role="alert">
+                        <div t-if="payment_recovery_invoice" t-attf-class="alert #{'alert-info' if payment_recovery and payment_recovery.get('state') == 'retry_pending' else 'alert-warning' if payment_recovery and payment_recovery.get('state') == 'retry_failed' else 'alert-danger'} d-flex flex-column flex-lg-row gap-3 align-items-lg-center justify-content-between" role="alert">
                             <div class="d-flex align-items-start gap-2">
                                 <i class="fa fa-fw fa-credit-card mt-1"/>
                                 <div>
-                                    <div class="fw-semibold">Payment Recovery Needed</div>
+                                    <div class="fw-semibold">
+                                        <t t-if="payment_recovery and payment_recovery.get('state') == 'retry_pending'">Payment Retry Pending</t>
+                                        <t t-elif="payment_recovery and payment_recovery.get('state') == 'retry_failed'">Payment Retry Failed</t>
+                                        <t t-else="">Payment Recovery Needed</t>
+                                    </div>
                                     <div>
                                         Invoice <a t-att-href="payment_recovery_invoice.get_portal_url()"><span t-field="payment_recovery_invoice.name"/></a>
                                         has an outstanding balance of
@@ -285,6 +289,9 @@
                                     </div>
                                     <div t-if="payment_recovery and payment_recovery.get('next_action')" class="small text-muted">
                                         <t t-out="payment_recovery.get('next_action')"/>
+                                    </div>
+                                    <div t-if="payment_recovery and payment_recovery.get('payment_attempt')" class="small text-muted">
+                                        Attempt: <t t-out="payment_recovery.get('payment_attempt').display_name"/>
                                     </div>
                                 </div>
                             </div>

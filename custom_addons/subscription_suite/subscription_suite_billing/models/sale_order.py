@@ -675,6 +675,18 @@ class SaleOrder(models.Model):
         self.ensure_one()
         return self._get_payment_recovery_invoices()[:1]
 
+    def _get_latest_portal_payment_attempt(self, invoice):
+        self.ensure_one()
+        invoice.ensure_one()
+        attempt = self.env['subscription.payment.attempt'].sudo().search([
+            ('subscription_id', '=', self.id),
+            ('invoice_id', '=', invoice.id),
+            ('source', '=', 'portal'),
+        ], limit=1, order='attempt_date desc, id desc')
+        if attempt and attempt.state == 'pending' and attempt.transaction_id:
+            attempt._sync_from_transaction()
+        return attempt
+
     def _get_portal_payment_recovery_context(self):
         self.ensure_one()
         invoice = self._get_portal_payment_recovery_invoice()
@@ -687,6 +699,29 @@ class SaleOrder(models.Model):
                 'can_retry': False,
                 'message': _('No payment recovery action is needed.'),
                 'next_action': False,
+                'payment_attempt': self.env['subscription.payment.attempt'],
+            }
+
+        payment_attempt = self._get_latest_portal_payment_attempt(invoice)
+        if payment_attempt and payment_attempt.state == 'pending':
+            return {
+                'invoice': invoice,
+                'state': 'retry_pending',
+                'has_saved_method': has_saved_method,
+                'can_retry': False,
+                'message': _('Payment retry was submitted and is waiting for provider confirmation.'),
+                'next_action': _('Open the invoice to check current payment status.'),
+                'payment_attempt': payment_attempt,
+            }
+        if payment_attempt and payment_attempt.state in ('failed', 'cancelled', 'error') and has_saved_method:
+            return {
+                'invoice': invoice,
+                'state': 'retry_failed',
+                'has_saved_method': has_saved_method,
+                'can_retry': True,
+                'message': _('The last payment retry failed.'),
+                'next_action': _('Retry the saved payment method or open the invoice to pay another way.'),
+                'payment_attempt': payment_attempt,
             }
 
         if has_saved_method:
@@ -705,6 +740,7 @@ class SaleOrder(models.Model):
             'can_retry': bool(has_saved_method),
             'message': message,
             'next_action': next_action,
+            'payment_attempt': payment_attempt,
         }
 
     def _get_portal_available_payment_tokens(self, requester_partner):
@@ -788,6 +824,9 @@ class SaleOrder(models.Model):
             raise ValidationError(_('Only posted customer invoices can be retried.'))
         if invoice.payment_state not in ['not_paid', 'partial']:
             raise ValidationError(_('This invoice does not need payment recovery.'))
+        latest_attempt = self._get_latest_portal_payment_attempt(invoice)
+        if latest_attempt and latest_attempt.state == 'pending':
+            raise UserError(_('A payment retry is already pending provider confirmation. Open the invoice to check current status.'))
         if not self.payment_token_id:
             raise UserError(_('No saved payment method is available. Open the invoice to pay or add a payment method.'))
 

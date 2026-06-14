@@ -353,6 +353,55 @@ class TestBillingAttempts(TransactionCase):
         self.assertIn('card declined', attempt.failure_message)
         self.assertTrue(attempt.recovery_note)
 
+    def test_pending_payment_attempt_refresh_stays_pending(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        attempt = self.env['subscription.payment.attempt']._create_for_invoice(subscription, invoice)
+        transaction = self._create_payment_transaction(subscription, invoice, state='pending')
+        attempt._finalize_from_transaction(transaction)
+
+        result = attempt.action_refresh_transaction_state()
+
+        self.assertTrue(result)
+        self.assertEqual(attempt.state, 'pending')
+        self.assertEqual(attempt.provider_state, 'pending')
+        self.assertFalse(attempt.completed_at)
+        self.assertFalse(attempt.recovery_required)
+
+    def test_pending_payment_attempt_refresh_to_success_logs_outcome(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        attempt = self.env['subscription.payment.attempt']._create_for_invoice(subscription, invoice)
+        transaction = self._create_payment_transaction(subscription, invoice, state='pending')
+        attempt._finalize_from_transaction(transaction)
+
+        transaction._set_done()
+        attempt.action_refresh_transaction_state()
+
+        self.assertEqual(attempt.state, 'success')
+        self.assertEqual(attempt.provider_state, 'done')
+        self.assertTrue(attempt.completed_at)
+        self.assertFalse(attempt.recovery_required)
+        self.assertIn('refreshed', attempt.message_ids[:1].body)
+        self.assertTrue(subscription.subscription_log_ids.filtered(lambda log: log.event_type == 'payment_success'))
+
+    def test_pending_payment_attempt_refresh_to_cancelled_requires_recovery(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        attempt = self.env['subscription.payment.attempt']._create_for_invoice(subscription, invoice)
+        transaction = self._create_payment_transaction(subscription, invoice, state='pending')
+        attempt._finalize_from_transaction(transaction)
+
+        transaction._set_canceled(state_message='customer cancelled')
+        attempt.action_refresh_transaction_state()
+
+        self.assertEqual(attempt.state, 'cancelled')
+        self.assertEqual(attempt.provider_state, 'cancel')
+        self.assertTrue(attempt.completed_at)
+        self.assertTrue(attempt.recovery_required)
+        self.assertIn('customer cancelled', attempt.failure_message)
+        self.assertTrue(subscription.subscription_log_ids.filtered(lambda log: log.event_type == 'payment_failed'))
+
     def test_payment_attempt_exception_records_recovery_context(self):
         subscription = self._create_due_subscription()
         invoice = self._create_subscription_invoice(subscription)

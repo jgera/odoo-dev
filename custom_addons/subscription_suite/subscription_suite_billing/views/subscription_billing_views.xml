@@ -223,6 +223,7 @@
                     <button name="action_open_invoice" type="object" string="Open Invoice"/>
                     <button name="action_open_subscription" type="object" string="Open Subscription"/>
                     <button name="action_open_transaction" type="object" string="Open Transaction" invisible="not transaction_id"/>
+                    <button name="action_refresh_transaction_state" type="object" string="Refresh Transaction" class="btn-primary" invisible="state != 'pending' or not transaction_id"/>
                     <field name="state" widget="statusbar"/>
                 </header>
                 <sheet>
@@ -275,6 +276,7 @@
                 <field name="transaction_id"/>
                 <filter string="Successful" name="success" domain="[('state', '=', 'success')]"/>
                 <filter string="Pending" name="pending" domain="[('state', '=', 'pending')]"/>
+                <filter string="Pending With Transaction" name="pending_with_transaction" domain="[('state', '=', 'pending'), ('transaction_id', '!=', False)]"/>
                 <filter string="Failed" name="failed" domain="[('state', 'in', ['failed', 'error'])]"/>
                 <filter string="Cancelled" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
                 <filter string="Recovery Required" name="recovery_required" domain="[('recovery_required', '=', True)]"/>
