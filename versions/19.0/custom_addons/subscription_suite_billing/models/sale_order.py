@@ -623,9 +623,36 @@ class SaleOrder(models.Model):
             'order_line': order_lines,
         })
 
+    def _get_payment_collection_token(self, invoice):
+        self.ensure_one()
+        primary_token = self.payment_token_id
+        if not primary_token:
+            return self.env['payment.token'], 'primary'
+        if not invoice:
+            return primary_token, 'primary'
+        invoice.ensure_one()
+
+        backup_token = self.backup_payment_token_id
+        if not backup_token or not backup_token.active:
+            return primary_token, 'primary'
+
+        latest_attempt = self.env['subscription.payment.attempt'].sudo().search([
+            ('subscription_id', '=', self.id),
+            ('invoice_id', '=', invoice.id),
+            ('state', 'in', ['failed', 'cancelled', 'error']),
+        ], limit=1, order='attempt_date desc, id desc')
+        latest_used_primary = (
+            latest_attempt
+            and latest_attempt.token_id == primary_token
+            and latest_attempt.token_role in (False, 'primary')
+        )
+        if latest_used_primary:
+            return backup_token, 'backup'
+        return primary_token, 'primary'
+
     def _auto_collect_payment(self, invoice, source='cron', requested_by=None):
         self.ensure_one()
-        token = self.payment_token_id
+        token, token_role = self._get_payment_collection_token(invoice)
         if not token:
             return False
 
@@ -634,6 +661,8 @@ class SaleOrder(models.Model):
             invoice,
             source=source,
             requested_by=requested_by,
+            token=token,
+            token_role=token_role,
         )
         try:
             tx = self.env['payment.transaction'].create({

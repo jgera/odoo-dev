@@ -201,6 +201,7 @@
                 <field name="invoice_id"/>
                 <field name="transaction_id" optional="show"/>
                 <field name="source"/>
+                <field name="token_role" optional="show"/>
                 <field name="state" widget="badge" decoration-success="state == 'success'" decoration-danger="state in ('failed', 'error')" decoration-warning="state == 'pending'" decoration-muted="state == 'cancelled'"/>
                 <field name="provider_id" optional="show"/>
                 <field name="provider_state" optional="show"/>
@@ -237,6 +238,7 @@
                         </group>
                         <group>
                             <field name="source"/>
+                            <field name="token_role"/>
                             <field name="requested_by_id"/>
                             <field name="attempt_date"/>
                             <field name="completed_at"/>
@@ -274,6 +276,8 @@
                 <field name="partner_id"/>
                 <field name="invoice_id"/>
                 <field name="transaction_id"/>
+                <filter string="Primary Method" name="primary_token" domain="[('token_role', '=', 'primary')]"/>
+                <filter string="Backup Method" name="backup_token" domain="[('token_role', '=', 'backup')]"/>
                 <filter string="Successful" name="success" domain="[('state', '=', 'success')]"/>
                 <filter string="Pending" name="pending" domain="[('state', '=', 'pending')]"/>
                 <filter string="Pending With Transaction" name="pending_with_transaction" domain="[('state', '=', 'pending'), ('transaction_id', '!=', False)]"/>
@@ -285,6 +289,7 @@
                 <group>
                     <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
                     <filter string="Source" name="group_source" context="{'group_by': 'source'}"/>
+                    <filter string="Payment Method Role" name="group_token_role" context="{'group_by': 'token_role'}"/>
                     <filter string="Provider" name="group_provider" context="{'group_by': 'provider_id'}"/>
                     <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
                     <filter string="Attempt Date" name="group_attempt_date" context="{'group_by': 'attempt_date:day'}"/>

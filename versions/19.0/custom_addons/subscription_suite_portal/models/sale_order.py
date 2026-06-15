@@ -29,11 +29,17 @@ class SaleOrder(models.Model):
             self._get_or_create_demo_portal_user(partner)
 
         token = self._get_or_create_demo_payment_token(partner_saved)
+        backup_token = self._get_or_create_demo_payment_token(
+            partner_saved,
+            provider_ref='portal-recovery-demo-backup-token',
+            payment_details='1881',
+        )
         self._get_or_create_recovery_subscription(
             partner_saved,
             'PORTAL-RECOVERY-SAVED',
             _('Portal Recovery Demo - Saved Method'),
             token=token,
+            backup_token=backup_token,
             create_invoice=True,
             state='past_due',
         )
@@ -84,9 +90,9 @@ class SaleOrder(models.Model):
         })
 
     @api.model
-    def _get_or_create_demo_payment_token(self, partner):
+    def _get_or_create_demo_payment_token(self, partner, provider_ref='portal-recovery-demo-token', payment_details='4242'):
         token = self.env['payment.token'].sudo().search([
-            ('provider_ref', '=', 'portal-recovery-demo-token'),
+            ('provider_ref', '=', provider_ref),
             ('partner_id', '=', partner.id),
         ], limit=1)
         if token:
@@ -97,9 +103,9 @@ class SaleOrder(models.Model):
         return self.env['payment.token'].sudo().create({
             'provider_id': provider.id,
             'payment_method_id': payment_method.id,
-            'payment_details': '4242',
+            'payment_details': payment_details,
             'partner_id': partner.id,
-            'provider_ref': 'portal-recovery-demo-token',
+            'provider_ref': provider_ref,
             'active': True,
         })
 
@@ -134,7 +140,7 @@ class SaleOrder(models.Model):
         return provider
 
     @api.model
-    def _get_or_create_recovery_subscription(self, partner, client_ref, name, token=None, create_invoice=False, state='active'):
+    def _get_or_create_recovery_subscription(self, partner, client_ref, name, token=None, backup_token=None, create_invoice=False, state='active'):
         subscription = self.search([('client_order_ref', '=', client_ref)], limit=1)
         if not subscription:
             product = self.env.ref('subscription_suite.demo_product_basic')
@@ -161,6 +167,7 @@ class SaleOrder(models.Model):
         subscription.write({
             'subscription_state': state,
             'payment_token_id': token.id if token else False,
+            'backup_payment_token_id': backup_token.id if backup_token else False,
         })
         if create_invoice and not subscription._get_payment_recovery_invoices():
             invoice = subscription._create_invoices()[:1]

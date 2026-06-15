@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from odoo import fields
 from odoo.exceptions import ValidationError
@@ -112,6 +113,18 @@ class TestBillingAttempts(TransactionCase):
         elif state == 'pending':
             transaction._set_pending(state_message=state_message)
         return transaction
+
+    def _create_payment_token(self, subscription, provider_ref='subscription-payment-attempt-token', details='4242'):
+        provider = self._create_payment_provider()
+        payment_method = provider.payment_method_ids[:1]
+        return self.env['payment.token'].sudo().create({
+            'provider_id': provider.id,
+            'payment_method_id': payment_method.id,
+            'payment_details': details,
+            'partner_id': subscription.partner_id.id,
+            'provider_ref': provider_ref,
+            'active': True,
+        })
 
     def test_cron_creates_successful_billing_attempt_and_invoice_once(self):
         subscription = self._create_due_subscription()
@@ -316,6 +329,7 @@ class TestBillingAttempts(TransactionCase):
         self.assertEqual(attempt.source, 'portal')
         self.assertEqual(attempt.state, 'pending')
         self.assertEqual(attempt.amount, invoice.amount_residual or invoice.amount_total)
+        self.assertEqual(attempt.token_role, 'primary')
 
     def test_payment_attempt_finalize_success_from_transaction(self):
         subscription = self._create_due_subscription()
@@ -413,6 +427,110 @@ class TestBillingAttempts(TransactionCase):
         self.assertTrue(attempt.completed_at)
         self.assertTrue(attempt.recovery_required)
         self.assertIn('provider timeout', attempt.failure_message)
+
+    def test_backup_payment_token_cannot_match_primary(self):
+        subscription = self._create_due_subscription()
+        token = self._create_payment_token(subscription)
+        subscription.payment_token_id = token.id
+
+        with self.assertRaises(ValidationError):
+            subscription.backup_payment_token_id = token.id
+
+    def test_backup_payment_token_must_belong_to_customer(self):
+        subscription = self._create_due_subscription()
+        other_subscription = self._create_due_subscription()
+        other_subscription.partner_id = self.env['res.partner'].create({'name': 'Other Backup Customer'})
+        token = self._create_payment_token(other_subscription, provider_ref='other-backup-token')
+
+        with self.assertRaises(ValidationError):
+            subscription.backup_payment_token_id = token.id
+
+    def test_payment_collection_uses_primary_before_failure(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        primary = self._create_payment_token(subscription, provider_ref='primary-token')
+        backup = self._create_payment_token(subscription, provider_ref='backup-token', details='1881')
+        subscription.write({
+            'payment_token_id': primary.id,
+            'backup_payment_token_id': backup.id,
+        })
+
+        token, token_role = subscription._get_payment_collection_token(invoice)
+
+        self.assertEqual(token, primary)
+        self.assertEqual(token_role, 'primary')
+
+    def test_payment_collection_uses_backup_after_primary_failure(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        primary = self._create_payment_token(subscription, provider_ref='primary-token')
+        backup = self._create_payment_token(subscription, provider_ref='backup-token', details='1881')
+        subscription.write({
+            'payment_token_id': primary.id,
+            'backup_payment_token_id': backup.id,
+        })
+        self.env['subscription.payment.attempt']._create_for_invoice(
+            subscription,
+            invoice,
+            token=primary,
+            token_role='primary',
+        ).write({'state': 'failed', 'recovery_required': True})
+
+        token, token_role = subscription._get_payment_collection_token(invoice)
+
+        self.assertEqual(token, backup)
+        self.assertEqual(token_role, 'backup')
+
+    def test_payment_collection_returns_to_primary_after_backup_failure(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        primary = self._create_payment_token(subscription, provider_ref='primary-token')
+        backup = self._create_payment_token(subscription, provider_ref='backup-token', details='1881')
+        subscription.write({
+            'payment_token_id': primary.id,
+            'backup_payment_token_id': backup.id,
+        })
+        self.env['subscription.payment.attempt']._create_for_invoice(
+            subscription,
+            invoice,
+            token=backup,
+            token_role='backup',
+        ).write({'state': 'failed', 'recovery_required': True})
+
+        token, token_role = subscription._get_payment_collection_token(invoice)
+
+        self.assertEqual(token, primary)
+        self.assertEqual(token_role, 'primary')
+
+    def test_auto_collect_records_backup_token_role_after_primary_failure(self):
+        subscription = self._create_due_subscription()
+        invoice = self._create_subscription_invoice(subscription)
+        primary = self._create_payment_token(subscription, provider_ref='primary-token')
+        backup = self._create_payment_token(subscription, provider_ref='backup-token', details='1881')
+        subscription.write({
+            'payment_token_id': primary.id,
+            'backup_payment_token_id': backup.id,
+        })
+        self.env['subscription.payment.attempt']._create_for_invoice(
+            subscription,
+            invoice,
+            token=primary,
+            token_role='primary',
+        ).write({'state': 'failed', 'recovery_required': True})
+
+        def fake_send_payment_request(transactions):
+            transactions._set_pending()
+
+        with patch.object(self.env.registry['payment.transaction'], '_send_payment_request', fake_send_payment_request):
+            transaction = subscription._auto_collect_payment(invoice, source='manual', requested_by=self.env.user)
+
+        attempt = self.env['subscription.payment.attempt'].search([
+            ('subscription_id', '=', subscription.id),
+            ('invoice_id', '=', invoice.id),
+        ], limit=1, order='attempt_date desc, id desc')
+        self.assertEqual(transaction.token_id, backup)
+        self.assertEqual(attempt.token_id, backup)
+        self.assertEqual(attempt.token_role, 'backup')
 
     def test_subscription_payment_attempt_stat_action_filters_subscription(self):
         subscription = self._create_due_subscription()

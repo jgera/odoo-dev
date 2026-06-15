@@ -24,6 +24,10 @@ class SubscriptionPaymentAttempt(models.Model):
     currency_id = fields.Many2one(related='invoice_id.currency_id', string='Currency', store=True, readonly=True)
     provider_id = fields.Many2one('payment.provider', string='Provider', readonly=True, index=True)
     token_id = fields.Many2one('payment.token', string='Payment Token', readonly=True, index=True)
+    token_role = fields.Selection([
+        ('primary', 'Primary'),
+        ('backup', 'Backup'),
+    ], string='Payment Method Role', default='primary', readonly=True, index=True)
     requested_by_id = fields.Many2one('res.users', string='Requested By', readonly=True)
     source = fields.Selection([
         ('cron', 'Cron'),
@@ -86,16 +90,17 @@ class SubscriptionPaymentAttempt(models.Model):
         return True
 
     @api.model
-    def _create_for_invoice(self, subscription, invoice, source='manual', requested_by=None):
+    def _create_for_invoice(self, subscription, invoice, source='manual', requested_by=None, token=None, token_role='primary'):
         subscription.ensure_one()
         invoice.ensure_one()
-        token = subscription.payment_token_id
+        token = token or subscription.payment_token_id
         return self.create({
             'name': self.env['ir.sequence'].next_by_code('subscription.payment.attempt') or _('New'),
             'subscription_id': subscription.id,
             'invoice_id': invoice.id,
             'provider_id': token.provider_id.id if token else False,
             'token_id': token.id if token else False,
+            'token_role': token_role,
             'requested_by_id': requested_by.id if requested_by else self.env.user.id,
             'source': source,
             'amount': invoice.amount_residual or invoice.amount_total,

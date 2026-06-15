@@ -378,7 +378,7 @@ This slice intentionally reuses Odoo's invoice portal payment page instead of cr
 
 Demo portal users use password `portal`:
 
-- `portal.recovery.saved@example.com`: `PORTAL-RECOVERY-SAVED`, past due with an unpaid invoice and saved payment method.
+- `portal.recovery.saved@example.com`: `PORTAL-RECOVERY-SAVED`, past due with an unpaid invoice, saved primary method, and manager-configured backup method.
 - `portal.recovery.nomethod@example.com`: `PORTAL-RECOVERY-NOMETHOD`, past due with an unpaid invoice and no saved payment method.
 - `portal.recovery.clear@example.com`: `PORTAL-RECOVERY-CLEAR`, active subscription with no recovery banner.
 - `portal.recovery.other@example.com`: `PORTAL-RECOVERY-OTHER`, second portal customer for access isolation checks.
@@ -407,6 +407,7 @@ Demo portal users use password `portal`:
 5. Open **Subscriptions > Operations > Manager Operations** and confirm failed payment attempts appear as payment recovery work.
 6. From a subscription, use the **Payments** stat button and confirm it filters attempts for that subscription only.
 7. For portal retries, confirm the attempt source is **Portal** and recovery notes distinguish pending provider confirmation, successful recovery, and failed customer retry.
+8. If a primary-method attempt failed and the subscription has a backup payment method, confirm the next retry records **Payment Method Role** as **Backup**.
 
 ## 13. Portal Payment Method Demo
 
@@ -417,6 +418,16 @@ Demo portal users use password `portal`:
 5. Click **Add Method** and confirm Odoo's native payment-method validation form opens.
 6. Complete validation with a tokenizing provider and confirm the return page assigns the newly saved token to the subscription.
 7. Try assigning a token owned by another customer through a crafted request and confirm the server rejects it.
+
+Backend backup payment method:
+
+1. Open a subscription in the backend.
+2. In the **Subscription** tab, set **Payment Token** to the primary saved method.
+3. Set **Backup Payment Token** to a different active token owned by the same customer.
+4. Confirm the form rejects a backup token that equals the primary token.
+5. Confirm the form rejects a backup token owned by another customer.
+6. Create or locate a failed payment attempt for the same invoice that used the primary method.
+7. Trigger the next portal, manual, or automated retry and confirm the new payment attempt uses **Payment Method Role: Backup**.
 
 ## 14. Dunning Attempt Ledger Demo
 
@@ -472,6 +483,7 @@ Automated coverage:
 - `subscription_suite_dunning` tests cover manual retry from a dunning attempt.
 - `subscription_suite_dunning` tests cover missing payment method and final-action retry guards.
 - `subscription_suite_dunning` tests cover final dunning action idempotency.
+- `subscription_suite_billing` tests cover backup payment method validation and next-retry fallback selection.
 
 ## 17. Automated Dunning Retry Demo
 
@@ -490,5 +502,6 @@ Automated coverage:
 
 - `subscription_suite_dunning` tests cover scheduled retry creation for email-and-retry steps.
 - `subscription_suite_dunning` tests cover auto retry cron linking payment attempts.
+- `subscription_suite_dunning` tests cover auto retry using the backup method after a primary-method failure.
 - `subscription_suite_dunning` tests cover retry exhaustion.
 - `subscription_suite_dunning` tests cover retry setting validation.

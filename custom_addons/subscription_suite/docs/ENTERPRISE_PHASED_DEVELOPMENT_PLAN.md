@@ -599,7 +599,7 @@ For every phase, update or create:
    - Configurable retry schedule - initial policy-line delay and max retry fields done.
    - Retry count - auto/manual retry counts done on dunning attempts.
    - Manual retry action from dunning attempts - initial version done.
-   - Optional backup payment method field.
+   - Optional backup payment method field - manager-configured next-retry fallback done.
 
 4. Customer recovery flow
    - Portal banner for failed payment - initial open-invoice recovery banner done.
@@ -620,6 +620,7 @@ For every phase, update or create:
 - Add past-due subscriptions at different dunning stages.
 - Add demo dunning policies with friendly reminder, stronger reminder, final notice, and final action.
 - Add payment attempt and dunning attempt demo scenarios where safe; otherwise add a repeatable demo script to generate them.
+- Portal recovery demo saved-method scenario includes a manager-configured backup payment method.
 
 **Documentation updates:**
 
@@ -641,6 +642,7 @@ For every phase, update or create:
 - Failed transaction creates payment attempt and starts dunning.
 - Dunning steps create attempt records.
 - Successful retry resolves dunning.
+- Backup payment method is used on the next retry after a primary-method failure.
 - Final action idempotency - initial version done.
 - Recovery report numbers.
 
@@ -648,6 +650,7 @@ For every phase, update or create:
 
 - Demo database must show at least one recoverable past-due subscription and one final-action path.
 - Portal demo data must include saved-method recovery, no-method blocked recovery, clear paid/active state, and another portal customer for isolation checks.
+- Saved-method recovery demo must include a backup payment method for fallback validation.
 - Recovery dashboard must separate portal-originated attempts into pending, failed, recovered, and manual-action drilldowns.
 - Tests must prove successful payment returns a subscription to active exactly once.
 

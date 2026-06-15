@@ -68,6 +68,7 @@ class SaleOrder(models.Model):
     ], string='Billing Interval Unit', default='month')
     
     payment_token_id = fields.Many2one('payment.token', string='Payment Token', copy=False)
+    backup_payment_token_id = fields.Many2one('payment.token', string='Backup Payment Token', copy=False)
     
     recurring_total = fields.Monetary(string='Recurring Total', compute='_compute_recurring_total', store=True)
     mrr = fields.Monetary(string='MRR', compute='_compute_mrr', store=True)
@@ -165,6 +166,19 @@ class SaleOrder(models.Model):
     def _compute_is_auto_pay(self):
         for order in self:
             order.is_auto_pay = bool(order.payment_token_id)
+
+    @api.constrains('payment_token_id', 'backup_payment_token_id', 'partner_id')
+    def _check_subscription_payment_tokens(self):
+        for order in self:
+            backup_token = order.backup_payment_token_id
+            if not backup_token:
+                continue
+            if order.payment_token_id and backup_token == order.payment_token_id:
+                raise ValidationError(_('The backup payment method must be different from the primary payment method.'))
+            if not backup_token.active:
+                raise ValidationError(_('The backup payment method must be active.'))
+            if backup_token.partner_id.commercial_partner_id != order.partner_id.commercial_partner_id:
+                raise ValidationError(_('The backup payment method must belong to this customer.'))
 
     @api.depends('subscription_start_date', 'trial_start_date')
     def _compute_days_since_start(self):

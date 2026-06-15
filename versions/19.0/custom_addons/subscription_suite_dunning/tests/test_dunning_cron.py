@@ -90,6 +90,18 @@ class TestDunningCron(TransactionCase):
         self.sub.payment_token_id = token.id
         return token
 
+    def _create_extra_payment_token(self, provider_ref='dunning-retry-backup-token', details='1881'):
+        provider = self._create_payment_token().provider_id
+        payment_method = provider.payment_method_ids[:1]
+        return self.env['payment.token'].sudo().create({
+            'provider_id': provider.id,
+            'payment_method_id': payment_method.id,
+            'payment_details': details,
+            'partner_id': self.sub.partner_id.id,
+            'provider_ref': provider_ref,
+            'active': True,
+        })
+
     def _create_retry_invoice(self):
         return self.env['account.move'].create({
             'move_type': 'out_invoice',
@@ -363,3 +375,39 @@ class TestDunningCron(TransactionCase):
         self.assertTrue(attempt.retry_exhausted)
         self.assertFalse(attempt.next_auto_retry_at)
         self.assertIn('exhausted', attempt.note)
+
+    def test_10_auto_retry_uses_backup_after_primary_failure(self):
+        self.sub._start_dunning()
+        invoice = self._create_retry_invoice()
+        primary = self._create_payment_token()
+        backup = self._create_extra_payment_token()
+        self.sub.write({
+            'payment_token_id': primary.id,
+            'backup_payment_token_id': backup.id,
+        })
+        self.env['subscription.payment.attempt']._create_for_invoice(
+            self.sub,
+            invoice,
+            token=primary,
+            token_role='primary',
+        ).write({'state': 'failed', 'recovery_required': True})
+        attempt = self.env['subscription.dunning.attempt'].create({
+            'subscription_id': self.sub.id,
+            'invoice_id': invoice.id,
+            'policy_id': self.policy.id,
+            'policy_line_id': self.step_1.id,
+            'action_type': 'email_and_retry',
+            'state': 'done',
+            'auto_retry_enabled': True,
+            'max_auto_retries': 2,
+            'next_auto_retry_at': fields.Datetime.now(),
+        })
+
+        def fake_send_payment_request(transactions):
+            transactions._set_pending()
+
+        with patch.object(self.env.registry['payment.transaction'], '_send_payment_request', fake_send_payment_request):
+            attempt._run_auto_retry()
+
+        self.assertEqual(attempt.payment_attempt_id.token_id, backup)
+        self.assertEqual(attempt.payment_attempt_id.token_role, 'backup')

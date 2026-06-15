@@ -98,6 +98,7 @@
                             <field name="next_invoice_date"/>
                             <field name="last_invoice_date"/>
                             <field name="payment_token_id" domain="[('partner_id', '=', partner_id)]"/>
+                            <field name="backup_payment_token_id" domain="[('partner_id', '=', partner_id)]"/>
                         </group>
                         <group name="sub_dates" string="Lifecycle Dates">
                             <field name="trial_start_date" invisible="not trial_start_date"/>

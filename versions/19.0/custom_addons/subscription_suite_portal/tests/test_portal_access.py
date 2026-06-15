@@ -575,6 +575,44 @@ class TestPortalAccess(TransactionCase):
         ], limit=1)
         self.assertTrue(operation)
 
+    def test_17b_portal_retry_uses_backup_after_primary_failure(self):
+        """Portal retry uses the backend backup method after a primary failure."""
+        invoice = self._create_subscription_invoice()
+        primary = self._create_payment_token(self.partner)
+        backup = self._create_payment_token(self.partner)
+        self.sub.write({
+            'subscription_state': 'past_due',
+            'payment_token_id': primary.id,
+            'backup_payment_token_id': backup.id,
+        })
+        self.env['subscription.payment.attempt']._create_for_invoice(
+            self.sub,
+            invoice,
+            source='portal',
+            token=primary,
+            token_role='primary',
+        ).write({'state': 'failed', 'recovery_required': True})
+        portal_user = self.env['res.users'].create({
+            'name': 'Portal Backup Retry User',
+            'login': 'portal-backup-retry@example.com',
+            'partner_id': self.partner.id,
+            'group_ids': [Command.set([self.env.ref('base.group_portal').id])],
+        })
+
+        def fake_send_payment_request(transactions):
+            transactions._set_pending()
+
+        with patch.object(self.env.registry['payment.transaction'], '_send_payment_request', fake_send_payment_request):
+            self.sub._portal_retry_payment_recovery(invoice, portal_user)
+
+        attempt = self.env['subscription.payment.attempt'].search([
+            ('subscription_id', '=', self.sub.id),
+            ('invoice_id', '=', invoice.id),
+            ('source', '=', 'portal'),
+        ], limit=1, order='attempt_date desc, id desc')
+        self.assertEqual(attempt.token_id, backup)
+        self.assertEqual(attempt.token_role, 'backup')
+
     def test_18_portal_payment_recovery_demo_data_creates_expected_scenarios(self):
         """Demo data helper creates saved-method, no-method, clear, and isolation scenarios."""
         self.env['sale.order']._create_portal_recovery_demo_data()
@@ -585,6 +623,7 @@ class TestPortalAccess(TransactionCase):
         other = self.env['sale.order'].search([('client_order_ref', '=', 'PORTAL-RECOVERY-OTHER')], limit=1)
 
         self.assertEqual(saved._get_portal_payment_recovery_context()['state'], 'retry_available')
+        self.assertTrue(saved.backup_payment_token_id)
         self.assertEqual(no_method._get_portal_payment_recovery_context()['state'], 'missing_payment_method')
         self.assertEqual(clear._get_portal_payment_recovery_context()['state'], 'clear')
         self.assertEqual(other._get_portal_payment_recovery_context()['state'], 'missing_payment_method')
