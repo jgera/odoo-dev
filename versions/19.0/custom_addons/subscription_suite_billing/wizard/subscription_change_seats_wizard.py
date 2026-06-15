@@ -1,5 +1,6 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
+from odoo.tools.float_utils import float_compare
 
 
 class SubscriptionChangeSeatsWizard(models.TransientModel):
@@ -9,6 +10,10 @@ class SubscriptionChangeSeatsWizard(models.TransientModel):
     subscription_id = fields.Many2one('sale.order', string='Subscription', required=True, readonly=True)
     current_seat_quantity = fields.Float(string='Current Seats', readonly=True)
     new_seat_quantity = fields.Float(string='New Seats', required=True)
+    change_timing = fields.Selection([
+        ('immediate', 'Immediately with Proration'),
+        ('next_period', 'Next Billing Period'),
+    ], string='Apply', default='immediate', required=True)
     effective_date = fields.Date(string='Effective Date', default=fields.Date.today, required=True)
     current_mrr = fields.Monetary(string='Current MRR', currency_field='currency_id', compute='_compute_impact')
     new_mrr = fields.Monetary(string='New MRR', currency_field='currency_id', compute='_compute_impact')
@@ -29,10 +34,25 @@ class SubscriptionChangeSeatsWizard(models.TransientModel):
     @api.constrains('new_seat_quantity')
     def _check_new_seat_quantity(self):
         for wizard in self:
-            if wizard.new_seat_quantity < 1:
+            if not wizard.subscription_id:
+                continue
+            if wizard.new_seat_quantity is None:
+                continue
+            seat_line = wizard.subscription_id._get_single_seat_line()
+            line_uom = seat_line.product_uom_id or seat_line.product_id.uom_id
+            precision_rounding = line_uom.rounding or 0.01
+            if float_compare(wizard.new_seat_quantity, 1.0, precision_rounding=precision_rounding) < 0:
                 raise ValidationError(_("Seat quantity must be at least 1."))
 
-    @api.depends('subscription_id', 'new_seat_quantity', 'effective_date')
+    @api.onchange('change_timing', 'subscription_id')
+    def _onchange_change_timing(self):
+        for wizard in self:
+            if wizard.change_timing == 'next_period' and wizard.subscription_id:
+                wizard.effective_date = wizard.subscription_id.next_invoice_date or fields.Date.today()
+            elif wizard.change_timing == 'immediate' and not wizard.effective_date:
+                wizard.effective_date = fields.Date.today()
+
+    @api.depends('subscription_id', 'new_seat_quantity', 'effective_date', 'change_timing')
     def _compute_impact(self):
         for wizard in self:
             wizard.new_mrr = 0.0
@@ -60,13 +80,21 @@ class SubscriptionChangeSeatsWizard(models.TransientModel):
             total_days = (period_end - period_start).days or 1
             used_days = max(0, (effective_date - period_start).days)
             remaining_days = max(0, total_days - used_days)
-            net_amount = remaining_days * ((new_mrr / 30.0) - (current_mrr / 30.0))
+            net_amount = 0.0 if wizard.change_timing == 'next_period' else remaining_days * ((new_mrr / 30.0) - (current_mrr / 30.0))
             symbol = wizard.currency_id.symbol or '$'
 
             wizard.current_mrr = current_mrr
             wizard.new_mrr = new_mrr
             wizard.net_amount = net_amount
-            if wizard.subscription_id._compare_mrr(new_mrr, current_mrr) >= 0:
+            if wizard.change_timing == 'next_period':
+                wizard.proration_preview = _(
+                    "<p>Seats will change from <b>%(old_qty)s</b> to <b>%(new_qty)s</b> on <b>%(date)s</b>.</p>"
+                    "<p>No proration document is generated because the change applies at the billing boundary.</p>",
+                    old_qty=seat_line.product_uom_qty,
+                    new_qty=wizard.new_seat_quantity,
+                    date=wizard.effective_date,
+                )
+            elif wizard.subscription_id._compare_mrr(new_mrr, current_mrr) >= 0:
                 wizard.proration_preview = _(
                     "<p>Seats will increase from <b>%(old_qty)s</b> to <b>%(new_qty)s</b>.</p>"
                     "<p>Estimated prorated charge: <b>%(symbol)s%(amount).2f</b></p>",
@@ -87,8 +115,14 @@ class SubscriptionChangeSeatsWizard(models.TransientModel):
 
     def action_confirm_change(self):
         self.ensure_one()
-        self.subscription_id._execute_seat_change(
-            self.new_seat_quantity,
-            effective_date=self.effective_date,
-        )
+        if self.change_timing == 'next_period':
+            self.subscription_id._schedule_seat_change(
+                self.new_seat_quantity,
+                effective_date=self.effective_date,
+            )
+        else:
+            self.subscription_id._execute_seat_change(
+                self.new_seat_quantity,
+                effective_date=self.effective_date,
+            )
         return {'type': 'ir.actions.act_window_close'}

@@ -10,7 +10,8 @@
                     <field name="currency_id" invisible="1"/>
                     <field name="current_seat_quantity"/>
                     <field name="new_seat_quantity"/>
-                    <field name="effective_date"/>
+                    <field name="change_timing" widget="radio"/>
+                    <field name="effective_date" readonly="change_timing == 'next_period'"/>
                 </group>
                 <group string="Financial Impact">
                     <field name="current_mrr" widget="monetary"/>

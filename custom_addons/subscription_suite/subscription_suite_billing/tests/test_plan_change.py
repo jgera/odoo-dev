@@ -205,10 +205,91 @@ class TestPlanChange(TransactionCase):
         subscription.invalidate_recordset()
         self.assertEqual(subscription.seat_quantity, 12.0)
 
+    def test_wizard_schedules_next_period_seat_change_without_proration(self):
+        subscription = self._create_seat_subscription()
+        action = subscription.action_change_seats()
+
+        wizard = self.env['subscription.change.seats.wizard'].with_context(action['context']).create({
+            'subscription_id': subscription.id,
+            'new_seat_quantity': 12.0,
+            'change_timing': 'next_period',
+            'effective_date': date(2026, 1, 31),
+        })
+        self.assertEqual(wizard.net_amount, 0.0)
+        wizard.action_confirm_change()
+        subscription.invalidate_recordset()
+
+        self.assertEqual(subscription.seat_quantity, 10.0)
+        self.assertEqual(subscription.pending_seat_quantity, 12.0)
+        self.assertEqual(subscription.pending_seat_change_date, date(2026, 1, 31))
+        self.assertFalse(subscription.proration_ids.filtered(lambda proration: proration.proration_scope == 'seat_change'))
+
+    def test_scheduled_seat_increase_applies_before_billing_invoice(self):
+        today = fields.Date.today()
+        subscription = self._create_seat_subscription(confirm=False, last_invoice_date=today, next_invoice_date=today)
+        subscription.action_confirm()
+        subscription._schedule_seat_change(12.0, effective_date=today)
+
+        self.env['sale.order']._cron_generate_subscription_invoices()
+        subscription.invalidate_recordset()
+
+        self.assertEqual(subscription.seat_quantity, 12.0)
+        self.assertFalse(subscription.pending_seat_change_date)
+        self.assertFalse(subscription.proration_ids.filtered(lambda proration: proration.proration_scope == 'seat_change'))
+        self.assertAlmostEqual(subscription.mrr, 173.0, places=2)
+
+        invoice = self.env['account.move'].search([
+            ('subscription_id', '=', subscription.id),
+        ], order='id desc', limit=1)
+        self.assertTrue(invoice)
+        seat_invoice_line = invoice.invoice_line_ids.filtered(lambda line: line.product_id == self.seat_product)
+        self.assertEqual(seat_invoice_line.quantity, 12.0)
+        self.assertAlmostEqual(invoice.amount_untaxed, 173.0, places=2)
+
+        movement = self.env['subscription.mrr.movement'].search([
+            ('subscription_id', '=', subscription.id),
+        ], order='id desc', limit=1)
+        self.assertEqual(movement.movement_type, 'expansion')
+
+    def test_scheduled_seat_decrease_and_cancel(self):
+        subscription = self._create_seat_subscription()
+        subscription._schedule_seat_change(5.0, effective_date=date(2026, 1, 31))
+        subscription.invalidate_recordset()
+
+        self.assertEqual(subscription.pending_seat_quantity, 5.0)
+        subscription.action_cancel_pending_seat_change()
+        subscription.invalidate_recordset()
+
+        self.assertFalse(subscription.pending_seat_change_date)
+        self.assertFalse(subscription.pending_seat_quantity)
+        self.assertEqual(subscription.seat_quantity, 10.0)
+
+    def test_pending_seat_change_noop_is_cleared_without_movement(self):
+        subscription = self._create_seat_subscription()
+        subscription._schedule_seat_change(12.0, effective_date=date(2026, 1, 31))
+        seat_line = subscription._get_single_seat_line()
+        seat_line.write({'product_uom_qty': 12.0})
+        subscription.invalidate_recordset(['seat_quantity', 'recurring_total', 'mrr'])
+        movement_count = self.env['subscription.mrr.movement'].search_count([
+            ('subscription_id', '=', subscription.id),
+        ])
+
+        applied = subscription._apply_pending_seat_change()
+        subscription.invalidate_recordset()
+
+        self.assertFalse(applied)
+        self.assertFalse(subscription.pending_seat_change_date)
+        self.assertEqual(subscription.seat_quantity, 12.0)
+        self.assertEqual(self.env['subscription.mrr.movement'].search_count([
+            ('subscription_id', '=', subscription.id),
+        ]), movement_count)
+
     def test_immediate_seat_change_guards(self):
         subscription = self._create_seat_subscription()
         with self.assertRaises(ValidationError):
             subscription._execute_seat_change(10.0, effective_date=date(2026, 1, 16))
+        with self.assertRaises(ValidationError):
+            subscription._schedule_seat_change(10.0, effective_date=date(2026, 1, 31))
         with self.assertRaises(ValidationError):
             subscription._execute_seat_change(10.000000001, effective_date=date(2026, 1, 16))
         with self.assertRaises(ValidationError):
@@ -243,6 +324,8 @@ class TestPlanChange(TransactionCase):
         expired = self._create_seat_subscription(state='expired')
         with self.assertRaises(ValidationError):
             expired._execute_seat_change(12.0, effective_date=date(2026, 1, 16))
+        with self.assertRaises(ValidationError):
+            expired._schedule_seat_change(12.0, effective_date=date(2026, 1, 31))
 
         quote = self._create_seat_subscription(confirm=False)
         with self.assertRaises(ValidationError):

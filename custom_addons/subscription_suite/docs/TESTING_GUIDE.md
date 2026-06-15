@@ -549,3 +549,20 @@ Automated coverage:
 Automated coverage:
 
 - `subscription_suite_billing` tests cover immediate seat increase, decrease, wizard apply, proration audit fields, adjustment invoice, credit note, MRR movement, logs, and blocked states.
+
+## 20. Scheduled Seat Change Demo
+
+1. Open the demo subscription **Team Seats Monthly**.
+2. Confirm the subscription is active, paused, or past due and has exactly one recurring line with **Component Type** set to **Seat**.
+3. Click **Change Seats**.
+4. Select **Next Billing Period** in the **Apply** field.
+5. Enter a different seat quantity and confirm the effective date is the subscription's next invoice date.
+6. Confirm the wizard shows a zero net amount and explains that no proration document is generated at the billing boundary.
+7. Confirm the change and verify the subscription shows **Pending Seat Quantity** and **Pending Seat Change Date**.
+8. Use **Cancel Seat Change** before billing and confirm the pending fields clear without changing current seats.
+9. Schedule the change again, run recurring billing, and confirm the seat quantity updates before the invoice is created.
+10. Confirm the generated invoice uses the new seat quantity, no seat-change proration document is created, and subscription logs plus MRR movement history record the scheduled change.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover scheduled wizard submission, zero-proration preview, cancellation, no-op clearing, application before recurring invoice generation, invoice quantity, MRR movement, and shared blocked states.

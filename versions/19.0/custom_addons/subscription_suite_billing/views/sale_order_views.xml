@@ -18,6 +18,8 @@
                         class="oe_highlight" invisible="subscription_state != 'active'"/>
                 <button name="action_change_seats" type="object" string="Change Seats"
                         invisible="not is_subscription or seat_quantity &lt;= 0 or subscription_state not in ('active', 'paused', 'past_due')"/>
+                <button name="action_cancel_pending_seat_change" type="object" string="Cancel Seat Change"
+                        invisible="not pending_seat_change_date"/>
                 <button name="action_cancel_pending_plan_change" type="object" string="Cancel Plan Change"
                         invisible="not pending_plan_change_id"/>
             </xpath>
@@ -26,6 +28,8 @@
                 <field name="pending_plan_change_id" invisible="not pending_plan_change_id" readonly="1"/>
                 <field name="pending_plan_change_date" invisible="not pending_plan_change_id" readonly="1"/>
                 <field name="pending_plan_change_type" invisible="not pending_plan_change_id" readonly="1"/>
+                <field name="pending_seat_quantity" invisible="not pending_seat_change_date" readonly="1"/>
+                <field name="pending_seat_change_date" invisible="not pending_seat_change_date" readonly="1"/>
             </xpath>
             
             <xpath expr="//div[@name='button_box']" position="inside">

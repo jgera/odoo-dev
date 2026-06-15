@@ -26,6 +26,8 @@ class SaleOrder(models.Model):
         ('upgrade', 'Upgrade'),
         ('downgrade', 'Downgrade'),
     ], string='Pending Plan Change Type', copy=False)
+    pending_seat_quantity = fields.Float(string='Pending Seat Quantity', copy=False)
+    pending_seat_change_date = fields.Date(string='Pending Seat Change Date', copy=False, index=True)
     plan_change_request_count = fields.Integer(
         string='Plan Change Requests',
         compute='_compute_plan_change_request_count',
@@ -82,6 +84,21 @@ class SaleOrder(models.Model):
                 'default_new_seat_quantity': self.seat_quantity,
             },
         }
+
+    def action_cancel_pending_seat_change(self):
+        for subscription in self:
+            if not subscription.pending_seat_change_date:
+                continue
+            old_values = {
+                'pending_seat_quantity': subscription.pending_seat_quantity,
+                'pending_seat_change_date': subscription.pending_seat_change_date,
+            }
+            subscription._clear_pending_seat_change()
+            subscription._log_subscription_event(
+                'plan_changed',
+                _('Scheduled seat change cancelled'),
+                old_values=old_values,
+            )
 
     def action_view_billing_attempts(self):
         self.ensure_one()
@@ -199,6 +216,8 @@ class SaleOrder(models.Model):
         self.ensure_one()
         if self.pending_plan_change_id and self.pending_plan_change_date and self.pending_plan_change_date <= fields.Date.today():
             self._apply_pending_plan_change()
+        if self.pending_seat_change_date and self.pending_seat_change_date <= fields.Date.today():
+            self._apply_pending_seat_change()
 
         attempt = self._get_or_create_billing_attempt(run=billing_run)
         if billing_run and not attempt.run_id:
@@ -430,6 +449,76 @@ class SaleOrder(models.Model):
             movement_date=effective_date,
         )
         return proration
+
+    def _clear_pending_seat_change(self):
+        self.write({
+            'pending_seat_quantity': 0.0,
+            'pending_seat_change_date': False,
+        })
+
+    def _schedule_seat_change(self, new_quantity, effective_date=None):
+        self.ensure_one()
+        effective_date = effective_date or self.next_invoice_date
+        if not effective_date:
+            raise ValidationError(_("Set a next invoice date before scheduling a next-period seat change."))
+        seat_line = self._check_seat_change_allowed(new_quantity=new_quantity)
+        old_quantity = seat_line.product_uom_qty
+        old_mrr = self.mrr
+        new_mrr = self._get_mrr_after_seat_change(seat_line, new_quantity)
+        self.write({
+            'pending_seat_quantity': new_quantity,
+            'pending_seat_change_date': effective_date,
+        })
+        self._log_subscription_event(
+            'plan_changed',
+            _('Seat change from %(old_qty)s to %(new_qty)s scheduled for %(date)s', old_qty=old_quantity, new_qty=new_quantity, date=effective_date),
+            old_values={'seats': old_quantity, 'mrr': old_mrr},
+            new_values={'seats': new_quantity, 'mrr': new_mrr, 'effective_date': effective_date, 'timing': 'next_period'},
+        )
+        return True
+
+    def _apply_pending_seat_change(self):
+        self.ensure_one()
+        if not self.pending_seat_change_date:
+            return False
+        new_quantity = self.pending_seat_quantity
+        effective_date = self.pending_seat_change_date
+        seat_line = self._check_seat_change_allowed()
+        old_quantity = seat_line.product_uom_qty
+        line_uom = seat_line.product_uom_id or seat_line.product_id.uom_id
+        if float_compare(new_quantity, old_quantity, precision_rounding=line_uom.rounding or 0.01) == 0:
+            self._clear_pending_seat_change()
+            self._log_subscription_event(
+                'plan_changed',
+                _('Scheduled seat change skipped because the subscription already has %(qty)s seats', qty=old_quantity),
+                old_values={'seats': old_quantity},
+                new_values={'seats': old_quantity, 'effective_date': effective_date, 'timing': 'next_period'},
+            )
+            return False
+        old_mrr = self.mrr
+        new_mrr = self._get_mrr_after_seat_change(seat_line, new_quantity)
+        seat_line.write({'product_uom_qty': new_quantity})
+        self.invalidate_recordset(['seat_quantity', 'recurring_total', 'mrr'])
+        self._clear_pending_seat_change()
+        movement_type = self._get_mrr_movement_type(old_mrr, new_mrr)
+        self._log_subscription_event(
+            'plan_changed',
+            _('Scheduled seat change applied from %(old_qty)s to %(new_qty)s', old_qty=old_quantity, new_qty=new_quantity),
+            old_values={'seats': old_quantity, 'mrr': old_mrr},
+            new_values={'seats': new_quantity, 'mrr': new_mrr, 'effective_date': effective_date, 'timing': 'next_period'},
+        )
+        self._log_mrr_movement(
+            movement_type,
+            old_mrr,
+            new_mrr,
+            _('MRR %s from scheduled seat change: %s to %s seats') % (
+                'expansion' if movement_type == 'expansion' else 'contraction',
+                old_quantity,
+                new_quantity,
+            ),
+            movement_date=effective_date,
+        )
+        return True
 
     def _plan_change_requires_approval(self, old_plan, new_plan, old_mrr=None):
         self.ensure_one()
