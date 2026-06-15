@@ -8,9 +8,10 @@ Primary demo XML:
 
 ```text
 subscription_suite/demo/subscription_demo.xml
+subscription_suite_billing/demo/plan_change_approval_demo.xml
 ```
 
-The current demo data is loaded by the core `subscription_suite` manifest.
+The current demo data is loaded by the core `subscription_suite` manifest and billing demo additions from `subscription_suite_billing`.
 
 ## Current Demo Records
 
@@ -21,6 +22,7 @@ The current demo data is loaded by the core `subscription_suite` manifest.
 | `subscription_suite.demo_product_basic` | `product.product` | Basic subscription service product |
 | `subscription_suite.demo_product_pro` | `product.product` | Pro subscription service product |
 | `subscription_suite.demo_product_support_addon` | `product.product` | Priority support subscription add-on |
+| `subscription_suite_billing.demo_product_api_call_overage` | `product.product` | API-call overage billing product |
 
 ### Plans
 
@@ -28,6 +30,7 @@ The current demo data is loaded by the core `subscription_suite` manifest.
 | --- | --- | --- | --- |
 | `subscription_suite.demo_plan_basic` | Monthly | 14 days | Basic monthly plan |
 | `subscription_suite.demo_plan_pro` | Annual | 30 days | Pro annual plan |
+| `subscription_suite.demo_plan_team_seats` | Monthly | 0 days | Seat-based plan with API-call usage rule |
 
 ### Plan Lines
 
@@ -35,6 +38,15 @@ The current demo data is loaded by the core `subscription_suite` manifest.
 | --- | --- | --- | --- |
 | `subscription_suite.demo_plan_basic_line` | Basic Subscription Tier | 29.00 | Monthly recurring plan line |
 | `subscription_suite.demo_plan_pro_line` | Pro Subscription Tier | 299.00 | Annual recurring plan line |
+| `subscription_suite_billing.demo_plan_team_seats_usage_api_calls` | API Calls | 0.02 overage | Included API-call allowance and overage rule |
+
+### Usage Metering
+
+| XML ID | Model | Purpose |
+| --- | --- | --- |
+| `subscription_suite_billing.demo_usage_meter_api_calls` | `subscription.usage.meter` | API-call meter used by the Team Seats plan |
+| `subscription_suite_billing.demo_usage_event_team_seats_api_calls_1` | `subscription.usage.event` | Ready demo API-call usage event |
+| `subscription_suite_billing.demo_usage_event_team_seats_api_calls_2` | `subscription.usage.event` | Ready demo API-call usage event |
 
 ### Cancellation Reasons
 

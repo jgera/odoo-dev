@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_usage_meter_list" model="ir.ui.view">
+        <field name="name">subscription.usage.meter.list</field>
+        <field name="model">subscription.usage.meter</field>
+        <field name="arch" type="xml">
+            <list string="Usage Meters">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="uom_id"/>
+                <field name="active" widget="boolean_toggle"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_meter_form" model="ir.ui.view">
+        <field name="name">subscription.usage.meter.form</field>
+        <field name="model">subscription.usage.meter</field>
+        <field name="arch" type="xml">
+            <form string="Usage Meter">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="uom_id"/>
+                        </group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_meter_search" model="ir.ui.view">
+        <field name="name">subscription.usage.meter.search</field>
+        <field name="model">subscription.usage.meter</field>
+        <field name="arch" type="xml">
+            <search string="Usage Meters">
+                <field name="name"/>
+                <field name="code"/>
+                <filter string="Archived" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_event_list" model="ir.ui.view">
+        <field name="name">subscription.usage.event.list</field>
+        <field name="model">subscription.usage.event</field>
+        <field name="arch" type="xml">
+            <list string="Usage Events" decoration-muted="state == 'invoiced'">
+                <field name="event_date"/>
+                <field name="subscription_id"/>
+                <field name="meter_id"/>
+                <field name="quantity"/>
+                <field name="external_reference" optional="show"/>
+                <field name="state" widget="badge" decoration-success="state == 'invoiced'" decoration-info="state == 'ready'"/>
+                <field name="summary_id" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_event_form" model="ir.ui.view">
+        <field name="name">subscription.usage.event.form</field>
+        <field name="model">subscription.usage.event</field>
+        <field name="arch" type="xml">
+            <form string="Usage Event">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="subscription_id"/>
+                            <field name="meter_id"/>
+                            <field name="quantity"/>
+                            <field name="event_date"/>
+                        </group>
+                        <group>
+                            <field name="external_reference"/>
+                            <field name="state"/>
+                            <field name="summary_id" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_event_search" model="ir.ui.view">
+        <field name="name">subscription.usage.event.search</field>
+        <field name="model">subscription.usage.event</field>
+        <field name="arch" type="xml">
+            <search string="Usage Events">
+                <field name="subscription_id"/>
+                <field name="meter_id"/>
+                <field name="external_reference"/>
+                <filter string="Ready" name="ready" domain="[('state', '=', 'ready')]"/>
+                <filter string="Invoiced" name="invoiced" domain="[('state', '=', 'invoiced')]"/>
+                <group>
+                    <filter string="Meter" name="group_meter" context="{'group_by': 'meter_id'}"/>
+                    <filter string="Subscription" name="group_subscription" context="{'group_by': 'subscription_id'}"/>
+                    <filter string="Event Date" name="group_event_date" context="{'group_by': 'event_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_summary_list" model="ir.ui.view">
+        <field name="name">subscription.usage.summary.list</field>
+        <field name="model">subscription.usage.summary</field>
+        <field name="arch" type="xml">
+            <list string="Usage Summaries" create="0" edit="0" decoration-success="invoice_id">
+                <field name="subscription_id"/>
+                <field name="meter_id"/>
+                <field name="period_start"/>
+                <field name="period_end"/>
+                <field name="included_quantity"/>
+                <field name="used_quantity"/>
+                <field name="billable_quantity"/>
+                <field name="overage_price_unit" widget="monetary"/>
+                <field name="amount" widget="monetary"/>
+                <field name="invoice_id"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_summary_form" model="ir.ui.view">
+        <field name="name">subscription.usage.summary.form</field>
+        <field name="model">subscription.usage.summary</field>
+        <field name="arch" type="xml">
+            <form string="Usage Summary" create="0" edit="0">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="subscription_id"/>
+                            <field name="meter_id"/>
+                            <field name="period_start"/>
+                            <field name="period_end"/>
+                        </group>
+                        <group>
+                            <field name="included_quantity"/>
+                            <field name="used_quantity"/>
+                            <field name="billable_quantity"/>
+                            <field name="overage_price_unit" widget="monetary"/>
+                            <field name="amount" widget="monetary"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="overage_product_id"/>
+                        <field name="invoice_id"/>
+                        <field name="invoice_line_id"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                    </group>
+                    <notebook>
+                        <page string="Events">
+                            <field name="event_ids">
+                                <list create="0" edit="0">
+                                    <field name="event_date"/>
+                                    <field name="quantity"/>
+                                    <field name="external_reference"/>
+                                    <field name="state" widget="badge"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_usage_summary_search" model="ir.ui.view">
+        <field name="name">subscription.usage.summary.search</field>
+        <field name="model">subscription.usage.summary</field>
+        <field name="arch" type="xml">
+            <search string="Usage Summaries">
+                <field name="subscription_id"/>
+                <field name="meter_id"/>
+                <field name="invoice_id"/>
+                <filter string="Billable" name="billable" domain="[('billable_quantity', '&gt;', 0)]"/>
+                <filter string="Invoiced" name="invoiced" domain="[('invoice_id', '!=', False)]"/>
+                <filter string="Not Invoiced" name="not_invoiced" domain="[('invoice_id', '=', False)]"/>
+                <group>
+                    <filter string="Meter" name="group_meter" context="{'group_by': 'meter_id'}"/>
+                    <filter string="Subscription" name="group_subscription" context="{'group_by': 'subscription_id'}"/>
+                    <filter string="Period End" name="group_period_end" context="{'group_by': 'period_end:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_subscription_usage_meter" model="ir.actions.act_window">
+        <field name="name">Usage Meters</field>
+        <field name="res_model">subscription.usage.meter</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_subscription_usage_event" model="ir.actions.act_window">
+        <field name="name">Usage Events</field>
+        <field name="res_model">subscription.usage.event</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_ready': 1}</field>
+    </record>
+
+    <record id="action_subscription_usage_summary" model="ir.actions.act_window">
+        <field name="name">Usage Summaries</field>
+        <field name="res_model">subscription.usage.summary</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_subscription_usage_meter"
+              name="Usage Meters"
+              parent="subscription_suite.menu_subscription_configuration"
+              action="action_subscription_usage_meter"
+              sequence="45"/>
+
+    <menuitem id="menu_subscription_usage_event"
+              name="Usage Events"
+              parent="menu_subscription_billing"
+              action="action_subscription_usage_event"
+              sequence="40"/>
+
+    <menuitem id="menu_subscription_usage_summary"
+              name="Usage Summaries"
+              parent="menu_subscription_billing"
+              action="action_subscription_usage_summary"
+              sequence="42"/>
+</odoo>

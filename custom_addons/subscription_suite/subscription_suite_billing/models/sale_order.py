@@ -38,6 +38,8 @@ class SaleOrder(models.Model):
     pending_addon_price_unit = fields.Monetary(string='Pending Add-on Unit Price', copy=False)
     pending_addon_discount = fields.Float(string='Pending Add-on Discount (%)', copy=False)
     pending_addon_change_date = fields.Date(string='Pending Add-on Change Date', copy=False, index=True)
+    usage_summary_ids = fields.One2many('subscription.usage.summary', 'subscription_id', string='Usage Summaries')
+    usage_summary_count = fields.Integer(string='Usage Summary Count', compute='_compute_usage_summary_count')
     plan_change_request_count = fields.Integer(
         string='Plan Change Requests',
         compute='_compute_plan_change_request_count',
@@ -54,6 +56,10 @@ class SaleOrder(models.Model):
     def _compute_payment_attempt_count(self):
         for record in self:
             record.payment_attempt_count = len(record.payment_attempt_ids)
+
+    def _compute_usage_summary_count(self):
+        for record in self:
+            record.usage_summary_count = len(record.usage_summary_ids)
 
     def _compute_plan_change_request_count(self):
         grouped = self.env['subscription.plan.change.request']._read_group(
@@ -171,6 +177,17 @@ class SaleOrder(models.Model):
             'type': 'ir.actions.act_window',
             'res_model': 'subscription.plan.change.request',
             'view_mode': 'list,form,activity',
+            'domain': [('subscription_id', '=', self.id)],
+            'context': {'default_subscription_id': self.id},
+        }
+
+    def action_view_usage_summaries(self):
+        self.ensure_one()
+        return {
+            'name': _('Usage Summaries'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.usage.summary',
+            'view_mode': 'list,form',
             'domain': [('subscription_id', '=', self.id)],
             'context': {'default_subscription_id': self.id},
         }
@@ -297,8 +314,11 @@ class SaleOrder(models.Model):
             })
             return False
 
+        usage_summaries = self._prepare_usage_summaries_for_invoice(attempt.period_start, attempt.period_end)
         try:
             invoice = super()._generate_subscription_invoice()
+            if invoice:
+                self._append_usage_invoice_lines(invoice, usage_summaries)
         except Exception as e:
             attempt._record_failure(e)
             raise
@@ -310,6 +330,7 @@ class SaleOrder(models.Model):
                 'subscription_period_start': period_start,
                 'subscription_period_end': period_end,
             })
+            self._mark_usage_summaries_invoiced(invoice, usage_summaries)
             attempt.write({
                 'state': 'success',
                 'invoice_id': invoice.id,
@@ -328,6 +349,126 @@ class SaleOrder(models.Model):
                 'error_message': _('No invoice was generated.'),
             })
         return invoice
+
+    def _get_plan_usage_lines(self):
+        self.ensure_one()
+        if not self.subscription_plan_id:
+            return self.env['subscription.plan.usage.line']
+        return self.subscription_plan_id.usage_line_ids.filtered(lambda line: line.meter_id.active)
+
+    def _get_or_create_usage_summary(self, usage_line, period_start, period_end):
+        self.ensure_one()
+        usage_line.ensure_one()
+        Summary = self.env['subscription.usage.summary']
+        summary = Summary.search([
+            ('subscription_id', '=', self.id),
+            ('meter_id', '=', usage_line.meter_id.id),
+            ('period_start', '=', period_start),
+            ('period_end', '=', period_end),
+        ], limit=1)
+        Event = self.env['subscription.usage.event']
+        domain = [
+            ('subscription_id', '=', self.id),
+            ('meter_id', '=', usage_line.meter_id.id),
+            ('state', '=', 'ready'),
+            ('event_date', '>=', period_start),
+            ('event_date', '<', period_end),
+            ('summary_id', '=', False),
+        ]
+        new_events = Event.search(domain)
+        if summary and not summary.invoice_id:
+            events = summary.event_ids | new_events
+        elif summary:
+            return summary
+        else:
+            events = new_events
+
+        if not summary and not events:
+            return Summary
+
+        used_quantity = sum(events.mapped('quantity'))
+        precision_rounding = usage_line.meter_id.uom_id.rounding or 0.01
+        billable_quantity = 0.0
+        if float_compare(used_quantity, usage_line.included_quantity, precision_rounding=precision_rounding) > 0:
+            billable_quantity = used_quantity - usage_line.included_quantity
+        amount = billable_quantity * usage_line.overage_price_unit
+        values = {
+            'subscription_id': self.id,
+            'meter_id': usage_line.meter_id.id,
+            'period_start': period_start,
+            'period_end': period_end,
+            'included_quantity': usage_line.included_quantity,
+            'used_quantity': used_quantity,
+            'billable_quantity': billable_quantity,
+            'overage_product_id': usage_line.overage_product_id.id,
+            'overage_price_unit': usage_line.overage_price_unit,
+            'amount': amount,
+        }
+        if summary:
+            summary.write(values)
+        else:
+            summary = Summary.create(values)
+        if new_events:
+            new_events.write({'summary_id': summary.id})
+        return summary
+
+    def _prepare_usage_summaries_for_invoice(self, period_start, period_end):
+        self.ensure_one()
+        if not period_start or not period_end or period_start >= period_end:
+            return self.env['subscription.usage.summary']
+        summaries = self.env['subscription.usage.summary']
+        for usage_line in self._get_plan_usage_lines():
+            summaries |= self._get_or_create_usage_summary(usage_line, period_start, period_end)
+        return summaries.filtered(lambda summary: not summary.invoice_id)
+
+    def _append_usage_invoice_lines(self, invoice, usage_summaries):
+        self.ensure_one()
+        invoice.ensure_one()
+        created_lines = self.env['account.move.line']
+        for summary in usage_summaries:
+            precision_rounding = summary.meter_id.uom_id.rounding or 0.01
+            if (
+                summary.invoice_line_id
+                or float_compare(summary.billable_quantity, 0.0, precision_rounding=precision_rounding) <= 0
+            ):
+                continue
+            product = summary.overage_product_id
+            account = product.property_account_income_id or product.categ_id.property_account_income_categ_id
+            if not account and hasattr(product, '_get_product_accounts'):
+                account = product._get_product_accounts().get('income')
+            if not account:
+                raise ValidationError(
+                    _("Configure an income account on usage overage product %s or its product category.")
+                    % product.display_name
+                )
+            taxes = product.taxes_id.filtered(lambda tax: not tax.company_id or tax.company_id == invoice.company_id)
+            created_lines |= self.env['account.move.line'].create({
+                'move_id': invoice.id,
+                'product_id': product.id,
+                'name': _('Usage overage: %(meter)s (%(start)s to %(end)s)') % {
+                    'meter': summary.meter_id.display_name,
+                    'start': summary.period_start,
+                    'end': summary.period_end,
+                },
+                'quantity': summary.billable_quantity,
+                'price_unit': summary.overage_price_unit,
+                'account_id': account.id,
+                'tax_ids': [(6, 0, taxes.ids)],
+                'currency_id': invoice.currency_id.id,
+                'usage_summary_id': summary.id,
+            })
+        return created_lines
+
+    def _mark_usage_summaries_invoiced(self, invoice, usage_summaries):
+        self.ensure_one()
+        invoice.ensure_one()
+        for summary in usage_summaries:
+            invoice_line = invoice.invoice_line_ids.filtered(lambda line: line.usage_summary_id == summary)[:1]
+            summary.write({
+                'invoice_id': invoice.id,
+                'invoice_line_id': invoice_line.id if invoice_line else False,
+            })
+            summary.event_ids.filtered(lambda event: event.state == 'ready').write({'state': 'invoiced'})
 
     def _execute_plan_change(self, new_plan, effective_date=None):
         self.ensure_one()

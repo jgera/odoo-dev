@@ -5,6 +5,10 @@ from . import subscription_payment_attempt
 from . import subscription_manager_operation
 from . import subscription_manager_operation_dashboard
 from . import subscription_plan
+from . import subscription_usage_meter
+from . import subscription_plan_usage_line
+from . import subscription_usage_event
+from . import subscription_usage_summary
 from . import subscription_plan_change_request
 from . import sale_order
 from . import account_move

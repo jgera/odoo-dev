@@ -600,3 +600,20 @@ Automated coverage:
 
 - `subscription_suite` tests cover flat pricing compatibility, volume pricing, graduated pricing, plan MRR, renewal quote tier copying, and invalid tier validation for gaps, overlaps, non-positive quantities, non-positive prices, and missing open-ended final tiers.
 - `subscription_suite_billing` tests cover plan application copying tier metadata, tiered invoice single-line presentation, and tier-aware seat change MRR/proration recomputation while existing flat add-on and payment recovery tests continue to run.
+
+## 23. Usage Metering Foundation Demo
+
+1. Open **Subscriptions -> Configuration -> Usage Meters**.
+2. Confirm **API Calls** exists with code `API_CALLS` and unit of measure **Units**.
+3. Open **Subscriptions -> Configuration -> Plans** and open **Team Seats Monthly**.
+4. In **Usage Billing**, confirm the plan includes **API Calls** with an included quantity of `1000`, overage product **API Call Overage**, and overage unit price `0.02`.
+5. Open **Subscriptions -> Billing -> Usage Events** and confirm the demo events for **Team Seats Monthly** are in **Ready** state and inside the current billing period.
+6. Run recurring billing for the demo subscription or the billing cron.
+7. Open **Subscriptions -> Billing -> Usage Summaries** and confirm one summary exists for **API Calls** with used quantity, included quantity, billable quantity, amount, and a linked invoice.
+8. Open the generated invoice and confirm it includes the normal recurring lines plus one **Usage overage: API Calls** line when usage exceeds the allowance.
+9. Run billing again for the same period and confirm no duplicate usage summary or duplicate usage invoice line is created.
+10. For a plan with a usage rule but no events in the billing period, confirm billing creates no empty usage summary and no usage invoice line.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover usage rule validation, one-summary aggregation by subscription/meter/period, no-event summary suppression, included usage with no invoice line, overage invoice line quantity/subtotal, event invoicing, and idempotent reruns.

@@ -11,6 +11,20 @@
                     <field name="approval_required_for_downgrade"/>
                 </group>
             </xpath>
+            <xpath expr="//page[@name='settings']/group" position="after">
+                <group string="Usage Billing">
+                    <field name="usage_line_ids" nolabel="1">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="meter_id"/>
+                            <field name="included_quantity"/>
+                            <field name="overage_product_id"/>
+                            <field name="overage_price_unit" widget="monetary"/>
+                            <field name="currency_id" column_invisible="1"/>
+                        </list>
+                    </field>
+                </group>
+            </xpath>
         </field>
     </record>
 </odoo>

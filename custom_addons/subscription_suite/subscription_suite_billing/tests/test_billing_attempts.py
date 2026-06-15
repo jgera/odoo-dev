@@ -18,6 +18,17 @@ class TestBillingAttempts(TransactionCase):
             'list_price': 100.0,
             'invoice_policy': 'order',
         })
+        self.usage_product = self.env['product.product'].create({
+            'name': 'API Call Overage',
+            'type': 'service',
+            'list_price': 0.5,
+            'invoice_policy': 'order',
+        })
+        self.usage_meter = self.env['subscription.usage.meter'].create({
+            'name': 'API Calls',
+            'code': 'TEST_%s' % self._testMethodName.upper(),
+            'uom_id': self.env.ref('uom.product_uom_unit').id,
+        })
         self.plan = self.env['subscription.plan'].create({
             'name': 'Billing Attempt Plan',
             'code': 'TEST-BILLING-ATTEMPT',
@@ -31,7 +42,18 @@ class TestBillingAttempts(TransactionCase):
             })],
         })
 
-    def _create_due_subscription(self, with_line=True):
+    def _add_usage_rule(self, included_quantity=100.0, overage_price_unit=0.5):
+        return self.env['subscription.plan.usage.line'].create({
+            'plan_id': self.plan.id,
+            'meter_id': self.usage_meter.id,
+            'included_quantity': included_quantity,
+            'overage_product_id': self.usage_product.id,
+            'overage_price_unit': overage_price_unit,
+        })
+
+    def _create_due_subscription(self, with_line=True, period_start=None, period_end=None):
+        period_end = period_end or fields.Date.today()
+        period_start = period_start or period_end
         values = {
             'partner_id': self.partner.id,
             'is_subscription': True,
@@ -39,8 +61,9 @@ class TestBillingAttempts(TransactionCase):
             'subscription_plan_id': self.plan.id,
             'billing_interval_count': 1,
             'billing_interval_unit': 'month',
-            'subscription_start_date': fields.Date.today(),
-            'next_invoice_date': fields.Date.today(),
+            'subscription_start_date': period_start,
+            'last_invoice_date': period_start,
+            'next_invoice_date': period_end,
         }
         if with_line:
             values['order_line'] = [(0, 0, {
@@ -54,10 +77,125 @@ class TestBillingAttempts(TransactionCase):
         subscription.action_confirm()
         return subscription
 
+    def _create_usage_period_subscription(self):
+        return self._create_due_subscription(
+            period_start=fields.Date.today() - timedelta(days=30),
+            period_end=fields.Date.today(),
+        )
+
+    def _create_usage_event(self, subscription, quantity, event_date=None, reference=None):
+        return self.env['subscription.usage.event'].create({
+            'subscription_id': subscription.id,
+            'meter_id': self.usage_meter.id,
+            'quantity': quantity,
+            'event_date': event_date or fields.Date.today() - timedelta(days=1),
+            'external_reference': reference,
+        })
+
     def _create_subscription_invoice(self, subscription):
         invoice = subscription._generate_subscription_invoice()
         self.assertTrue(invoice)
         return invoice
+
+    def test_usage_rule_validation_blocks_invalid_values(self):
+        with self.assertRaises(ValidationError):
+            self._add_usage_rule(included_quantity=-1.0, overage_price_unit=0.5)
+
+        with self.assertRaises(ValidationError):
+            self._add_usage_rule(included_quantity=0.0, overage_price_unit=0.0)
+
+    def test_usage_events_aggregate_into_one_summary_per_period(self):
+        self._add_usage_rule(included_quantity=100.0, overage_price_unit=0.5)
+        subscription = self._create_usage_period_subscription()
+        self._create_usage_event(subscription, 40.0, reference='USAGE-AGG-1')
+        self._create_usage_event(subscription, 75.0, reference='USAGE-AGG-2')
+
+        summaries = subscription._prepare_usage_summaries_for_invoice(
+            subscription.last_invoice_date,
+            subscription.next_invoice_date,
+        )
+        repeat_summaries = subscription._prepare_usage_summaries_for_invoice(
+            subscription.last_invoice_date,
+            subscription.next_invoice_date,
+        )
+
+        self.assertEqual(len(summaries), 1)
+        self.assertEqual(summaries, repeat_summaries)
+        self.assertEqual(summaries.meter_id, self.usage_meter)
+        self.assertEqual(summaries.used_quantity, 115.0)
+        self.assertEqual(summaries.billable_quantity, 15.0)
+        self.assertAlmostEqual(summaries.amount, 7.5, places=2)
+
+    def test_included_usage_creates_summary_without_invoice_line(self):
+        self._add_usage_rule(included_quantity=200.0, overage_price_unit=0.5)
+        subscription = self._create_usage_period_subscription()
+        self._create_usage_event(subscription, 150.0, reference='USAGE-INCLUDED-1')
+
+        invoice = self._create_subscription_invoice(subscription)
+        summary = self.env['subscription.usage.summary'].search([
+            ('subscription_id', '=', subscription.id),
+            ('meter_id', '=', self.usage_meter.id),
+        ])
+
+        self.assertEqual(len(summary), 1)
+        self.assertEqual(summary.invoice_id, invoice)
+        self.assertFalse(summary.invoice_line_id)
+        self.assertEqual(summary.billable_quantity, 0.0)
+        self.assertFalse(invoice.invoice_line_ids.filtered('usage_summary_id'))
+        self.assertEqual(summary.event_ids.state, 'invoiced')
+
+    def test_no_usage_events_create_no_summary_or_invoice_line(self):
+        self._add_usage_rule(included_quantity=200.0, overage_price_unit=0.5)
+        subscription = self._create_usage_period_subscription()
+
+        invoice = self._create_subscription_invoice(subscription)
+        summaries = self.env['subscription.usage.summary'].search([
+            ('subscription_id', '=', subscription.id),
+            ('meter_id', '=', self.usage_meter.id),
+        ])
+
+        self.assertFalse(summaries)
+        self.assertFalse(invoice.invoice_line_ids.filtered('usage_summary_id'))
+
+    def test_overage_usage_adds_one_invoice_line(self):
+        self._add_usage_rule(included_quantity=100.0, overage_price_unit=0.5)
+        subscription = self._create_usage_period_subscription()
+        self._create_usage_event(subscription, 40.0, reference='USAGE-OVERAGE-1')
+        self._create_usage_event(subscription, 75.0, reference='USAGE-OVERAGE-2')
+
+        invoice = self._create_subscription_invoice(subscription)
+        summary = self.env['subscription.usage.summary'].search([
+            ('subscription_id', '=', subscription.id),
+            ('meter_id', '=', self.usage_meter.id),
+        ])
+        usage_line = invoice.invoice_line_ids.filtered('usage_summary_id')
+
+        self.assertEqual(len(summary), 1)
+        self.assertEqual(len(usage_line), 1)
+        self.assertEqual(summary.invoice_id, invoice)
+        self.assertEqual(summary.invoice_line_id, usage_line)
+        self.assertEqual(usage_line.product_id, self.usage_product)
+        self.assertEqual(usage_line.quantity, 15.0)
+        self.assertAlmostEqual(usage_line.price_unit, 0.5, places=2)
+        self.assertAlmostEqual(usage_line.price_subtotal, 7.5, places=2)
+        self.assertAlmostEqual(invoice.amount_untaxed, 107.5, places=2)
+        self.assertEqual(set(summary.event_ids.mapped('state')), {'invoiced'})
+
+    def test_rerunning_billing_does_not_duplicate_usage_summary_or_line(self):
+        self._add_usage_rule(included_quantity=100.0, overage_price_unit=0.5)
+        subscription = self._create_usage_period_subscription()
+        self._create_usage_event(subscription, 125.0, reference='USAGE-IDEMPOTENT-1')
+
+        first_invoice = self._create_subscription_invoice(subscription)
+        second_invoice = subscription._generate_subscription_invoice()
+        summaries = self.env['subscription.usage.summary'].search([
+            ('subscription_id', '=', subscription.id),
+            ('meter_id', '=', self.usage_meter.id),
+        ])
+
+        self.assertFalse(second_invoice)
+        self.assertEqual(len(summaries), 1)
+        self.assertEqual(len(first_invoice.invoice_line_ids.filtered('usage_summary_id')), 1)
 
     def test_seat_subscription_invoice_uses_line_quantity_and_price(self):
         subscription = self.env['sale.order'].create({

@@ -8,6 +8,43 @@
             <field name="list_price">89.00</field>
         </record>
 
+        <record id="demo_product_api_call_overage" model="product.product">
+            <field name="name">API Call Overage</field>
+            <field name="type">service</field>
+            <field name="list_price">0.02</field>
+            <field name="invoice_policy">order</field>
+        </record>
+
+        <record id="demo_usage_meter_api_calls" model="subscription.usage.meter">
+            <field name="name">API Calls</field>
+            <field name="code">API_CALLS</field>
+            <field name="uom_id" ref="uom.product_uom_unit"/>
+        </record>
+
+        <record id="demo_plan_team_seats_usage_api_calls" model="subscription.plan.usage.line">
+            <field name="plan_id" ref="subscription_suite.demo_plan_team_seats"/>
+            <field name="meter_id" ref="demo_usage_meter_api_calls"/>
+            <field name="included_quantity">1000.0</field>
+            <field name="overage_product_id" ref="demo_product_api_call_overage"/>
+            <field name="overage_price_unit">0.02</field>
+        </record>
+
+        <record id="demo_usage_event_team_seats_api_calls_1" model="subscription.usage.event">
+            <field name="subscription_id" ref="subscription_suite.demo_subscription_team_seats"/>
+            <field name="meter_id" ref="demo_usage_meter_api_calls"/>
+            <field name="quantity">800.0</field>
+            <field name="event_date" eval="(DateTime.today() - relativedelta(days=7)).strftime('%Y-%m-%d')"/>
+            <field name="external_reference">DEMO-API-CALLS-001</field>
+        </record>
+
+        <record id="demo_usage_event_team_seats_api_calls_2" model="subscription.usage.event">
+            <field name="subscription_id" ref="subscription_suite.demo_subscription_team_seats"/>
+            <field name="meter_id" ref="demo_usage_meter_api_calls"/>
+            <field name="quantity">450.0</field>
+            <field name="event_date" eval="(DateTime.today() - relativedelta(days=3)).strftime('%Y-%m-%d')"/>
+            <field name="external_reference">DEMO-API-CALLS-002</field>
+        </record>
+
         <record id="demo_plan_enterprise" model="subscription.plan">
             <field name="name">Enterprise Monthly</field>
             <field name="code">ENTERPRISE-MONTHLY</field>

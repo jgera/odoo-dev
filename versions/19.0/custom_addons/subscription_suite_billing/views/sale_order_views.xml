@@ -51,6 +51,9 @@
                 <button class="oe_stat_button" icon="fa-calculator" name="%(subscription_suite_billing.action_subscription_proration)d" type="action" invisible="not is_subscription">
                     <field name="proration_count" widget="statinfo" string="Prorations"/>
                 </button>
+                <button class="oe_stat_button" icon="fa-tachometer" name="action_view_usage_summaries" type="object" invisible="not is_subscription">
+                    <field name="usage_summary_count" widget="statinfo" string="Usage"/>
+                </button>
                 <button class="oe_stat_button" icon="fa-check-square-o" name="action_view_subscription_plan_change_requests" type="object" invisible="not is_subscription">
                     <field name="plan_change_request_count" widget="statinfo" string="Plan Requests"/>
                 </button>

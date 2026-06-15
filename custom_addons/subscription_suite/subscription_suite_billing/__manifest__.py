@@ -23,6 +23,7 @@ Handles advanced billing scenarios:
         'data/sequence_data.xml',
         'data/cron_data.xml',
         'views/subscription_billing_views.xml',
+        'views/subscription_usage_views.xml',
         'views/subscription_proration_views.xml',
         'views/subscription_plan_views.xml',
         'views/subscription_plan_change_request_views.xml',

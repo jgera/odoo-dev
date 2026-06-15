@@ -71,7 +71,7 @@ These are not criticisms; they are the exact next enterprise work.
 | Pause/resume | Pause/resume now adjusts the next invoice date by paused duration and respects max pause days | Remaining work is mostly portal self-service and support workflow polish |
 | Cancellation | Immediate and end-of-period cancellation now exist, including scheduled cancellation reversal and cron finalization | Remaining work is mostly renewal/upsell lifecycle parity and optional approvals |
 | Renewals/upsells | Linked renewal and upsell quotations, sales history, upsell effective date, proration ledger, draft adjustment invoices/credit notes, immediate and scheduled next-period plan changes, approval-gated plan change requests, upgrade/downgrade path checks, minimum commitment enforcement, and plan-level renewal/upsell quote guards now exist | Sales workflow parity is improving; remaining work is optional approval routing and deeper quote lifecycle automation |
-| Usage/seats | Seat-line classification and read-only seat totals now exist; no usage-based billing, tiered pricing, customer seat self-service, or quantity sync yet | Seat billing foundation is started; richer SaaS and B2B pricing patterns remain Phase 5 work |
+| Usage/seats | Seat-line classification, read-only seat totals, tiered/volume pricing, and a backend usage-metering foundation now exist; no customer seat self-service, external usage API, or entitlement sync yet | Core Phase 5 monetization mechanics are in place; customer-facing and integration-heavy workflows remain later work |
 | Analytics | Basic MRR/ARR exists; operational recovery dashboard now separates portal-originated recovery attempts by pending, failed, recovered, and manual-action buckets; no NRR, GRR, retention cohorts, forecast, LTV, or trial conversion yet | Management reporting is improving operationally, but executive revenue analytics remain incomplete |
 | Revenue recognition | Not implemented | Finance/compliance gap for annual/prepaid contracts |
 | Multi-currency | Amounts remain in order currency; no normalized company-currency MRR ledger | Cross-currency analytics can mislead |
@@ -666,7 +666,7 @@ For every phase, update or create:
 
 **Objective:** Support the monetization patterns expected by SaaS and enterprise subscription businesses.
 
-**Current slice:** Tiered And Volume Pricing Foundation. This adds subscription-native `flat`, `volume`, and `graduated` pricing models on recurring plan/order lines, copies tier metadata from plans into subscription sale order lines, keeps invoice presentation as one line with an effective unit price, and threads tier-aware price recomputation through renewal quotes and backend seat quantity changes. Usage metering, portal tier explanations, couponing, invoice line-per-tier breakdowns, and external entitlement sync remain deferred.
+**Current slice:** Usage Metering Foundation. This adds reusable usage meters, plan-level included allowance and overage rules, backend usage events, billing-period summaries, and one overage invoice line per billable meter during recurring invoice generation. Portal usage display, external ingestion APIs, tiered usage pricing, customer self-service, coupons, invoice line-per-tier breakdowns, and external entitlement sync remain deferred.
 
 **Build items:**
 
@@ -687,11 +687,11 @@ For every phase, update or create:
    - Optional seat sync hooks for external applications.
 
 3. Usage-based billing
-   - Add `subscription.usage.meter`.
-   - Add `subscription.usage.event`.
-   - Add `subscription.usage.summary`.
-   - Generate invoice lines from usage summaries.
-   - Support included usage and overage rates.
+   - Add `subscription.usage.meter` - foundation done.
+   - Add `subscription.usage.event` - foundation done for backend-entered/imported events.
+   - Add `subscription.usage.summary` - foundation done with one summary per subscription, meter, and billing period.
+   - Generate invoice lines from usage summaries - foundation done with one overage line per billable meter.
+   - Support included usage and overage rates - foundation done for summed usage.
 
 4. Discounts and coupons
    - Time-limited discounts.
@@ -703,7 +703,7 @@ For every phase, update or create:
 - Add flat, seat-based, add-on, tiered, volume, and usage-based demo plans.
 - Seat-based demo plan and subscription exist for validating base plus seat recurring lines.
 - Volume and graduated seat-pricing demo plans exist for validating tier setup and effective unit prices.
-- Add demo usage events and summaries for overage billing.
+- API-call usage meter, overage product, usage rule, and demo events exist for overage billing walkthroughs.
 - Add subscriptions with expiring discounts and coupons.
 
 **Documentation updates:**
@@ -727,6 +727,9 @@ For every phase, update or create:
 - Backend add-on operations can add/remove recurring add-on lines immediately or at the next billing period with audit, proration, invoice, log, and MRR movement coverage.
 - Backend seat changes recompute tier-effective unit prices before MRR and proration calculations.
 - Usage invoice lines are reproducible from usage events/summaries.
+- Usage event aggregation is idempotent per subscription, meter, and billing period.
+- Configured usage rules with no events do not create empty summaries.
+- Included usage creates an audit summary without adding an invoice line.
 - Discount expiration does not require manual invoice edits.
 
 **Tests:**
@@ -735,8 +738,7 @@ For every phase, update or create:
 - Scheduled backend seat increase/decrease and cancellation.
 - Backend add-on add/remove, scheduling, cancellation, and proration.
 - Tiered and volume calculations, invalid tier validation, copied tier metadata, tiered invoices, and tier-aware seat changes.
-- Usage event aggregation.
-- Overage invoice generation.
+- Usage event aggregation, no-event summary suppression, included-allowance summaries, overage invoice line generation, and no-duplicate billing reruns.
 - Coupon expiry.
 - Mixed flat plus usage subscription.
 
