@@ -89,6 +89,41 @@ class TestBillingAttempts(TransactionCase):
         self.assertAlmostEqual(invoice_line.price_subtotal, 90.0, places=2)
         self.assertAlmostEqual(invoice.amount_untaxed, 90.0, places=2)
 
+    def test_tiered_subscription_invoice_uses_effective_unit_price(self):
+        subscription = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'is_subscription': True,
+            'subscription_state': 'active',
+            'subscription_plan_id': self.plan.id,
+            'billing_interval_count': 1,
+            'billing_interval_unit': 'month',
+            'subscription_start_date': fields.Date.today(),
+            'next_invoice_date': fields.Date.today(),
+            'order_line': [(0, 0, {
+                'product_id': self.product.id,
+                'name': 'Graduated Seats',
+                'product_uom_qty': 25.0,
+                'price_unit': 10.8,
+                'is_recurring': True,
+                'subscription_component_type': 'seat',
+                'subscription_pricing_model': 'graduated',
+                'subscription_tier_ids': [
+                    (0, 0, {'sequence': 10, 'min_quantity': 1.0, 'max_quantity': 10.0, 'price_unit': 12.0}),
+                    (0, 0, {'sequence': 20, 'min_quantity': 10.0, 'price_unit': 10.0}),
+                ],
+            })],
+        })
+        subscription.action_confirm()
+
+        invoice = self._create_subscription_invoice(subscription)
+        invoice_line = invoice.invoice_line_ids.filtered(lambda line: line.product_id == self.product)[:1]
+
+        self.assertEqual(len(invoice.invoice_line_ids.filtered(lambda line: line.product_id == self.product)), 1)
+        self.assertEqual(invoice_line.quantity, 25.0)
+        self.assertAlmostEqual(invoice_line.price_unit, 10.8, places=2)
+        self.assertAlmostEqual(invoice_line.price_subtotal, 270.0, places=2)
+        self.assertAlmostEqual(invoice.amount_untaxed, 270.0, places=2)
+
     def _create_payment_provider(self):
         payment_method = self.env.ref('payment.payment_method_unknown')
         redirect_form = self.env['ir.ui.view'].create({

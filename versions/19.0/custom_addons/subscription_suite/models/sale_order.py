@@ -313,6 +313,10 @@ class SaleOrder(models.Model):
         }
         if 'subscription_component_type' in line._fields:
             values['subscription_component_type'] = line.subscription_component_type
+        if 'subscription_pricing_model' in line._fields:
+            values['subscription_pricing_model'] = line.subscription_pricing_model
+        if 'subscription_tier_ids' in line._fields:
+            values['subscription_tier_ids'] = line._copy_subscription_tier_commands()
         if 'product_uom' in line._fields and line.product_uom:
             values['product_uom'] = line.product_uom.id
         elif 'product_uom_id' in line._fields and line.product_uom_id:

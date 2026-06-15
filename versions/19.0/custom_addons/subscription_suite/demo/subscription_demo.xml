@@ -105,6 +105,80 @@
             <field name="price_unit">12.00</field>
         </record>
 
+        <record id="demo_plan_volume_seats" model="subscription.plan">
+            <field name="name">Volume Seats Monthly</field>
+            <field name="code">VOLUME-SEATS-MONTHLY</field>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="trial_days">0</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="demo_plan_volume_seats_line" model="subscription.plan.line">
+            <field name="plan_id" ref="demo_plan_volume_seats"/>
+            <field name="subscription_component_type">seat</field>
+            <field name="product_id" ref="demo_product_team_seat"/>
+            <field name="description">Volume Seat License</field>
+            <field name="quantity">25.0</field>
+            <field name="price_unit">12.00</field>
+        </record>
+
+        <record id="demo_plan_volume_seats_line_tier_1" model="subscription.plan.line.tier">
+            <field name="plan_line_id" ref="demo_plan_volume_seats_line"/>
+            <field name="sequence">10</field>
+            <field name="min_quantity">1.0</field>
+            <field name="max_quantity">10.0</field>
+            <field name="price_unit">12.00</field>
+        </record>
+
+        <record id="demo_plan_volume_seats_line_tier_2" model="subscription.plan.line.tier">
+            <field name="plan_line_id" ref="demo_plan_volume_seats_line"/>
+            <field name="sequence">20</field>
+            <field name="min_quantity">10.0</field>
+            <field name="price_unit">10.00</field>
+        </record>
+
+        <record id="demo_plan_volume_seats_line" model="subscription.plan.line">
+            <field name="subscription_pricing_model">volume</field>
+        </record>
+
+        <record id="demo_plan_graduated_seats" model="subscription.plan">
+            <field name="name">Graduated Seats Monthly</field>
+            <field name="code">GRAD-SEATS-MONTHLY</field>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="trial_days">0</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="demo_plan_graduated_seats_line" model="subscription.plan.line">
+            <field name="plan_id" ref="demo_plan_graduated_seats"/>
+            <field name="subscription_component_type">seat</field>
+            <field name="product_id" ref="demo_product_team_seat"/>
+            <field name="description">Graduated Seat License</field>
+            <field name="quantity">25.0</field>
+            <field name="price_unit">12.00</field>
+        </record>
+
+        <record id="demo_plan_graduated_seats_line_tier_1" model="subscription.plan.line.tier">
+            <field name="plan_line_id" ref="demo_plan_graduated_seats_line"/>
+            <field name="sequence">10</field>
+            <field name="min_quantity">1.0</field>
+            <field name="max_quantity">10.0</field>
+            <field name="price_unit">12.00</field>
+        </record>
+
+        <record id="demo_plan_graduated_seats_line_tier_2" model="subscription.plan.line.tier">
+            <field name="plan_line_id" ref="demo_plan_graduated_seats_line"/>
+            <field name="sequence">20</field>
+            <field name="min_quantity">10.0</field>
+            <field name="price_unit">10.00</field>
+        </record>
+
+        <record id="demo_plan_graduated_seats_line" model="subscription.plan.line">
+            <field name="subscription_pricing_model">graduated</field>
+        </record>
+
         <!-- Demo Cancellation Reasons -->
         <record id="demo_cancel_reason_expensive" model="subscription.cancel.reason">
             <field name="name">Too Expensive</field>

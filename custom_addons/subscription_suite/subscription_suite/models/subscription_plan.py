@@ -65,15 +65,28 @@ class SubscriptionPlan(models.Model):
         'Trial days cannot be negative.',
     )
 
-    @api.depends('plan_line_ids.price_unit', 'plan_line_ids.quantity')
+    @api.depends(
+        'plan_line_ids.price_unit',
+        'plan_line_ids.quantity',
+        'plan_line_ids.subscription_pricing_model',
+        'plan_line_ids.tier_ids.min_quantity',
+        'plan_line_ids.tier_ids.max_quantity',
+        'plan_line_ids.tier_ids.price_unit',
+    )
     def _compute_plan_price(self):
         for plan in self:
-            plan.plan_price = sum(
-                line.price_unit * line.quantity
-                for line in plan.plan_line_ids
-            )
+            plan.plan_price = plan._get_plan_recurring_total()
 
-    @api.depends('plan_line_ids.price_unit', 'plan_line_ids.quantity', 'billing_interval_count', 'billing_interval_unit')
+    @api.depends(
+        'plan_line_ids.price_unit',
+        'plan_line_ids.quantity',
+        'plan_line_ids.subscription_pricing_model',
+        'plan_line_ids.tier_ids.min_quantity',
+        'plan_line_ids.tier_ids.max_quantity',
+        'plan_line_ids.tier_ids.price_unit',
+        'billing_interval_count',
+        'billing_interval_unit',
+    )
     def _compute_plan_mrr(self):
         for plan in self:
             plan.plan_mrr = plan._get_plan_mrr()
@@ -95,7 +108,7 @@ class SubscriptionPlan(models.Model):
 
     def _get_plan_recurring_total(self):
         self.ensure_one()
-        return sum(line.price_unit * line.quantity for line in self.plan_line_ids)
+        return sum(line._get_subscription_line_total() for line in self.plan_line_ids)
 
     def _get_plan_mrr(self):
         self.ensure_one()

@@ -1,5 +1,7 @@
+from . import subscription_tier_pricing
 from . import subscription_plan
 from . import subscription_plan_line
+from . import subscription_plan_line_tier
 from . import subscription_log
 from . import subscription_mrr_movement
 from . import subscription_cancel_reason
@@ -8,6 +10,7 @@ from . import subscription_cancellation_request
 from . import subscription_lifecycle_request
 from . import sale_order
 from . import sale_order_line
+from . import sale_order_line_tier
 from . import product_template
 from . import res_partner
 from . import account_move

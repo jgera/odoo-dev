@@ -142,6 +142,65 @@ class TestPlanChange(TransactionCase):
             subscription.action_confirm()
         return subscription
 
+    def _tier_commands(self):
+        return [
+            (0, 0, {'sequence': 10, 'min_quantity': 1.0, 'max_quantity': 10.0, 'price_unit': 12.0}),
+            (0, 0, {'sequence': 20, 'min_quantity': 10.0, 'price_unit': 10.0}),
+        ]
+
+    def _create_volume_seat_plan(self, quantity=25.0):
+        return self.env['subscription.plan'].create({
+            'name': 'Volume Seats Monthly',
+            'code': 'TEST-VOLUME-SEATS',
+            'billing_interval_count': 1,
+            'billing_interval_unit': 'month',
+            'plan_line_ids': [(0, 0, {
+                'product_id': self.seat_product.id,
+                'quantity': quantity,
+                'price_unit': 12.0,
+                'description': 'Volume Seats',
+                'subscription_component_type': 'seat',
+                'subscription_pricing_model': 'volume',
+                'tier_ids': self._tier_commands(),
+            })],
+        })
+
+    def test_apply_tiered_plan_copies_effective_price_and_tiers(self):
+        subscription = self._create_basic_subscription()
+        plan = self._create_volume_seat_plan(quantity=25.0)
+
+        subscription._apply_subscription_plan(plan)
+        subscription.invalidate_recordset(['recurring_total', 'mrr', 'seat_quantity'])
+        seat_line = subscription.order_line.filtered(lambda line: line.subscription_component_type == 'seat')[:1]
+
+        self.assertEqual(seat_line.subscription_pricing_model, 'volume')
+        self.assertEqual(len(seat_line.subscription_tier_ids), 2)
+        self.assertAlmostEqual(seat_line.price_unit, 10.0, places=2)
+        self.assertAlmostEqual(subscription.recurring_total, 250.0, places=2)
+        self.assertAlmostEqual(subscription.mrr, 250.0, places=2)
+        self.assertEqual(subscription.seat_quantity, 25.0)
+
+    def test_tiered_seat_increase_recomputes_effective_price_and_mrr(self):
+        subscription = self._create_seat_subscription(seat_quantity=9.0)
+        seat_line = subscription.order_line.filtered(lambda line: line.subscription_component_type == 'seat')[:1]
+        seat_line.write({
+            'subscription_pricing_model': 'volume',
+            'subscription_tier_ids': self._tier_commands(),
+        })
+        subscription.invalidate_recordset(['recurring_total', 'mrr'])
+        old_mrr = subscription.mrr
+
+        proration = subscription._execute_seat_change(12.0, effective_date=date(2026, 1, 16))
+        subscription.invalidate_recordset(['recurring_total', 'mrr', 'seat_quantity'])
+
+        self.assertAlmostEqual(old_mrr, 137.0, places=2)
+        self.assertAlmostEqual(seat_line.price_unit, 10.0, places=2)
+        self.assertEqual(seat_line.product_uom_qty, 12.0)
+        self.assertAlmostEqual(subscription.recurring_total, 149.0, places=2)
+        self.assertAlmostEqual(subscription.mrr, 149.0, places=2)
+        self.assertEqual(proration.proration_scope, 'seat_change')
+        self.assertEqual(proration.change_type, 'upgrade')
+
     def test_immediate_seat_increase_updates_mrr_and_creates_adjustment_invoice(self):
         subscription = self._create_seat_subscription()
         old_mrr = subscription.mrr

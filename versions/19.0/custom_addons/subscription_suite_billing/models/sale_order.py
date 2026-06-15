@@ -439,9 +439,16 @@ class SaleOrder(models.Model):
 
     def _get_mrr_after_seat_change(self, seat_line, new_quantity):
         self.ensure_one()
-        new_seat_subtotal = new_quantity * seat_line.price_unit * (1 - (seat_line.discount or 0.0) / 100.0)
+        new_seat_subtotal = seat_line._get_subscription_discounted_total(quantity=new_quantity)
         new_recurring_total = self.recurring_total - seat_line.price_subtotal + new_seat_subtotal
         return self._monthly_equivalent_amount(new_recurring_total)
+
+    def _get_seat_change_write_values(self, seat_line, new_quantity):
+        self.ensure_one()
+        values = {'product_uom_qty': new_quantity}
+        if seat_line.subscription_pricing_model != 'flat':
+            values['price_unit'] = seat_line._get_effective_price_unit(quantity=new_quantity)
+        return values
 
     def _execute_seat_change(self, new_quantity, effective_date=None):
         self.ensure_one()
@@ -471,7 +478,7 @@ class SaleOrder(models.Model):
             'new_daily_rate': new_mrr / 30.0,
         })
 
-        seat_line.write({'product_uom_qty': new_quantity})
+        seat_line.write(self._get_seat_change_write_values(seat_line, new_quantity))
         self.invalidate_recordset(['seat_quantity', 'recurring_total', 'mrr'])
         proration.action_apply_proration()
         movement_type = self._get_mrr_movement_type(old_mrr, new_mrr)
@@ -541,7 +548,7 @@ class SaleOrder(models.Model):
             return False
         old_mrr = self.mrr
         new_mrr = self._get_mrr_after_seat_change(seat_line, new_quantity)
-        seat_line.write({'product_uom_qty': new_quantity})
+        seat_line.write(self._get_seat_change_write_values(seat_line, new_quantity))
         self.invalidate_recordset(['seat_quantity', 'recurring_total', 'mrr'])
         self._clear_pending_seat_change()
         movement_type = self._get_mrr_movement_type(old_mrr, new_mrr)
@@ -1101,19 +1108,10 @@ class SaleOrder(models.Model):
         else:
             recurring_lines.unlink()
 
-        order_lines = []
-        for plan_line in plan.plan_line_ids:
-            order_lines.append((0, 0, {
-                'product_id': plan_line.product_id.id,
-                'name': plan_line.description or plan_line.product_id.get_product_multiline_description_sale(),
-                'product_uom_qty': plan_line.quantity,
-                'price_unit': plan_line.price_unit,
-                'discount': plan_line.discount,
-                'is_recurring': True,
-                'subscription_component_type': plan_line.subscription_component_type,
-                'recurring_interval_count': plan.billing_interval_count,
-                'recurring_interval_unit': plan.billing_interval_unit,
-            }))
+        order_lines = [
+            (0, 0, plan_line._prepare_sale_order_line_values(plan))
+            for plan_line in plan.plan_line_ids
+        ]
 
         self.write({
             'subscription_plan_id': plan.id,

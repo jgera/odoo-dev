@@ -666,16 +666,16 @@ For every phase, update or create:
 
 **Objective:** Support the monetization patterns expected by SaaS and enterprise subscription businesses.
 
-**Current slice:** Backend Add-on Operations. This adds manager-side recurring add-on changes with immediate proration, next-period scheduling, cancellation, add-on proration audit fields, subscription logs, and MRR movement. It builds on the existing `addon` component type and upsell quote behavior while keeping portal self-service, tiered pricing, usage metering, coupons, and external entitlement sync deferred.
+**Current slice:** Tiered And Volume Pricing Foundation. This adds subscription-native `flat`, `volume`, and `graduated` pricing models on recurring plan/order lines, copies tier metadata from plans into subscription sale order lines, keeps invoice presentation as one line with an effective unit price, and threads tier-aware price recomputation through renewal quotes and backend seat quantity changes. Usage metering, portal tier explanations, couponing, invoice line-per-tier breakdowns, and external entitlement sync remain deferred.
 
 **Build items:**
 
 1. Pricing model expansion
-   - Flat recurring.
-   - Per-seat recurring.
-   - Tiered pricing.
-   - Volume pricing.
-   - Add-ons.
+   - Flat recurring - done.
+   - Per-seat recurring - foundation done.
+   - Tiered pricing - foundation done with graduated tier totals converted to effective unit price.
+   - Volume pricing - foundation done with matched tier price applied to all units.
+   - Add-ons - backend manager operations done for flat add-ons.
    - One-time setup and onboarding fees.
 
 2. Seat management
@@ -683,7 +683,7 @@ For every phase, update or create:
    - Portal-visible seat count - read-only summary done.
    - Immediate backend seat increase/decrease with proration - done.
    - Scheduled backend seat increase/decrease at the next billing period - done.
-   - Backend add-on add/remove with immediate proration and next-period scheduling - current slice.
+   - Backend add-on add/remove with immediate proration and next-period scheduling - done.
    - Optional seat sync hooks for external applications.
 
 3. Usage-based billing
@@ -702,6 +702,7 @@ For every phase, update or create:
 
 - Add flat, seat-based, add-on, tiered, volume, and usage-based demo plans.
 - Seat-based demo plan and subscription exist for validating base plus seat recurring lines.
+- Volume and graduated seat-pricing demo plans exist for validating tier setup and effective unit prices.
 - Add demo usage events and summaries for overage billing.
 - Add subscriptions with expiring discounts and coupons.
 
@@ -715,12 +716,16 @@ For every phase, update or create:
 **Acceptance gates:**
 
 - The module can bill flat, seat-based, add-on, and usage overage subscriptions.
+- Subscription plan lines support flat, volume, and graduated pricing models with validated contiguous tiers.
+- Subscription order lines preserve copied tier metadata and invoice as one recurring line with the effective unit price.
 - Seat subscription invoices use Odoo's existing quantity times unit-price mechanics.
 - Renewal and upsell quotes preserve subscription component type on copied recurring lines.
+- Renewal quotes preserve subscription pricing model and copied tier rows.
 - Backend and portal summaries show read-only seat totals when recurring seat lines exist.
 - Immediate backend seat changes create proration, subscription logs, and MRR movement.
 - Scheduled backend seat changes apply before recurring billing without a proration document, can be cancelled before application, and record subscription logs and MRR movement.
 - Backend add-on operations can add/remove recurring add-on lines immediately or at the next billing period with audit, proration, invoice, log, and MRR movement coverage.
+- Backend seat changes recompute tier-effective unit prices before MRR and proration calculations.
 - Usage invoice lines are reproducible from usage events/summaries.
 - Discount expiration does not require manual invoice edits.
 
@@ -729,7 +734,7 @@ For every phase, update or create:
 - Immediate backend seat increase/decrease.
 - Scheduled backend seat increase/decrease and cancellation.
 - Backend add-on add/remove, scheduling, cancellation, and proration.
-- Tiered and volume calculations.
+- Tiered and volume calculations, invalid tier validation, copied tier metadata, tiered invoices, and tier-aware seat changes.
 - Usage event aggregation.
 - Overage invoice generation.
 - Coupon expiry.

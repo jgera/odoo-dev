@@ -44,10 +44,11 @@
                     </group>
                     <notebook>
                         <page name="lines" string="Products">
-                            <field name="plan_line_ids">
+                            <field name="plan_line_ids" mode="list,form">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
                                     <field name="subscription_component_type"/>
+                                    <field name="subscription_pricing_model"/>
                                     <field name="product_id"/>
                                     <field name="description"/>
                                     <field name="quantity"/>
@@ -56,6 +57,38 @@
                                     <field name="discount"/>
                                     <field name="currency_id" invisible="1"/>
                                 </list>
+                                <form string="Plan Line">
+                                    <sheet>
+                                        <group>
+                                            <group>
+                                                <field name="sequence"/>
+                                                <field name="subscription_component_type"/>
+                                                <field name="subscription_pricing_model"/>
+                                                <field name="product_id"/>
+                                                <field name="quantity"/>
+                                                <field name="uom_id" groups="uom.group_uom"/>
+                                            </group>
+                                            <group>
+                                                <field name="price_unit" widget="monetary"/>
+                                                <field name="discount"/>
+                                                <field name="currency_id" invisible="1"/>
+                                                <field name="company_id" invisible="1"/>
+                                            </group>
+                                        </group>
+                                        <field name="description" placeholder="Line description..." nolabel="1"/>
+                                        <group string="Pricing Tiers" invisible="subscription_pricing_model == 'flat'">
+                                            <field name="tier_ids" nolabel="1">
+                                                <list editable="bottom">
+                                                    <field name="sequence" widget="handle"/>
+                                                    <field name="min_quantity"/>
+                                                    <field name="max_quantity"/>
+                                                    <field name="price_unit" widget="monetary"/>
+                                                    <field name="currency_id" column_invisible="1"/>
+                                                </list>
+                                            </field>
+                                        </group>
+                                    </sheet>
+                                </form>
                             </field>
                         </page>
                         <page name="description" string="Description">

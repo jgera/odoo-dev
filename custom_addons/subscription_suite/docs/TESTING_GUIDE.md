@@ -583,3 +583,20 @@ Automated coverage:
 Automated coverage:
 
 - `subscription_suite_billing` tests cover immediate add/remove, add-on proration invoices and credit notes, scheduled add/remove before billing, cancellation, wizard scheduling, MRR movement, and blocked states.
+
+## 22. Tiered And Volume Pricing Demo
+
+1. Open **Subscriptions -> Configuration -> Plans**.
+2. Open **Volume Seats Monthly** and confirm the seat line uses **Pricing Model** set to **Volume** with two tiers: 1 to 10 at 12.00 and 10+ at 10.00.
+3. Confirm the plan monthly equivalent uses the matched tier price for the full quantity.
+4. Open **Graduated Seats Monthly** and confirm the seat line uses **Pricing Model** set to **Graduated** with the same tiers.
+5. Confirm the graduated plan monthly equivalent totals the first bracket at 12.00, later units at 10.00, and stores the effective unit price when copied to a subscription line.
+6. Create a subscription from a tiered plan and confirm the recurring line shows the copied pricing model while the invoice still contains one line with the effective unit price.
+7. Create a renewal quote and confirm the recurring line keeps the pricing model and copied tiers.
+8. On a tiered seat subscription, use **Change Seats** to cross a tier boundary and confirm the seat line's unit price, recurring total, MRR, proration, and generated invoice reflect the new effective unit price.
+9. Confirm flat add-ons still use normal quantity times unit-price behavior.
+
+Automated coverage:
+
+- `subscription_suite` tests cover flat pricing compatibility, volume pricing, graduated pricing, plan MRR, renewal quote tier copying, and invalid tier validation for gaps, overlaps, non-positive quantities, non-positive prices, and missing open-ended final tiers.
+- `subscription_suite_billing` tests cover plan application copying tier metadata, tiered invoice single-line presentation, and tier-aware seat change MRR/proration recomputation while existing flat add-on and payment recovery tests continue to run.

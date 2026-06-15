@@ -480,6 +480,113 @@ class TestSubscriptionLifecycle(TransactionCase):
         self.assertEqual(plan_line.subscription_component_type, 'base')
         self.assertEqual(sub.order_line[:1].subscription_component_type, 'base')
 
+    def _create_tiered_plan_line(self, pricing_model='volume', quantity=25.0):
+        plan = self.env['subscription.plan'].create({
+            'name': 'Tiered Monthly',
+            'code': 'TIERED-MONTHLY-%s' % pricing_model,
+            'billing_interval_count': 1,
+            'billing_interval_unit': 'month',
+        })
+        return self.env['subscription.plan.line'].create({
+            'plan_id': plan.id,
+            'product_id': self.product.id,
+            'quantity': quantity,
+            'price_unit': 12.0,
+            'subscription_pricing_model': pricing_model,
+            'tier_ids': [
+                (0, 0, {'sequence': 10, 'min_quantity': 1.0, 'max_quantity': 10.0, 'price_unit': 12.0}),
+                (0, 0, {'sequence': 20, 'min_quantity': 10.0, 'price_unit': 10.0}),
+            ],
+        })
+
+    def test_flat_pricing_remains_unchanged(self):
+        plan_line = self.env['subscription.plan.line'].create({
+            'plan_id': self.plan.id,
+            'product_id': self.product.id,
+            'quantity': 3.0,
+            'price_unit': 100.0,
+        })
+
+        self.assertEqual(plan_line.subscription_pricing_model, 'flat')
+        self.assertAlmostEqual(plan_line._get_subscription_line_total(), 300.0, places=2)
+        self.assertAlmostEqual(plan_line._get_effective_price_unit(), 100.0, places=2)
+
+    def test_volume_tier_pricing_uses_matched_price_for_full_quantity(self):
+        plan_line = self._create_tiered_plan_line(pricing_model='volume', quantity=25.0)
+
+        self.assertAlmostEqual(plan_line._get_subscription_line_total(), 250.0, places=2)
+        self.assertAlmostEqual(plan_line._get_effective_price_unit(), 10.0, places=2)
+        self.assertAlmostEqual(plan_line.plan_id.plan_price, 250.0, places=2)
+        self.assertAlmostEqual(plan_line.plan_id.plan_mrr, 250.0, places=2)
+
+    def test_graduated_tier_pricing_uses_effective_unit_price(self):
+        plan_line = self._create_tiered_plan_line(pricing_model='graduated', quantity=25.0)
+
+        self.assertAlmostEqual(plan_line._get_subscription_line_total(), 270.0, places=2)
+        self.assertAlmostEqual(plan_line._get_effective_price_unit(), 10.8, places=2)
+        self.assertAlmostEqual(plan_line.plan_id.plan_price, 270.0, places=2)
+        self.assertAlmostEqual(plan_line.plan_id.plan_mrr, 270.0, places=2)
+
+    def test_tiered_quote_copy_preserves_pricing_metadata(self):
+        sub = self._create_active_subscription()
+        line = sub.order_line.filtered('is_recurring')[:1]
+        line.write({
+            'product_uom_qty': 25.0,
+            'price_unit': 10.8,
+            'subscription_pricing_model': 'graduated',
+            'subscription_tier_ids': [
+                (0, 0, {'sequence': 10, 'min_quantity': 1.0, 'max_quantity': 10.0, 'price_unit': 12.0}),
+                (0, 0, {'sequence': 20, 'min_quantity': 10.0, 'price_unit': 10.0}),
+            ],
+        })
+
+        quote = self.env['sale.order'].browse(sub.action_renew_subscription()['res_id'])
+        quote_line = quote.order_line.filtered('is_recurring')[:1]
+
+        self.assertEqual(quote_line.subscription_pricing_model, 'graduated')
+        self.assertEqual(len(quote_line.subscription_tier_ids), 2)
+        self.assertAlmostEqual(quote_line.price_unit, 10.8, places=2)
+
+    def test_invalid_tiers_are_blocked(self):
+        invalid_tiers = [
+            [
+                (0, 0, {'sequence': 10, 'min_quantity': 0.0, 'max_quantity': 10.0, 'price_unit': 12.0}),
+                (0, 0, {'sequence': 20, 'min_quantity': 10.0, 'price_unit': 10.0}),
+            ],
+            [
+                (0, 0, {'sequence': 10, 'min_quantity': 1.0, 'max_quantity': 10.0, 'price_unit': 12.0}),
+                (0, 0, {'sequence': 20, 'min_quantity': 11.0, 'price_unit': 10.0}),
+            ],
+            [
+                (0, 0, {'sequence': 10, 'min_quantity': 1.0, 'max_quantity': 10.0, 'price_unit': 12.0}),
+                (0, 0, {'sequence': 20, 'min_quantity': 9.0, 'price_unit': 10.0}),
+            ],
+            [
+                (0, 0, {'sequence': 10, 'min_quantity': 1.0, 'max_quantity': 10.0, 'price_unit': 12.0}),
+                (0, 0, {'sequence': 20, 'min_quantity': 10.0, 'price_unit': 0.0}),
+            ],
+            [
+                (0, 0, {'sequence': 10, 'min_quantity': 1.0, 'max_quantity': 10.0, 'price_unit': 12.0}),
+                (0, 0, {'sequence': 20, 'min_quantity': 10.0, 'max_quantity': 25.0, 'price_unit': 10.0}),
+            ],
+        ]
+        for index, tiers in enumerate(invalid_tiers):
+            plan = self.env['subscription.plan'].create({
+                'name': 'Invalid Tier Plan %s' % index,
+                'code': 'INVALID-TIER-%s' % index,
+                'billing_interval_count': 1,
+                'billing_interval_unit': 'month',
+            })
+            with self.assertRaises(ValidationError):
+                self.env['subscription.plan.line'].create({
+                    'plan_id': plan.id,
+                    'product_id': self.product.id,
+                    'quantity': 25.0,
+                    'price_unit': 12.0,
+                    'subscription_pricing_model': 'volume',
+                    'tier_ids': tiers,
+                })
+
     def test_seat_quantity_counts_only_recurring_seat_lines(self):
         sub = self._create_active_subscription()
         sub.write({
