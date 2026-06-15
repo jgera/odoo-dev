@@ -53,6 +53,27 @@
             <field name="price_unit">29.00</field>
         </record>
 
+        <record id="demo_plan_discounted_monthly" model="subscription.plan">
+            <field name="name">Promotional Monthly</field>
+            <field name="code">PROMO-MONTHLY</field>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="trial_days">0</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="demo_plan_discounted_monthly_line" model="subscription.plan.line">
+            <field name="plan_id" ref="demo_plan_discounted_monthly"/>
+            <field name="product_id" ref="demo_product_basic"/>
+            <field name="description">Basic Subscription Tier - Launch Promo</field>
+            <field name="quantity">1.0</field>
+            <field name="price_unit">29.00</field>
+            <field name="discount">5.0</field>
+            <field name="subscription_promo_discount">20.0</field>
+            <field name="subscription_promo_discount_start_date" eval="(DateTime.today() - relativedelta(days=7)).strftime('%Y-%m-%d')"/>
+            <field name="subscription_promo_discount_end_date" eval="(DateTime.today() + relativedelta(days=14)).strftime('%Y-%m-%d')"/>
+        </record>
+
         <record id="demo_plan_pro" model="subscription.plan">
             <field name="name">Pro Annual</field>
             <field name="code">PRO-ANNUAL</field>
@@ -341,6 +362,60 @@
             <field name="name">Basic Subscription Tier (Due for Billing)</field>
             <field name="product_uom_qty">1.0</field>
             <field name="price_unit">29.00</field>
+            <field name="is_recurring">True</field>
+        </record>
+
+        <record id="demo_subscription_active_discount" model="sale.order">
+            <field name="partner_id" ref="base.res_partner_2"/>
+            <field name="is_subscription">True</field>
+            <field name="subscription_plan_id" ref="demo_plan_discounted_monthly"/>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="subscription_state">active</field>
+            <field name="subscription_start_date" eval="(DateTime.today() - relativedelta(days=7)).strftime('%Y-%m-%d')"/>
+            <field name="last_invoice_date" eval="(DateTime.today() - relativedelta(days=7)).strftime('%Y-%m-%d')"/>
+            <field name="next_invoice_date" eval="(DateTime.today() + relativedelta(days=14)).strftime('%Y-%m-%d')"/>
+        </record>
+
+        <record id="demo_subscription_active_discount_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_active_discount"/>
+            <field name="product_id" ref="demo_product_basic"/>
+            <field name="name">Basic Subscription Tier - Active Launch Promo</field>
+            <field name="product_uom_qty">1.0</field>
+            <field name="price_unit">29.00</field>
+            <field name="discount">24.0</field>
+            <field name="subscription_base_discount">5.0</field>
+            <field name="subscription_promo_discount">20.0</field>
+            <field name="subscription_promo_discount_start_date" eval="(DateTime.today() - relativedelta(days=7)).strftime('%Y-%m-%d')"/>
+            <field name="subscription_promo_discount_end_date" eval="(DateTime.today() + relativedelta(days=14)).strftime('%Y-%m-%d')"/>
+            <field name="subscription_promo_discount_state">active</field>
+            <field name="is_recurring">True</field>
+        </record>
+
+        <record id="demo_subscription_expired_discount" model="sale.order">
+            <field name="partner_id" ref="base.res_partner_3"/>
+            <field name="is_subscription">True</field>
+            <field name="subscription_plan_id" ref="demo_plan_discounted_monthly"/>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="subscription_state">active</field>
+            <field name="subscription_start_date" eval="(DateTime.today() - relativedelta(months=1)).strftime('%Y-%m-%d')"/>
+            <field name="last_invoice_date" eval="(DateTime.today() - relativedelta(months=1)).strftime('%Y-%m-%d')"/>
+            <field name="next_invoice_date" eval="DateTime.today().strftime('%Y-%m-%d')"/>
+        </record>
+
+        <record id="demo_subscription_expired_discount_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_expired_discount"/>
+            <field name="product_id" ref="demo_product_basic"/>
+            <field name="name">Basic Subscription Tier - Expired Promo</field>
+            <field name="product_uom_qty">1.0</field>
+            <field name="price_unit">29.00</field>
+            <field name="discount">24.0</field>
+            <field name="subscription_base_discount">5.0</field>
+            <field name="subscription_promo_discount">20.0</field>
+            <field name="subscription_promo_discount_start_date" eval="(DateTime.today() - relativedelta(days=30)).strftime('%Y-%m-%d')"/>
+            <field name="subscription_promo_discount_end_date" eval="(DateTime.today() - relativedelta(days=1)).strftime('%Y-%m-%d')"/>
+            <field name="subscription_promo_discount_state">active</field>
             <field name="is_recurring">True</field>
         </record>
 

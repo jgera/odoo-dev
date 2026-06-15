@@ -146,6 +146,11 @@
                 <field name="is_recurring" column_invisible="parent.is_subscription == False"/>
                 <field name="subscription_component_type" column_invisible="parent.is_subscription == False"/>
                 <field name="subscription_pricing_model" readonly="1" column_invisible="parent.is_subscription == False"/>
+                <field name="subscription_base_discount" readonly="1" optional="hide" column_invisible="parent.is_subscription == False"/>
+                <field name="subscription_promo_discount" readonly="1" optional="hide" column_invisible="parent.is_subscription == False"/>
+                <field name="subscription_promo_discount_start_date" readonly="1" optional="hide" column_invisible="parent.is_subscription == False"/>
+                <field name="subscription_promo_discount_end_date" readonly="1" optional="hide" column_invisible="parent.is_subscription == False"/>
+                <field name="subscription_promo_discount_state" readonly="1" optional="hide" column_invisible="parent.is_subscription == False"/>
             </xpath>
         </field>
     </record>

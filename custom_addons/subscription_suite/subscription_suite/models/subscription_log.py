@@ -17,6 +17,7 @@ class SubscriptionLog(models.Model):
         ('paused', 'Paused'),
         ('resumed', 'Resumed'),
         ('plan_changed', 'Plan Changed'),
+        ('discount_changed', 'Discount Changed'),
         ('upgraded', 'Upgraded'),
         ('downgraded', 'Downgraded'),
         ('invoice_generated', 'Invoice Generated'),

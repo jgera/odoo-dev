@@ -632,3 +632,25 @@ Automated coverage:
 Automated coverage:
 
 - `subscription_suite_billing` tests cover cancelled usage exclusion, cancellation-driven summary recomputation/clearing, recomputing draft summaries with new events, and locked invoiced usage records.
+
+## 25. Time-Limited Recurring Discounts Demo
+
+1. Open **Subscriptions -> Configuration -> Plans**.
+2. Open **Promotional Monthly** and confirm the recurring line has a base discount, promotional discount, start date, and end date.
+3. Create a subscription from the promotional plan or open **Basic Subscription Tier - Active Launch Promo** in the demo subscription lines.
+4. Confirm the recurring sale order line stores the copied base discount and promotional metadata while the regular **Discount (%)** field shows the effective invoice-facing discount.
+5. Generate a renewal quote and confirm the copied recurring line preserves the base discount, promotional discount, and promotional dates.
+6. Open the demo subscription **Basic Subscription Tier - Expired Promo** or create a due subscription with a promo end date before today.
+7. Run recurring billing.
+8. Confirm the invoice line uses the copied base discount only, the sale order line promotional status changes to **Expired**, and the subscription has one **Discount Changed** log entry for the expiry.
+9. Run the refresh or billing path again and confirm the expiry log is not duplicated.
+10. For an active promotional discount, run recurring billing and confirm recurring total, MRR, and the invoice line discount include the active promotion.
+
+Automated coverage:
+
+- `subscription_suite` tests cover plan-line promotional metadata copying, renewal quote preservation, and invalid percentage/date validation.
+- `subscription_suite_billing` tests cover active promotion invoice/MRR impact, expired promotion removal before billing, and idempotent expiry logging.
+
+Implementation note:
+
+- Future discount features should continue using subscription metadata for lifecycle/audit decisions and Odoo sale order line `discount` as the invoice-facing effective discount. Do not add coupon-code or stacking behavior into this foundation without a separate validated slice.

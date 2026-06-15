@@ -279,6 +279,7 @@ class SaleOrder(models.Model):
             self._apply_pending_seat_change()
         if self.pending_addon_change_date and self.pending_addon_change_date <= fields.Date.today():
             self._apply_pending_addon_change()
+        self._refresh_subscription_line_discounts()
 
         attempt = self._get_or_create_billing_attempt(run=billing_run)
         if billing_run and not attempt.run_id:
@@ -780,6 +781,7 @@ class SaleOrder(models.Model):
             'discount': discount,
             'is_recurring': True,
             'subscription_component_type': 'addon',
+            'subscription_base_discount': discount,
             'recurring_interval_count': self.billing_interval_count,
             'recurring_interval_unit': self.billing_interval_unit,
         }

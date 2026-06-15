@@ -467,6 +467,66 @@ class TestSubscriptionLifecycle(TransactionCase):
         self.assertEqual(sub.subscription_end_date, quote.subscription_end_date)
         self.assertTrue(sub.subscription_log_ids.filtered(lambda log: log.event_type == 'renewed'))
 
+    def test_plan_line_copies_promotional_discount_metadata(self):
+        plan_line = self.env['subscription.plan.line'].create({
+            'plan_id': self.plan.id,
+            'product_id': self.product.id,
+            'quantity': 1.0,
+            'price_unit': 100.0,
+            'discount': 10.0,
+            'subscription_promo_discount': 20.0,
+            'subscription_promo_discount_start_date': fields.Date.today() - relativedelta(days=1),
+            'subscription_promo_discount_end_date': fields.Date.today() + relativedelta(days=10),
+        })
+
+        values = plan_line._prepare_sale_order_line_values(self.plan)
+
+        self.assertAlmostEqual(values['subscription_base_discount'], 10.0, places=2)
+        self.assertAlmostEqual(values['subscription_promo_discount'], 20.0, places=2)
+        self.assertEqual(values['subscription_promo_discount_state'], 'active')
+        self.assertAlmostEqual(values['discount'], 28.0, places=2)
+
+    def test_renewal_quote_preserves_promotional_discount_metadata(self):
+        sub = self._create_active_subscription()
+        line = sub.order_line.filtered('is_recurring')[:1]
+        line.write({
+            'subscription_base_discount': 5.0,
+            'subscription_promo_discount': 15.0,
+            'subscription_promo_discount_start_date': fields.Date.today() - relativedelta(days=1),
+            'subscription_promo_discount_end_date': fields.Date.today() + relativedelta(days=10),
+            'subscription_promo_discount_state': 'active',
+            'discount': 19.25,
+        })
+
+        action = sub.action_renew_subscription()
+        quote = self.env['sale.order'].browse(action['res_id'])
+        quote_line = quote.order_line.filtered('is_recurring')[:1]
+
+        self.assertAlmostEqual(quote_line.subscription_base_discount, 5.0, places=2)
+        self.assertAlmostEqual(quote_line.subscription_promo_discount, 15.0, places=2)
+        self.assertEqual(quote_line.subscription_promo_discount_state, 'active')
+        self.assertEqual(quote_line.subscription_promo_discount_end_date, line.subscription_promo_discount_end_date)
+
+    def test_invalid_promotional_discount_metadata_is_blocked(self):
+        with self.assertRaises(ValidationError):
+            self.env['subscription.plan.line'].create({
+                'plan_id': self.plan.id,
+                'product_id': self.product.id,
+                'quantity': 1.0,
+                'price_unit': 100.0,
+                'subscription_promo_discount': 101.0,
+            })
+        with self.assertRaises(ValidationError):
+            self.env['subscription.plan.line'].create({
+                'plan_id': self.plan.id,
+                'product_id': self.product.id,
+                'quantity': 1.0,
+                'price_unit': 100.0,
+                'subscription_promo_discount': 10.0,
+                'subscription_promo_discount_start_date': fields.Date.today(),
+                'subscription_promo_discount_end_date': fields.Date.today(),
+            })
+
     def test_plan_and_order_lines_default_to_base_component(self):
         plan_line = self.env['subscription.plan.line'].create({
             'plan_id': self.plan.id,

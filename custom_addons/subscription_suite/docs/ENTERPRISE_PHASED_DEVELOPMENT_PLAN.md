@@ -666,7 +666,7 @@ For every phase, update or create:
 
 **Objective:** Support the monetization patterns expected by SaaS and enterprise subscription businesses.
 
-**Current slice:** Usage Metering Audit Hardening. This builds on the usage-metering foundation by adding cancellable uninvoiced usage events, immutable invoiced usage records, draft summary recomputation, and billing safeguards that exclude cancelled events. Portal usage display, external ingestion APIs, tiered usage pricing, customer self-service, coupons, invoice line-per-tier breakdowns, and external entitlement sync remain deferred.
+**Current slice:** Time-Limited Recurring Discounts Foundation. This adds plan-defined promotional discount metadata, copies it to recurring subscription lines, refreshes Odoo-native sale line discounts before recurring billing, recalculates MRR after activation or expiry, and records subscription audit logs. Coupon codes, portal promo entry, discount analytics, accounting deferrals, invoice line-per-tier breakdowns, public usage ingestion, customer self-service, and external entitlement sync remain deferred.
 
 **Build items:**
 
@@ -695,9 +695,9 @@ For every phase, update or create:
    - Usage event audit hardening - done for cancelling ready events, recomputing draft summaries, and locking invoiced events.
 
 4. Discounts and coupons
-   - Time-limited discounts.
+   - Time-limited recurring discounts - foundation done using plan-line and sale-line metadata plus Odoo sale line `discount`.
    - Coupon application history.
-   - Discount expiration handling.
+   - Discount expiration handling - foundation done before recurring billing with subscription logs and MRR recalculation.
 
 **Demo data updates:**
 
@@ -705,7 +705,8 @@ For every phase, update or create:
 - Seat-based demo plan and subscription exist for validating base plus seat recurring lines.
 - Volume and graduated seat-pricing demo plans exist for validating tier setup and effective unit prices.
 - API-call usage meter, overage product, usage rule, and demo events exist for overage billing walkthroughs.
-- Add subscriptions with expiring discounts and coupons.
+- Promotional monthly plan and subscriptions exist for active and expired promotional discount walkthroughs.
+- Add coupon examples later when coupon-code support exists.
 
 **Documentation updates:**
 
@@ -713,6 +714,7 @@ For every phase, update or create:
 - Add usage-meter setup guide.
 - Add seat management workflow.
 - Add examples showing invoice output for each pricing model.
+- Keep future recurring-discount features Odoo-native by using sale order line `discount` as the invoice-facing effective value and metadata fields only for lifecycle/audit decisions.
 
 **Acceptance gates:**
 
@@ -734,6 +736,8 @@ For every phase, update or create:
 - Cancelled usage events are excluded from billing and draft summary recomputation.
 - Invoiced usage events and summaries are immutable from manager correction actions.
 - Discount expiration does not require manual invoice edits.
+- Active promotional discounts update recurring total, MRR, and invoice line discount before billing.
+- Expired promotional discounts revert the invoice-facing discount to the copied base discount without deleting promotion metadata or duplicating logs.
 
 **Tests:**
 
@@ -743,6 +747,7 @@ For every phase, update or create:
 - Tiered and volume calculations, invalid tier validation, copied tier metadata, tiered invoices, and tier-aware seat changes.
 - Usage event aggregation, no-event summary suppression, included-allowance summaries, overage invoice line generation, and no-duplicate billing reruns.
 - Usage event cancellation, draft summary recomputation, locked invoiced usage records, and cancelled-event billing exclusion.
+- Promotional discount metadata copying, validation, activation, expiry, invoice discount, MRR recalculation, renewal preservation, and idempotent expiry logging.
 - Coupon expiry.
 - Mixed flat plus usage subscription.
 

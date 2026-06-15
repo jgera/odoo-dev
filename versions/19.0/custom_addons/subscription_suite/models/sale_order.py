@@ -317,6 +317,8 @@ class SaleOrder(models.Model):
             values['subscription_pricing_model'] = line.subscription_pricing_model
         if 'subscription_tier_ids' in line._fields:
             values['subscription_tier_ids'] = line._copy_subscription_tier_commands()
+        if 'subscription_base_discount' in line._fields:
+            values.update(line._copy_subscription_discount_values())
         if 'product_uom' in line._fields and line.product_uom:
             values['product_uom'] = line.product_uom.id
         elif 'product_uom_id' in line._fields and line.product_uom_id:
@@ -330,6 +332,36 @@ class SaleOrder(models.Model):
         if 'recurring_interval_unit' in line._fields:
             values['recurring_interval_unit'] = line.recurring_interval_unit
         return values
+
+    def _refresh_subscription_line_discounts(self, on_date=None):
+        for subscription in self:
+            if not subscription.is_subscription:
+                continue
+            changed = False
+            for line in subscription.order_line.filtered(lambda order_line: order_line.is_recurring and not order_line.display_type):
+                if 'subscription_base_discount' not in line._fields:
+                    continue
+                change = line._refresh_subscription_effective_discount(on_date=on_date)
+                if not change:
+                    continue
+                changed = True
+                if change['new_state'] == 'active' and change['old_state'] != 'active':
+                    subscription._log_subscription_event(
+                        'discount_changed',
+                        _('Promotional discount activated on %(product)s', product=line.product_id.display_name or line.name),
+                        old_values={'discount': change['old_discount'], 'state': change['old_state']},
+                        new_values={'discount': change['new_discount'], 'state': change['new_state'], 'line_id': line.id},
+                    )
+                elif change['new_state'] == 'expired' and change['old_state'] != 'expired':
+                    subscription._log_subscription_event(
+                        'discount_changed',
+                        _('Promotional discount expired on %(product)s', product=line.product_id.display_name or line.name),
+                        old_values={'discount': change['old_discount'], 'state': change['old_state']},
+                        new_values={'discount': change['new_discount'], 'state': change['new_state'], 'line_id': line.id},
+                    )
+            if changed:
+                subscription.invalidate_recordset(['recurring_total', 'mrr'])
+        return True
 
     def _prepare_subscription_quote_values(self, quote_type):
         self.ensure_one()
@@ -872,6 +904,7 @@ class SaleOrder(models.Model):
 
     def _generate_subscription_invoice(self):
         self.ensure_one()
+        self._refresh_subscription_line_discounts()
         # Create invoice from order lines
         invoices = self._create_invoices()
         invoice = invoices[:1]

@@ -55,6 +55,9 @@
                                     <field name="uom_id" groups="uom.group_uom"/>
                                     <field name="price_unit" widget="monetary"/>
                                     <field name="discount"/>
+                                    <field name="subscription_promo_discount" optional="hide"/>
+                                    <field name="subscription_promo_discount_start_date" optional="hide"/>
+                                    <field name="subscription_promo_discount_end_date" optional="hide"/>
                                     <field name="currency_id" invisible="1"/>
                                 </list>
                                 <form string="Plan Line">
@@ -71,6 +74,9 @@
                                             <group>
                                                 <field name="price_unit" widget="monetary"/>
                                                 <field name="discount"/>
+                                                <field name="subscription_promo_discount"/>
+                                                <field name="subscription_promo_discount_start_date"/>
+                                                <field name="subscription_promo_discount_end_date"/>
                                                 <field name="currency_id" invisible="1"/>
                                                 <field name="company_id" invisible="1"/>
                                             </group>

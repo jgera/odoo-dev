@@ -336,6 +336,65 @@ class TestBillingAttempts(TransactionCase):
         self.assertAlmostEqual(invoice_line.price_subtotal, 270.0, places=2)
         self.assertAlmostEqual(invoice.amount_untaxed, 270.0, places=2)
 
+    def test_active_promotional_discount_affects_invoice_and_mrr(self):
+        subscription = self._create_due_subscription()
+        line = subscription.order_line.filtered('is_recurring')[:1]
+        line.write({
+            'subscription_base_discount': 10.0,
+            'subscription_promo_discount': 20.0,
+            'subscription_promo_discount_start_date': fields.Date.today() - timedelta(days=1),
+            'subscription_promo_discount_end_date': fields.Date.today() + timedelta(days=10),
+            'subscription_promo_discount_state': 'inactive',
+            'discount': 10.0,
+        })
+        subscription.invalidate_recordset(['recurring_total', 'mrr'])
+
+        invoice = self._create_subscription_invoice(subscription)
+        invoice_line = invoice.invoice_line_ids.filtered(lambda move_line: move_line.product_id == self.product)[:1]
+
+        self.assertAlmostEqual(line.discount, 28.0, places=2)
+        self.assertEqual(line.subscription_promo_discount_state, 'active')
+        self.assertAlmostEqual(subscription.recurring_total, 72.0, places=2)
+        self.assertAlmostEqual(subscription.mrr, 72.0, places=2)
+        self.assertAlmostEqual(invoice_line.discount, 28.0, places=2)
+        self.assertAlmostEqual(invoice.amount_untaxed, 72.0, places=2)
+        self.assertTrue(subscription.subscription_log_ids.filtered(
+            lambda log: log.event_type == 'discount_changed' and 'activated' in (log.description or '')
+        ))
+
+    def test_expired_promotional_discount_is_removed_once_before_invoice(self):
+        subscription = self._create_due_subscription()
+        line = subscription.order_line.filtered('is_recurring')[:1]
+        line.write({
+            'subscription_base_discount': 10.0,
+            'subscription_promo_discount': 20.0,
+            'subscription_promo_discount_start_date': fields.Date.today() - timedelta(days=20),
+            'subscription_promo_discount_end_date': fields.Date.today() - timedelta(days=5),
+            'subscription_promo_discount_state': 'active',
+            'discount': 28.0,
+        })
+        subscription.invalidate_recordset(['recurring_total', 'mrr'])
+
+        invoice = self._create_subscription_invoice(subscription)
+        invoice_line = invoice.invoice_line_ids.filtered(lambda move_line: move_line.product_id == self.product)[:1]
+        expiry_logs = subscription.subscription_log_ids.filtered(
+            lambda log: log.event_type == 'discount_changed' and 'expired' in (log.description or '')
+        )
+
+        self.assertAlmostEqual(line.discount, 10.0, places=2)
+        self.assertEqual(line.subscription_promo_discount_state, 'expired')
+        self.assertAlmostEqual(subscription.recurring_total, 90.0, places=2)
+        self.assertAlmostEqual(subscription.mrr, 90.0, places=2)
+        self.assertAlmostEqual(invoice_line.discount, 10.0, places=2)
+        self.assertAlmostEqual(invoice.amount_untaxed, 90.0, places=2)
+        self.assertEqual(len(expiry_logs), 1)
+
+        subscription._refresh_subscription_line_discounts()
+        expiry_logs = subscription.subscription_log_ids.filtered(
+            lambda log: log.event_type == 'discount_changed' and 'expired' in (log.description or '')
+        )
+        self.assertEqual(len(expiry_logs), 1)
+
     def _create_payment_provider(self):
         payment_method = self.env.ref('payment.payment_method_unknown')
         redirect_form = self.env['ir.ui.view'].create({
