@@ -19,6 +19,9 @@
                             <field name="new_plan_id" readonly="1"/>
                             <field name="old_seat_quantity" readonly="1" invisible="proration_scope != 'seat_change'"/>
                             <field name="new_seat_quantity" readonly="1" invisible="proration_scope != 'seat_change'"/>
+                            <field name="addon_product_id" readonly="1" invisible="proration_scope != 'addon_change'"/>
+                            <field name="old_addon_quantity" readonly="1" invisible="proration_scope != 'addon_change'"/>
+                            <field name="new_addon_quantity" readonly="1" invisible="proration_scope != 'addon_change'"/>
                         </group>
                         <group string="Period Information">
                             <field name="period_start" readonly="1"/>
@@ -58,6 +61,9 @@
                 <field name="new_plan_id"/>
                 <field name="old_seat_quantity" optional="hide"/>
                 <field name="new_seat_quantity" optional="hide"/>
+                <field name="addon_product_id" optional="hide"/>
+                <field name="old_addon_quantity" optional="hide"/>
+                <field name="new_addon_quantity" optional="hide"/>
                 <field name="net_amount" widget="monetary"/>
                 <field name="state" widget="badge" decoration-success="state == 'applied'"/>
                 <field name="currency_id" column_invisible="1"/>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_change_addons_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.change.addons.wizard.form</field>
+        <field name="model">subscription.change.addons.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Change Add-ons">
+                <group>
+                    <field name="subscription_id" invisible="1"/>
+                    <field name="currency_id" invisible="1"/>
+                    <field name="operation" widget="radio"/>
+                    <field name="change_timing" widget="radio"/>
+                    <field name="product_id" invisible="operation != 'add'" required="operation == 'add'"/>
+                    <field name="addon_line_id" invisible="operation != 'remove'" required="operation == 'remove'" domain="[('order_id', '=', subscription_id), ('is_recurring', '=', True), ('subscription_component_type', '=', 'addon'), ('display_type', '=', False)]"/>
+                    <field name="quantity"/>
+                    <field name="price_unit" widget="monetary" invisible="operation != 'add'"/>
+                    <field name="discount" invisible="operation != 'add'"/>
+                    <field name="effective_date" readonly="change_timing == 'next_period'"/>
+                </group>
+                <group string="Financial Impact">
+                    <field name="current_addon_quantity"/>
+                    <field name="new_addon_quantity"/>
+                    <field name="current_mrr" widget="monetary"/>
+                    <field name="new_mrr" widget="monetary"/>
+                    <field name="net_amount" widget="monetary"/>
+                    <field name="proration_preview" nolabel="1" colspan="2"/>
+                </group>
+                <footer>
+                    <button name="action_confirm_change" type="object" string="Confirm Change" class="btn-primary"/>
+                    <button special="cancel" string="Cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

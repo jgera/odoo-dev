@@ -20,6 +20,10 @@
                         invisible="not is_subscription or seat_quantity &lt;= 0 or subscription_state not in ('active', 'paused', 'past_due')"/>
                 <button name="action_cancel_pending_seat_change" type="object" string="Cancel Seat Change"
                         invisible="not pending_seat_change_date"/>
+                <button name="action_change_addons" type="object" string="Change Add-ons"
+                        invisible="not is_subscription or subscription_state not in ('active', 'paused', 'past_due')"/>
+                <button name="action_cancel_pending_addon_change" type="object" string="Cancel Add-on Change"
+                        invisible="not pending_addon_change_date"/>
                 <button name="action_cancel_pending_plan_change" type="object" string="Cancel Plan Change"
                         invisible="not pending_plan_change_id"/>
             </xpath>
@@ -30,6 +34,11 @@
                 <field name="pending_plan_change_type" invisible="not pending_plan_change_id" readonly="1"/>
                 <field name="pending_seat_quantity" invisible="not pending_seat_change_date" readonly="1"/>
                 <field name="pending_seat_change_date" invisible="not pending_seat_change_date" readonly="1"/>
+                <field name="pending_addon_change_operation" invisible="not pending_addon_change_date" readonly="1"/>
+                <field name="pending_addon_product_id" invisible="not pending_addon_change_date" readonly="1"/>
+                <field name="pending_addon_line_id" invisible="not pending_addon_change_date" readonly="1"/>
+                <field name="pending_addon_quantity" invisible="not pending_addon_change_date" readonly="1"/>
+                <field name="pending_addon_change_date" invisible="not pending_addon_change_date" readonly="1"/>
             </xpath>
             
             <xpath expr="//div[@name='button_box']" position="inside">

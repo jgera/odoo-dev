@@ -56,6 +56,12 @@ class TestPlanChange(TransactionCase):
             'list_price': 12.0,
             'invoice_policy': 'order',
         })
+        self.addon_product = self.env['product.product'].create({
+            'name': 'Priority Support',
+            'type': 'service',
+            'list_price': 20.0,
+            'invoice_policy': 'order',
+        })
         self.premium_plan = self.env['subscription.plan'].create({
             'name': 'Premium Monthly',
             'code': 'TEST-PREMIUM-MONTHLY',
@@ -283,6 +289,207 @@ class TestPlanChange(TransactionCase):
         self.assertEqual(self.env['subscription.mrr.movement'].search_count([
             ('subscription_id', '=', subscription.id),
         ]), movement_count)
+
+    def test_immediate_addon_add_updates_mrr_and_creates_adjustment_invoice(self):
+        subscription = self._create_seat_subscription()
+        old_mrr = subscription.mrr
+
+        proration = subscription._execute_addon_change(
+            'add',
+            product=self.addon_product,
+            quantity=2.0,
+            price_unit=20.0,
+            effective_date=date(2026, 1, 16),
+        )
+        subscription.invalidate_recordset()
+        addon_line = subscription._get_addon_lines(self.addon_product)
+
+        self.assertEqual(addon_line.product_uom_qty, 2.0)
+        self.assertAlmostEqual(subscription.mrr, 189.0, places=2)
+        self.assertEqual(proration.proration_scope, 'addon_change')
+        self.assertEqual(proration.change_type, 'upgrade')
+        self.assertEqual(proration.addon_product_id, self.addon_product)
+        self.assertEqual(proration.old_addon_quantity, 0.0)
+        self.assertEqual(proration.new_addon_quantity, 2.0)
+        self.assertTrue(proration.adjustment_invoice_id)
+        self.assertAlmostEqual(proration.net_amount, 20.0, places=2)
+
+        movement = self.env['subscription.mrr.movement'].search([
+            ('subscription_id', '=', subscription.id),
+        ], order='id desc', limit=1)
+        self.assertEqual(movement.movement_type, 'expansion')
+        self.assertAlmostEqual(movement.previous_mrr, old_mrr, places=2)
+        self.assertAlmostEqual(movement.new_mrr, 189.0, places=2)
+
+    def test_immediate_addon_remove_creates_credit_note(self):
+        subscription = self._create_seat_subscription()
+        subscription._execute_addon_change(
+            'add',
+            product=self.addon_product,
+            quantity=2.0,
+            price_unit=20.0,
+            effective_date=date(2026, 1, 1),
+        )
+        addon_line = subscription._get_addon_lines(self.addon_product)
+
+        proration = subscription._execute_addon_change(
+            'remove',
+            addon_line=addon_line,
+            quantity=1.0,
+            effective_date=date(2026, 1, 16),
+        )
+        subscription.invalidate_recordset()
+
+        self.assertEqual(addon_line.product_uom_qty, 1.0)
+        self.assertAlmostEqual(subscription.mrr, 169.0, places=2)
+        self.assertEqual(proration.proration_scope, 'addon_change')
+        self.assertEqual(proration.change_type, 'downgrade')
+        self.assertEqual(proration.old_addon_quantity, 2.0)
+        self.assertEqual(proration.new_addon_quantity, 1.0)
+        self.assertTrue(proration.credit_note_id)
+        self.assertAlmostEqual(proration.net_amount, -10.0, places=2)
+
+        movement = self.env['subscription.mrr.movement'].search([
+            ('subscription_id', '=', subscription.id),
+        ], order='id desc', limit=1)
+        self.assertEqual(movement.movement_type, 'contraction')
+
+    def test_change_addons_action_and_wizard_schedule_next_period(self):
+        subscription = self._create_seat_subscription()
+        action = subscription.action_change_addons()
+        self.assertEqual(action['res_model'], 'subscription.change.addons.wizard')
+
+        wizard = self.env['subscription.change.addons.wizard'].with_context(action['context']).create({
+            'subscription_id': subscription.id,
+            'operation': 'add',
+            'change_timing': 'next_period',
+            'product_id': self.addon_product.id,
+            'quantity': 2.0,
+            'price_unit': 20.0,
+            'effective_date': date(2026, 1, 31),
+        })
+        self.assertEqual(wizard.net_amount, 0.0)
+        wizard.action_confirm_change()
+        subscription.invalidate_recordset()
+
+        self.assertFalse(subscription._get_addon_lines(self.addon_product))
+        self.assertEqual(subscription.pending_addon_change_operation, 'add')
+        self.assertEqual(subscription.pending_addon_product_id, self.addon_product)
+        self.assertEqual(subscription.pending_addon_quantity, 2.0)
+        self.assertEqual(subscription.pending_addon_change_date, date(2026, 1, 31))
+
+    def test_scheduled_addon_add_applies_before_billing_invoice(self):
+        today = fields.Date.today()
+        subscription = self._create_seat_subscription(confirm=False, last_invoice_date=today, next_invoice_date=today)
+        subscription.action_confirm()
+        subscription._schedule_addon_change(
+            'add',
+            product=self.addon_product,
+            quantity=2.0,
+            price_unit=20.0,
+            effective_date=today,
+        )
+
+        self.env['sale.order']._cron_generate_subscription_invoices()
+        subscription.invalidate_recordset()
+        addon_line = subscription._get_addon_lines(self.addon_product)
+
+        self.assertEqual(addon_line.product_uom_qty, 2.0)
+        self.assertFalse(subscription.pending_addon_change_date)
+        self.assertFalse(subscription.proration_ids.filtered(lambda proration: proration.proration_scope == 'addon_change'))
+        self.assertAlmostEqual(subscription.mrr, 189.0, places=2)
+
+        invoice = self.env['account.move'].search([
+            ('subscription_id', '=', subscription.id),
+        ], order='id desc', limit=1)
+        self.assertTrue(invoice)
+        addon_invoice_line = invoice.invoice_line_ids.filtered(lambda line: line.product_id == self.addon_product)
+        self.assertEqual(addon_invoice_line.quantity, 2.0)
+        self.assertAlmostEqual(invoice.amount_untaxed, 189.0, places=2)
+
+    def test_scheduled_addon_remove_and_cancel(self):
+        subscription = self._create_seat_subscription()
+        subscription._execute_addon_change(
+            'add',
+            product=self.addon_product,
+            quantity=2.0,
+            price_unit=20.0,
+            effective_date=date(2026, 1, 1),
+        )
+        addon_line = subscription._get_addon_lines(self.addon_product)
+        subscription._schedule_addon_change(
+            'remove',
+            addon_line=addon_line,
+            quantity=1.0,
+            effective_date=date(2026, 1, 31),
+        )
+        subscription.invalidate_recordset()
+
+        self.assertEqual(subscription.pending_addon_change_operation, 'remove')
+        self.assertEqual(subscription.pending_addon_line_id, addon_line)
+        subscription.action_cancel_pending_addon_change()
+        subscription.invalidate_recordset()
+
+        self.assertFalse(subscription.pending_addon_change_date)
+        self.assertEqual(addon_line.product_uom_qty, 2.0)
+
+    def test_scheduled_addon_remove_applies_before_billing_invoice(self):
+        today = fields.Date.today()
+        subscription = self._create_seat_subscription(confirm=False, last_invoice_date=today, next_invoice_date=today)
+        subscription.action_confirm()
+        subscription._execute_addon_change(
+            'add',
+            product=self.addon_product,
+            quantity=2.0,
+            price_unit=20.0,
+            effective_date=today,
+        )
+        addon_line = subscription._get_addon_lines(self.addon_product)
+        subscription._schedule_addon_change(
+            'remove',
+            addon_line=addon_line,
+            quantity=1.0,
+            effective_date=today,
+        )
+
+        self.env['sale.order']._cron_generate_subscription_invoices()
+        subscription.invalidate_recordset()
+
+        self.assertEqual(addon_line.product_uom_qty, 1.0)
+        self.assertFalse(subscription.pending_addon_change_date)
+        self.assertAlmostEqual(subscription.mrr, 169.0, places=2)
+
+        invoice = self.env['account.move'].search([
+            ('subscription_id', '=', subscription.id),
+        ], order='id desc', limit=1)
+        addon_invoice_line = invoice.invoice_line_ids.filtered(lambda line: line.product_id == self.addon_product)
+        self.assertEqual(addon_invoice_line.quantity, 1.0)
+
+    def test_addon_change_guards(self):
+        subscription = self._create_seat_subscription()
+        with self.assertRaises(ValidationError):
+            subscription._execute_addon_change('add', quantity=1.0)
+        with self.assertRaises(ValidationError):
+            subscription._execute_addon_change('add', product=self.addon_product, quantity=0.0, price_unit=20.0)
+        with self.assertRaises(ValidationError):
+            subscription._execute_addon_change('remove', quantity=1.0)
+
+        subscription._execute_addon_change('add', product=self.addon_product, quantity=1.0, price_unit=20.0)
+        addon_line = subscription._get_addon_lines(self.addon_product)
+        with self.assertRaises(ValidationError):
+            subscription._execute_addon_change('remove', addon_line=addon_line, quantity=2.0)
+
+        quote = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'subscription_quote_type': 'upsell',
+            'subscription_origin_id': subscription.id,
+        })
+        with self.assertRaises(ValidationError):
+            quote._execute_addon_change('add', product=self.addon_product, quantity=1.0, price_unit=20.0)
+
+        cancelled = self._create_seat_subscription(state='cancelled')
+        with self.assertRaises(ValidationError):
+            cancelled._schedule_addon_change('add', product=self.addon_product, quantity=1.0, price_unit=20.0)
 
     def test_immediate_seat_change_guards(self):
         subscription = self._create_seat_subscription()

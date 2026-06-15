@@ -10,6 +10,7 @@ class SubscriptionProration(models.Model):
     proration_scope = fields.Selection([
         ('plan_change', 'Plan Change'),
         ('seat_change', 'Seat Change'),
+        ('addon_change', 'Add-on Change'),
     ], string='Scope', default='plan_change', required=True)
     change_type = fields.Selection([
         ('upgrade', 'Upgrade'),
@@ -22,6 +23,9 @@ class SubscriptionProration(models.Model):
     new_plan_id = fields.Many2one('subscription.plan', string='New Plan')
     old_seat_quantity = fields.Float(string='Old Seats', readonly=True)
     new_seat_quantity = fields.Float(string='New Seats', readonly=True)
+    addon_product_id = fields.Many2one('product.product', string='Add-on Product', readonly=True)
+    old_addon_quantity = fields.Float(string='Old Add-on Quantity', readonly=True)
+    new_addon_quantity = fields.Float(string='New Add-on Quantity', readonly=True)
     
     period_start = fields.Date(string='Period Start', required=True)
     period_end = fields.Date(string='Period End', required=True)
@@ -86,6 +90,8 @@ class SubscriptionProration(models.Model):
             )[:1]
             if seat_line:
                 return seat_line.product_id
+        if self.proration_scope == 'addon_change' and self.addon_product_id:
+            return self.addon_product_id
         plan = self.new_plan_id or self.old_plan_id
         product = plan.plan_line_ids[:1].product_id if plan and plan.plan_line_ids else False
         if not product:
@@ -173,6 +179,18 @@ class SubscriptionProration(models.Model):
                     'Seats changed from %(old_qty)s to %(new_qty)s with proration net amount %(amount)s%(document)s',
                     old_qty=self.old_seat_quantity,
                     new_qty=self.new_seat_quantity,
+                    amount=self.net_amount,
+                    document=_(' and document %s') % move.name if move else '',
+                ),
+            )
+        elif self.proration_scope == 'addon_change':
+            self.subscription_id._log_subscription_event(
+                'plan_changed',
+                _(
+                    'Add-on %(product)s changed from %(old_qty)s to %(new_qty)s with proration net amount %(amount)s%(document)s',
+                    product=self.addon_product_id.display_name,
+                    old_qty=self.old_addon_quantity,
+                    new_qty=self.new_addon_quantity,
                     amount=self.net_amount,
                     document=_(' and document %s') % move.name if move else '',
                 ),

@@ -566,3 +566,20 @@ Automated coverage:
 Automated coverage:
 
 - `subscription_suite_billing` tests cover scheduled wizard submission, zero-proration preview, cancellation, no-op clearing, application before recurring invoice generation, invoice quantity, MRR movement, and shared blocked states.
+
+## 21. Backend Add-on Operations Demo
+
+1. Open the demo subscription **Team Seats Monthly**.
+2. Confirm the subscription is active, paused, or past due.
+3. Click **Change Add-ons**.
+4. Select **Add**, choose the support add-on product, enter quantity, unit price, and discount, then confirm **Immediately with Proration**.
+5. Confirm a recurring line with **Component Type** set to **Add-on** is added or updated, MRR increases, and an **Add-on Change** proration creates an adjustment invoice when inside the billing period.
+6. Open **Change Add-ons** again, select **Remove**, choose the existing add-on line, enter the quantity to remove, and confirm immediately.
+7. Confirm the add-on quantity decreases or reaches zero, MRR decreases, and an **Add-on Change** proration creates a credit note when applicable.
+8. Repeat add/remove with **Next Billing Period** and confirm **Pending Add-on Operation**, product, quantity, and date appear on the subscription without a proration document.
+9. Use **Cancel Add-on Change** and confirm pending fields clear without changing current add-on lines.
+10. Schedule the change again, run recurring billing, and confirm the add-on change applies before invoice generation and the invoice reflects the new add-on quantity.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover immediate add/remove, add-on proration invoices and credit notes, scheduled add/remove before billing, cancellation, wizard scheduling, MRR movement, and blocked states.

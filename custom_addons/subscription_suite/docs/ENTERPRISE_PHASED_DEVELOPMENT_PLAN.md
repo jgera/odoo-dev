@@ -666,7 +666,7 @@ For every phase, update or create:
 
 **Objective:** Support the monetization patterns expected by SaaS and enterprise subscription businesses.
 
-**Current slice:** Scheduled Backend Seat Change Operations. This extends the backend seat-change wizard so managers can either apply a single-seat-line quantity change immediately with proration, or schedule it for the next billing period without a proration document. Scheduled changes are stored on the subscription, can be cancelled before billing, apply before recurring invoice creation, and record subscription logs plus MRR movement when applied. Portal self-service, tiered pricing, usage metering, and external seat sync remain deferred.
+**Current slice:** Backend Add-on Operations. This adds manager-side recurring add-on changes with immediate proration, next-period scheduling, cancellation, add-on proration audit fields, subscription logs, and MRR movement. It builds on the existing `addon` component type and upsell quote behavior while keeping portal self-service, tiered pricing, usage metering, coupons, and external entitlement sync deferred.
 
 **Build items:**
 
@@ -682,7 +682,8 @@ For every phase, update or create:
    - Seat quantity on subscription line - foundation done through recurring sale order lines marked as `seat`.
    - Portal-visible seat count - read-only summary done.
    - Immediate backend seat increase/decrease with proration - done.
-   - Scheduled backend seat increase/decrease at the next billing period - current slice.
+   - Scheduled backend seat increase/decrease at the next billing period - done.
+   - Backend add-on add/remove with immediate proration and next-period scheduling - current slice.
    - Optional seat sync hooks for external applications.
 
 3. Usage-based billing
@@ -719,6 +720,7 @@ For every phase, update or create:
 - Backend and portal summaries show read-only seat totals when recurring seat lines exist.
 - Immediate backend seat changes create proration, subscription logs, and MRR movement.
 - Scheduled backend seat changes apply before recurring billing without a proration document, can be cancelled before application, and record subscription logs and MRR movement.
+- Backend add-on operations can add/remove recurring add-on lines immediately or at the next billing period with audit, proration, invoice, log, and MRR movement coverage.
 - Usage invoice lines are reproducible from usage events/summaries.
 - Discount expiration does not require manual invoice edits.
 
@@ -726,6 +728,7 @@ For every phase, update or create:
 
 - Immediate backend seat increase/decrease.
 - Scheduled backend seat increase/decrease and cancellation.
+- Backend add-on add/remove, scheduling, cancellation, and proration.
 - Tiered and volume calculations.
 - Usage event aggregation.
 - Overage invoice generation.

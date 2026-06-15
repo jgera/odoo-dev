@@ -28,6 +28,16 @@ class SaleOrder(models.Model):
     ], string='Pending Plan Change Type', copy=False)
     pending_seat_quantity = fields.Float(string='Pending Seat Quantity', copy=False)
     pending_seat_change_date = fields.Date(string='Pending Seat Change Date', copy=False, index=True)
+    pending_addon_change_operation = fields.Selection([
+        ('add', 'Add'),
+        ('remove', 'Remove'),
+    ], string='Pending Add-on Operation', copy=False)
+    pending_addon_product_id = fields.Many2one('product.product', string='Pending Add-on Product', copy=False)
+    pending_addon_line_id = fields.Many2one('sale.order.line', string='Pending Add-on Line', copy=False)
+    pending_addon_quantity = fields.Float(string='Pending Add-on Quantity', copy=False)
+    pending_addon_price_unit = fields.Monetary(string='Pending Add-on Unit Price', copy=False)
+    pending_addon_discount = fields.Float(string='Pending Add-on Discount (%)', copy=False)
+    pending_addon_change_date = fields.Date(string='Pending Add-on Change Date', copy=False, index=True)
     plan_change_request_count = fields.Integer(
         string='Plan Change Requests',
         compute='_compute_plan_change_request_count',
@@ -97,6 +107,38 @@ class SaleOrder(models.Model):
             subscription._log_subscription_event(
                 'plan_changed',
                 _('Scheduled seat change cancelled'),
+                old_values=old_values,
+            )
+
+    def action_change_addons(self):
+        self.ensure_one()
+        self._check_addon_change_allowed()
+        return {
+            'name': _('Change Add-ons'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.change.addons.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_subscription_id': self.id,
+            },
+        }
+
+    def action_cancel_pending_addon_change(self):
+        for subscription in self:
+            if not subscription.pending_addon_change_date:
+                continue
+            old_values = {
+                'pending_addon_change_operation': subscription.pending_addon_change_operation,
+                'pending_addon_product_id': subscription.pending_addon_product_id.display_name,
+                'pending_addon_line_id': subscription.pending_addon_line_id.display_name,
+                'pending_addon_quantity': subscription.pending_addon_quantity,
+                'pending_addon_change_date': subscription.pending_addon_change_date,
+            }
+            subscription._clear_pending_addon_change()
+            subscription._log_subscription_event(
+                'plan_changed',
+                _('Scheduled add-on change cancelled'),
                 old_values=old_values,
             )
 
@@ -218,6 +260,8 @@ class SaleOrder(models.Model):
             self._apply_pending_plan_change()
         if self.pending_seat_change_date and self.pending_seat_change_date <= fields.Date.today():
             self._apply_pending_seat_change()
+        if self.pending_addon_change_date and self.pending_addon_change_date <= fields.Date.today():
+            self._apply_pending_addon_change()
 
         attempt = self._get_or_create_billing_attempt(run=billing_run)
         if billing_run and not attempt.run_id:
@@ -518,6 +562,240 @@ class SaleOrder(models.Model):
             ),
             movement_date=effective_date,
         )
+        return True
+
+    def _get_addon_lines(self, product=None):
+        self.ensure_one()
+        addon_lines = self.order_line.filtered(
+            lambda line: line.is_recurring
+            and line.subscription_component_type == 'addon'
+            and not line.display_type
+            and line.product_id
+        )
+        if product:
+            addon_lines = addon_lines.filtered(lambda line: line.product_id == product)
+        return addon_lines
+
+    def _check_addon_change_allowed(self):
+        self.ensure_one()
+        if not self.is_subscription:
+            raise ValidationError(_("Only subscriptions can change add-ons."))
+        if self.subscription_quote_type:
+            raise ValidationError(_("Subscription quotations cannot change add-ons."))
+        if self.state not in ('sale', 'done'):
+            raise ValidationError(_("Confirm the subscription before changing add-ons."))
+        if self.subscription_state not in ('active', 'paused', 'past_due'):
+            raise ValidationError(_("Add-ons can only be changed on active, paused, or past-due subscriptions."))
+        return True
+
+    def _check_addon_quantity(self, quantity, product=None, line=None, operation='add'):
+        precision_rounding = 0.01
+        if line:
+            line_uom = line.product_uom_id or line.product_id.uom_id
+            precision_rounding = line_uom.rounding or precision_rounding
+        elif product and product.uom_id:
+            precision_rounding = product.uom_id.rounding or precision_rounding
+        if float_compare(quantity, 1.0, precision_rounding=precision_rounding) < 0:
+            raise ValidationError(_("Add-on quantity must be at least 1."))
+        if operation == 'remove' and line and float_compare(quantity, line.product_uom_qty, precision_rounding=precision_rounding) > 0:
+            raise ValidationError(_("Cannot remove more add-on quantity than the subscription currently has."))
+        return precision_rounding
+
+    def _get_mrr_after_addon_change(self, addon_line=None, product=None, quantity=0.0, price_unit=0.0, discount=0.0, operation='add'):
+        self.ensure_one()
+        recurring_total = self.recurring_total
+        if operation == 'add':
+            if addon_line:
+                old_subtotal = addon_line.price_subtotal
+                new_quantity = addon_line.product_uom_qty + quantity
+                new_subtotal = new_quantity * addon_line.price_unit * (1 - (addon_line.discount or 0.0) / 100.0)
+                recurring_total = recurring_total - old_subtotal + new_subtotal
+            else:
+                recurring_total += quantity * price_unit * (1 - (discount or 0.0) / 100.0)
+        else:
+            old_subtotal = addon_line.price_subtotal
+            new_quantity = max(0.0, addon_line.product_uom_qty - quantity)
+            new_subtotal = new_quantity * addon_line.price_unit * (1 - (addon_line.discount or 0.0) / 100.0)
+            recurring_total = recurring_total - old_subtotal + new_subtotal
+        return self._monthly_equivalent_amount(recurring_total)
+
+    def _prepare_addon_line_values(self, product, quantity, price_unit=None, discount=0.0):
+        self.ensure_one()
+        product.ensure_one()
+        return {
+            'product_id': product.id,
+            'name': product.get_product_multiline_description_sale(),
+            'product_uom_qty': quantity,
+            'price_unit': price_unit if price_unit is not None else product.list_price,
+            'discount': discount,
+            'is_recurring': True,
+            'subscription_component_type': 'addon',
+            'recurring_interval_count': self.billing_interval_count,
+            'recurring_interval_unit': self.billing_interval_unit,
+        }
+
+    def _apply_addon_line_change(self, operation, product=None, quantity=0.0, price_unit=None, discount=0.0, addon_line=None):
+        self.ensure_one()
+        if operation == 'add':
+            addon_lines = self._get_addon_lines(product)
+            addon_line = addon_line or addon_lines[:1]
+            if addon_line:
+                addon_line.write({'product_uom_qty': addon_line.product_uom_qty + quantity})
+            else:
+                self.write({'order_line': [(0, 0, self._prepare_addon_line_values(product, quantity, price_unit, discount))]})
+                addon_line = self._get_addon_lines(product)[:1]
+        else:
+            addon_line.ensure_one()
+            remaining_quantity = max(0.0, addon_line.product_uom_qty - quantity)
+            addon_line.write({'product_uom_qty': remaining_quantity})
+        self.invalidate_recordset(['recurring_total', 'mrr'])
+        return addon_line
+
+    def _create_addon_proration(self, addon_line, product, old_quantity, new_quantity, old_mrr, new_mrr, effective_date):
+        self.ensure_one()
+        period_start = self.current_period_start or self.last_invoice_date or self.subscription_start_date or effective_date
+        period_end = self.current_period_end or self.next_invoice_date or self.subscription_plan_id.get_next_invoice_date(period_start)
+        if effective_date < period_start:
+            effective_date = period_start
+        if not period_start or not period_end or effective_date >= period_end:
+            return False
+        if self._compare_mrr(new_mrr, old_mrr) == 0:
+            return False
+        proration = self.env['subscription.proration'].create({
+            'subscription_id': self.id,
+            'proration_scope': 'addon_change',
+            'change_type': 'upgrade' if self._compare_mrr(new_mrr, old_mrr) > 0 else 'downgrade',
+            'change_date': effective_date,
+            'old_plan_id': self.subscription_plan_id.id,
+            'new_plan_id': self.subscription_plan_id.id,
+            'addon_product_id': product.id,
+            'old_addon_quantity': old_quantity,
+            'new_addon_quantity': new_quantity,
+            'period_start': period_start,
+            'period_end': period_end,
+            'old_daily_rate': old_mrr / 30.0,
+            'new_daily_rate': new_mrr / 30.0,
+        })
+        proration.action_apply_proration()
+        return proration
+
+    def _execute_addon_change(self, operation, product=None, quantity=0.0, price_unit=None, discount=0.0, addon_line=None, effective_date=None):
+        self.ensure_one()
+        effective_date = effective_date or fields.Date.today()
+        self._check_addon_change_allowed()
+        if operation not in ('add', 'remove'):
+            raise ValidationError(_("Unsupported add-on operation."))
+        if operation == 'add':
+            if not product:
+                raise ValidationError(_("Select an add-on product to add."))
+            product.ensure_one()
+            addon_line = self._get_addon_lines(product)[:1]
+            self._check_addon_quantity(quantity, product=product, line=addon_line, operation=operation)
+            old_quantity = addon_line.product_uom_qty if addon_line else 0.0
+            old_mrr = self.mrr
+            new_mrr = self._get_mrr_after_addon_change(addon_line=addon_line, product=product, quantity=quantity, price_unit=price_unit, discount=discount, operation=operation)
+            changed_line = self._apply_addon_line_change(operation, product=product, quantity=quantity, price_unit=price_unit, discount=discount, addon_line=addon_line)
+            new_quantity = old_quantity + quantity
+        else:
+            if not addon_line:
+                raise ValidationError(_("Select an existing add-on line to remove."))
+            addon_line.ensure_one()
+            product = addon_line.product_id
+            self._check_addon_quantity(quantity, line=addon_line, operation=operation)
+            old_quantity = addon_line.product_uom_qty
+            old_mrr = self.mrr
+            new_mrr = self._get_mrr_after_addon_change(addon_line=addon_line, quantity=quantity, operation=operation)
+            changed_line = self._apply_addon_line_change(operation, quantity=quantity, addon_line=addon_line)
+            new_quantity = max(0.0, old_quantity - quantity)
+
+        proration = self._create_addon_proration(changed_line, product, old_quantity, new_quantity, old_mrr, new_mrr, effective_date)
+        movement_type = self._get_mrr_movement_type(old_mrr, new_mrr)
+        operation_label = _('added') if operation == 'add' else _('removed')
+        self._log_subscription_event(
+            'plan_changed',
+            _('Add-on %(product)s %(operation)s: %(old_qty)s to %(new_qty)s', product=product.display_name, operation=operation_label, old_qty=old_quantity, new_qty=new_quantity),
+            old_values={'addon': product.display_name, 'quantity': old_quantity, 'mrr': old_mrr},
+            new_values={'addon': product.display_name, 'quantity': new_quantity, 'mrr': new_mrr, 'effective_date': effective_date, 'proration_id': proration.id if proration else False},
+        )
+        self._log_mrr_movement(
+            movement_type,
+            old_mrr,
+            new_mrr,
+            _('MRR %s from add-on change: %s') % (
+                'expansion' if movement_type == 'expansion' else 'contraction',
+                product.display_name,
+            ),
+            movement_date=effective_date,
+        )
+        return proration
+
+    def _clear_pending_addon_change(self):
+        self.write({
+            'pending_addon_change_operation': False,
+            'pending_addon_product_id': False,
+            'pending_addon_line_id': False,
+            'pending_addon_quantity': 0.0,
+            'pending_addon_price_unit': 0.0,
+            'pending_addon_discount': 0.0,
+            'pending_addon_change_date': False,
+        })
+
+    def _schedule_addon_change(self, operation, product=None, quantity=0.0, price_unit=None, discount=0.0, addon_line=None, effective_date=None):
+        self.ensure_one()
+        self._check_addon_change_allowed()
+        effective_date = effective_date or self.next_invoice_date
+        if not effective_date:
+            raise ValidationError(_("Set a next invoice date before scheduling a next-period add-on change."))
+        if operation == 'add':
+            if not product:
+                raise ValidationError(_("Select an add-on product to add."))
+            product.ensure_one()
+            self._check_addon_quantity(quantity, product=product, operation=operation)
+        elif operation == 'remove':
+            if not addon_line:
+                raise ValidationError(_("Select an existing add-on line to remove."))
+            addon_line.ensure_one()
+            product = addon_line.product_id
+            self._check_addon_quantity(quantity, line=addon_line, operation=operation)
+        else:
+            raise ValidationError(_("Unsupported add-on operation."))
+        self.write({
+            'pending_addon_change_operation': operation,
+            'pending_addon_product_id': product.id,
+            'pending_addon_line_id': addon_line.id if addon_line else False,
+            'pending_addon_quantity': quantity,
+            'pending_addon_price_unit': price_unit if price_unit is not None else product.list_price,
+            'pending_addon_discount': discount,
+            'pending_addon_change_date': effective_date,
+        })
+        self._log_subscription_event(
+            'plan_changed',
+            _('Add-on %(product)s %(operation)s scheduled for %(date)s', product=product.display_name, operation=operation, date=effective_date),
+            new_values={'addon': product.display_name, 'quantity': quantity, 'effective_date': effective_date, 'timing': 'next_period'},
+        )
+        return True
+
+    def _apply_pending_addon_change(self):
+        self.ensure_one()
+        if not self.pending_addon_change_date:
+            return False
+        operation = self.pending_addon_change_operation
+        product = self.pending_addon_product_id
+        addon_line = self.pending_addon_line_id
+        quantity = self.pending_addon_quantity
+        price_unit = self.pending_addon_price_unit
+        discount = self.pending_addon_discount
+        effective_date = self.pending_addon_change_date
+        self._execute_addon_change(
+            operation,
+            product=product,
+            quantity=quantity,
+            price_unit=price_unit,
+            discount=discount,
+            addon_line=addon_line,
+            effective_date=effective_date,
+        )
+        self._clear_pending_addon_change()
         return True
 
     def _plan_change_requires_approval(self, old_plan, new_plan, old_mrr=None):
