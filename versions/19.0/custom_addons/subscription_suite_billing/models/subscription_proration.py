@@ -108,12 +108,12 @@ class SubscriptionProration(models.Model):
 
     def _prepare_proration_move_vals(self):
         self.ensure_one()
-        if not self.net_amount:
+        if self.currency_id.is_zero(self.net_amount):
             return False
 
         product = self._get_proration_product()
         account = self._get_proration_income_account(product)
-        move_type = 'out_invoice' if self.net_amount > 0 else 'out_refund'
+        move_type = 'out_invoice' if self.currency_id.compare_amounts(self.net_amount, 0.0) > 0 else 'out_refund'
         amount = abs(self.net_amount)
         taxes = product.taxes_id.filtered(lambda tax: not tax.company_id or tax.company_id == self.company_id)
 
@@ -143,7 +143,7 @@ class SubscriptionProration(models.Model):
 
     def _create_proration_move(self):
         self.ensure_one()
-        if self.adjustment_invoice_id or self.credit_note_id or not self.net_amount:
+        if self.adjustment_invoice_id or self.credit_note_id or self.currency_id.is_zero(self.net_amount):
             return self.adjustment_invoice_id or self.credit_note_id
 
         move_vals = self._prepare_proration_move_vals()

@@ -94,6 +94,9 @@ class SubscriptionPaymentAttempt(models.Model):
         subscription.ensure_one()
         invoice.ensure_one()
         token = token or subscription.payment_token_id
+        amount = invoice.amount_residual
+        if invoice.currency_id.is_zero(amount):
+            amount = invoice.amount_total
         return self.create({
             'name': self.env['ir.sequence'].next_by_code('subscription.payment.attempt') or _('New'),
             'subscription_id': subscription.id,
@@ -103,7 +106,7 @@ class SubscriptionPaymentAttempt(models.Model):
             'token_role': token_role,
             'requested_by_id': requested_by.id if requested_by else self.env.user.id,
             'source': source,
-            'amount': invoice.amount_residual or invoice.amount_total,
+            'amount': amount,
             'state': 'pending',
         })
 

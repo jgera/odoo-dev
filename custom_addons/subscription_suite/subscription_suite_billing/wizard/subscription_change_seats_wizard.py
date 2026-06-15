@@ -66,7 +66,7 @@ class SubscriptionChangeSeatsWizard(models.TransientModel):
             wizard.current_mrr = current_mrr
             wizard.new_mrr = new_mrr
             wizard.net_amount = net_amount
-            if new_mrr >= current_mrr:
+            if wizard.subscription_id._compare_mrr(new_mrr, current_mrr) >= 0:
                 wizard.proration_preview = _(
                     "<p>Seats will increase from <b>%(old_qty)s</b> to <b>%(new_qty)s</b>.</p>"
                     "<p>Estimated prorated charge: <b>%(symbol)s%(amount).2f</b></p>",

@@ -219,7 +219,14 @@ class SaleOrder(models.Model):
                 'next_retry_at': False,
             })
 
-        invoiceable_lines = self.order_line.filtered(lambda line: not line.display_type and line.qty_to_invoice > 0)
+        invoiceable_lines = self.order_line.filtered(
+            lambda line: not line.display_type
+            and float_compare(
+                line.qty_to_invoice,
+                0.0,
+                precision_rounding=(line.product_uom_id or line.product_id.uom_id).rounding or 0.01,
+            ) > 0
+        )
         if not invoiceable_lines:
             attempt.write({
                 'state': 'skipped',
@@ -280,7 +287,7 @@ class SaleOrder(models.Model):
         old_daily_rate = old_mrr / 30
         new_daily_rate = new_mrr / 30
         
-        change_type = 'upgrade' if new_mrr > old_mrr else 'downgrade'
+        change_type = self._get_plan_change_type(new_plan, old_mrr=old_mrr)
         
         proration = self.env['subscription.proration'].create({
             'subscription_id': self.id,
@@ -298,7 +305,7 @@ class SaleOrder(models.Model):
 
         self._apply_subscription_plan(new_plan)
         new_mrr = self.mrr
-        movement_type = 'expansion' if new_mrr > old_mrr else 'contraction'
+        movement_type = self._get_mrr_movement_type(old_mrr, new_mrr)
         self._log_mrr_movement(
             movement_type,
             old_mrr,
@@ -316,7 +323,7 @@ class SaleOrder(models.Model):
         self.ensure_one()
         old_mrr = old_mrr if old_mrr is not None else self.mrr
         new_mrr = new_plan._get_plan_mrr()
-        return 'upgrade' if new_mrr > old_mrr else 'downgrade'
+        return 'upgrade' if self._compare_mrr(new_mrr, old_mrr) > 0 else 'downgrade'
 
     def _get_single_seat_line(self):
         self.ensure_one()
@@ -341,10 +348,10 @@ class SaleOrder(models.Model):
             raise ValidationError(_("Seats can only be changed on active, paused, or past-due subscriptions."))
         seat_line = self._get_single_seat_line()
         if new_quantity is not None:
-            if new_quantity < 1:
-                raise ValidationError(_("Seat quantity must be at least 1."))
             line_uom = seat_line.product_uom_id or seat_line.product_id.uom_id
             precision_rounding = line_uom.rounding or 0.01
+            if float_compare(new_quantity, 1.0, precision_rounding=precision_rounding) < 0:
+                raise ValidationError(_("Seat quantity must be at least 1."))
             if float_compare(
                 new_quantity,
                 seat_line.product_uom_qty,
@@ -389,7 +396,7 @@ class SaleOrder(models.Model):
         proration = self.env['subscription.proration'].create({
             'subscription_id': self.id,
             'proration_scope': 'seat_change',
-            'change_type': 'upgrade' if new_mrr > old_mrr else 'downgrade',
+            'change_type': 'upgrade' if self._compare_mrr(new_mrr, old_mrr) > 0 else 'downgrade',
             'change_date': effective_date,
             'old_plan_id': self.subscription_plan_id.id,
             'new_plan_id': self.subscription_plan_id.id,
@@ -404,7 +411,7 @@ class SaleOrder(models.Model):
         seat_line.write({'product_uom_qty': new_quantity})
         self.invalidate_recordset(['seat_quantity', 'recurring_total', 'mrr'])
         proration.action_apply_proration()
-        movement_type = 'expansion' if new_mrr > old_mrr else 'contraction'
+        movement_type = self._get_mrr_movement_type(old_mrr, new_mrr)
         self._log_subscription_event(
             'plan_changed',
             _('Seats changed from %(old_qty)s to %(new_qty)s', old_qty=old_quantity, new_qty=new_quantity),
@@ -643,7 +650,7 @@ class SaleOrder(models.Model):
         self._apply_subscription_plan(new_plan)
         self.invalidate_recordset(['recurring_total', 'mrr'])
         new_mrr = self.mrr
-        change_type = 'expansion' if new_mrr > old_mrr else 'contraction'
+        change_type = self._get_mrr_movement_type(old_mrr, new_mrr)
         self._clear_pending_plan_change()
         self._log_subscription_event(
             'plan_changed',
@@ -671,27 +678,28 @@ class SaleOrder(models.Model):
 
         old_mrr = old_mrr if old_mrr is not None else self.mrr
         new_mrr = new_plan._get_plan_mrr()
-        if new_mrr > old_mrr and old_plan.upgrade_plan_ids and new_plan not in old_plan.upgrade_plan_ids:
+        comparison = self._compare_mrr(new_mrr, old_mrr)
+        if comparison > 0 and old_plan.upgrade_plan_ids and new_plan not in old_plan.upgrade_plan_ids:
             raise ValidationError(
                 _("Plan %(new_plan)s is not an allowed upgrade path from %(old_plan)s.") % {
                     'new_plan': new_plan.display_name,
                     'old_plan': old_plan.display_name,
                 }
             )
-        if new_mrr < old_mrr and old_plan.downgrade_plan_ids and new_plan not in old_plan.downgrade_plan_ids:
+        if comparison < 0 and old_plan.downgrade_plan_ids and new_plan not in old_plan.downgrade_plan_ids:
             raise ValidationError(
                 _("Plan %(new_plan)s is not an allowed downgrade path from %(old_plan)s.") % {
                     'new_plan': new_plan.display_name,
                     'old_plan': old_plan.display_name,
                 }
             )
-        if new_mrr < old_mrr:
+        if comparison < 0:
             self._check_minimum_commitment(_('Downgrade'), effective_date=effective_date or fields.Date.today())
         return True
 
     def _create_upsell_proration(self, subscription, old_mrr, new_mrr):
         self.ensure_one()
-        if not subscription.subscription_plan_id or new_mrr == old_mrr:
+        if not subscription.subscription_plan_id or subscription._compare_mrr(new_mrr, old_mrr) == 0:
             return False
 
         effective_date = self.subscription_quote_effective_date or fields.Date.today()
@@ -704,7 +712,7 @@ class SaleOrder(models.Model):
 
         proration = self.env['subscription.proration'].create({
             'subscription_id': subscription.id,
-            'change_type': 'upgrade' if new_mrr > old_mrr else 'downgrade',
+            'change_type': 'upgrade' if subscription._compare_mrr(new_mrr, old_mrr) > 0 else 'downgrade',
             'change_date': effective_date,
             'old_plan_id': subscription.subscription_plan_id.id,
             'new_plan_id': subscription.subscription_plan_id.id,
@@ -789,12 +797,15 @@ class SaleOrder(models.Model):
             token_role=token_role,
         )
         try:
+            amount = invoice.amount_residual
+            if invoice.currency_id.is_zero(amount):
+                amount = invoice.amount_total
             tx = self.env['payment.transaction'].create({
                 'provider_id': token.provider_id.id,
                 'token_id': token.id,
                 'payment_method_id': token.payment_method_id.id,
                 'operation': 'online_token',
-                'amount': invoice.amount_residual or invoice.amount_total,
+                'amount': amount,
                 'currency_id': invoice.currency_id.id,
                 'partner_id': invoice.partner_id.id,
                 'reference': invoice.name,

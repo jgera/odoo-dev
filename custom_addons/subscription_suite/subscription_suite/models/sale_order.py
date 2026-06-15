@@ -161,6 +161,20 @@ class SaleOrder(models.Model):
             else:
                 order.mrr = 0.0
 
+    def _compare_mrr(self, new_mrr, old_mrr):
+        self.ensure_one()
+        currency = self.currency_id or self.company_id.currency_id
+        return currency.compare_amounts(new_mrr, old_mrr)
+
+    def _get_mrr_movement_type(self, old_mrr, new_mrr, equal_type='contraction'):
+        self.ensure_one()
+        comparison = self._compare_mrr(new_mrr, old_mrr)
+        if comparison > 0:
+            return 'expansion'
+        if comparison < 0:
+            return 'contraction'
+        return equal_type
+
     @api.depends('subscription_state', 'payment_token_id', 'is_subscription')
     def _compute_health_score(self):
         for order in self:
@@ -521,7 +535,7 @@ class SaleOrder(models.Model):
             },
         )
         subscription._log_mrr_movement(
-            'expansion' if new_mrr >= old_mrr else 'contraction',
+            subscription._get_mrr_movement_type(old_mrr, new_mrr, equal_type='expansion'),
             old_mrr,
             new_mrr,
             _('MRR change from upsell quotation %s') % self.name,

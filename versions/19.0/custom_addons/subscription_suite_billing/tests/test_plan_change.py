@@ -214,7 +214,7 @@ class TestPlanChange(TransactionCase):
         with self.assertRaises(ValidationError):
             subscription._execute_seat_change(0.0, effective_date=date(2026, 1, 16))
         with self.assertRaises(ValidationError):
-            subscription._execute_seat_change(0.999999, effective_date=date(2026, 1, 16))
+            subscription._execute_seat_change(0.994, effective_date=date(2026, 1, 16))
 
         missing_seats = self._create_basic_subscription()
         missing_seats.action_confirm()

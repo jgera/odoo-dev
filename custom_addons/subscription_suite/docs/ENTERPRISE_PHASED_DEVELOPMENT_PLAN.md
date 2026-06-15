@@ -22,6 +22,12 @@ Subscription Suite should become:
 
 The strongest differentiator remains the current architectural decision: subscriptions extend `sale.order`. That keeps subscriptions close to Odoo's native quotation, sales, invoicing, tax, pricelist, payment, chatter, portal, and accounting surfaces.
 
+### Engineering Standard
+
+- Quantity decisions must use Odoo float precision helpers with the relevant UoM rounding.
+- Monetary decisions must use `currency_id.compare_amounts()` or `currency_id.is_zero()`.
+- Future pricing, seats, usage, proration, discounts, payment recovery, and analytics slices should include near-equal precision tests instead of relying on raw float equality.
+
 ---
 
 ## 2. Current Implementation Audit

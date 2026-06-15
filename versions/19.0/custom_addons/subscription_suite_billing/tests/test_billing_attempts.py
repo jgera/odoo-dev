@@ -358,7 +358,10 @@ class TestBillingAttempts(TransactionCase):
         self.assertEqual(attempt.partner_id, subscription.partner_id)
         self.assertEqual(attempt.source, 'portal')
         self.assertEqual(attempt.state, 'pending')
-        self.assertEqual(attempt.amount, invoice.amount_residual or invoice.amount_total)
+        expected_amount = invoice.amount_residual
+        if invoice.currency_id.is_zero(expected_amount):
+            expected_amount = invoice.amount_total
+        self.assertEqual(attempt.amount, expected_amount)
         self.assertEqual(attempt.token_role, 'primary')
 
     def test_payment_attempt_finalize_success_from_transaction(self):

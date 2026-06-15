@@ -2,6 +2,15 @@
 
 This guide defines the standard validation commands for Subscription Suite on Odoo 19.
 
+## Float And Monetary Comparison Standard
+
+Use Odoo precision helpers for subscription quantities and money-sensitive comparisons:
+
+- Use `float_compare` or `float_is_zero` with the relevant UoM rounding for seat, usage, or quantity comparisons.
+- Use `currency_id.compare_amounts()` and `currency_id.is_zero()` for MRR, proration, invoice, payment, discount, credit, and recovery amount comparisons.
+- Avoid raw `==`, `!=`, `>`, or `<` for float business decisions unless the value is a counter/date/state, or the comparison intentionally does not depend on precision.
+- Add tests for near-equal values when changing quantity, pricing, MRR movement, proration, discounts, usage metering, or payment recovery logic.
+
 Run commands from the workspace root:
 
 ```text

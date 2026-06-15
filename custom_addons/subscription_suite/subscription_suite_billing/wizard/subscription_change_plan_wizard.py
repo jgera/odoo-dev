@@ -56,7 +56,7 @@ class SubscriptionChangePlanWizard(models.TransientModel):
                 old_mrr = wizard.subscription_id.mrr
                 new_mrr = wizard.new_plan_id._get_plan_mrr()
                 
-                wizard.change_type = 'upgrade' if new_mrr > old_mrr else 'downgrade'
+                wizard.change_type = 'upgrade' if wizard.subscription_id._compare_mrr(new_mrr, old_mrr) > 0 else 'downgrade'
                 
                 period_start = wizard.subscription_id.current_period_start or wizard.subscription_id.subscription_start_date
                 period_end = wizard.subscription_id.current_period_end or wizard.subscription_id.next_invoice_date
