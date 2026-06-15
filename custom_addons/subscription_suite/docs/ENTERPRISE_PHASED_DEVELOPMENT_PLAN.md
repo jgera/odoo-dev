@@ -65,7 +65,7 @@ These are not criticisms; they are the exact next enterprise work.
 | Pause/resume | Pause/resume now adjusts the next invoice date by paused duration and respects max pause days | Remaining work is mostly portal self-service and support workflow polish |
 | Cancellation | Immediate and end-of-period cancellation now exist, including scheduled cancellation reversal and cron finalization | Remaining work is mostly renewal/upsell lifecycle parity and optional approvals |
 | Renewals/upsells | Linked renewal and upsell quotations, sales history, upsell effective date, proration ledger, draft adjustment invoices/credit notes, immediate and scheduled next-period plan changes, approval-gated plan change requests, upgrade/downgrade path checks, minimum commitment enforcement, and plan-level renewal/upsell quote guards now exist | Sales workflow parity is improving; remaining work is optional approval routing and deeper quote lifecycle automation |
-| Usage/seats | No usage-based billing, seat metering, tiered pricing, or quantity sync | Weak for SaaS and B2B subscriptions |
+| Usage/seats | Seat-line classification and read-only seat totals now exist; no usage-based billing, tiered pricing, customer seat self-service, or quantity sync yet | Seat billing foundation is started; richer SaaS and B2B pricing patterns remain Phase 5 work |
 | Analytics | Basic MRR/ARR exists; operational recovery dashboard now separates portal-originated recovery attempts by pending, failed, recovered, and manual-action buckets; no NRR, GRR, retention cohorts, forecast, LTV, or trial conversion yet | Management reporting is improving operationally, but executive revenue analytics remain incomplete |
 | Revenue recognition | Not implemented | Finance/compliance gap for annual/prepaid contracts |
 | Multi-currency | Amounts remain in order currency; no normalized company-currency MRR ledger | Cross-currency analytics can mislead |
@@ -660,6 +660,8 @@ For every phase, update or create:
 
 **Objective:** Support the monetization patterns expected by SaaS and enterprise subscription businesses.
 
+**Current slice:** Seat Billing Foundation. This slice formalizes `base`, `seat`, and `addon` recurring line types, computes read-only subscription seat totals from recurring seat lines, shows seats in backend and portal summaries, and keeps existing sale order quantity, price, discount, tax, recurring interval, and invoice behavior unchanged.
+
 **Build items:**
 
 1. Pricing model expansion
@@ -671,8 +673,8 @@ For every phase, update or create:
    - One-time setup and onboarding fees.
 
 2. Seat management
-   - Seat quantity on subscription line.
-   - Portal-visible seat count.
+   - Seat quantity on subscription line - foundation done through recurring sale order lines marked as `seat`.
+   - Portal-visible seat count - read-only summary done.
    - Optional seat sync hooks for external applications.
    - Seat increase/decrease proration.
 
@@ -691,6 +693,7 @@ For every phase, update or create:
 **Demo data updates:**
 
 - Add flat, seat-based, add-on, tiered, volume, and usage-based demo plans.
+- Seat-based demo plan and subscription exist for validating base plus seat recurring lines.
 - Add demo usage events and summaries for overage billing.
 - Add subscriptions with expiring discounts and coupons.
 
@@ -704,6 +707,9 @@ For every phase, update or create:
 **Acceptance gates:**
 
 - The module can bill flat, seat-based, add-on, and usage overage subscriptions.
+- Seat subscription invoices use Odoo's existing quantity times unit-price mechanics.
+- Renewal and upsell quotes preserve subscription component type on copied recurring lines.
+- Backend and portal summaries show read-only seat totals when recurring seat lines exist.
 - Usage invoice lines are reproducible from usage events/summaries.
 - Seat changes can be prorated.
 - Discount expiration does not require manual invoice edits.

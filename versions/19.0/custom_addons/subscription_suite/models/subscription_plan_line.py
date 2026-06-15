@@ -7,6 +7,11 @@ class SubscriptionPlanLine(models.Model):
 
     plan_id = fields.Many2one('subscription.plan', string='Plan', required=True, ondelete='cascade')
     sequence = fields.Integer(string='Sequence', default=10)
+    subscription_component_type = fields.Selection([
+        ('base', 'Base'),
+        ('seat', 'Seat'),
+        ('addon', 'Add-on'),
+    ], string='Component Type', default='base', required=True)
     product_id = fields.Many2one('product.product', string='Product', required=True, domain=[('type', '=', 'service')])
     quantity = fields.Float(string='Quantity', default=1.0, required=True)
     uom_id = fields.Many2one('uom.uom', related='product_id.uom_id', string='Unit of Measure')

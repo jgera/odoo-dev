@@ -59,6 +59,36 @@ class TestBillingAttempts(TransactionCase):
         self.assertTrue(invoice)
         return invoice
 
+    def test_seat_subscription_invoice_uses_line_quantity_and_price(self):
+        subscription = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'is_subscription': True,
+            'subscription_state': 'active',
+            'subscription_plan_id': self.plan.id,
+            'billing_interval_count': 1,
+            'billing_interval_unit': 'month',
+            'subscription_start_date': fields.Date.today(),
+            'next_invoice_date': fields.Date.today(),
+            'order_line': [(0, 0, {
+                'product_id': self.product.id,
+                'name': 'Billing Attempt Seats',
+                'product_uom_qty': 6.0,
+                'price_unit': 15.0,
+                'is_recurring': True,
+                'subscription_component_type': 'seat',
+            })],
+        })
+        subscription.action_confirm()
+
+        invoice = self._create_subscription_invoice(subscription)
+        invoice_line = invoice.invoice_line_ids.filtered(lambda line: line.product_id == self.product)[:1]
+
+        self.assertEqual(subscription.seat_quantity, 6.0)
+        self.assertEqual(invoice_line.quantity, 6.0)
+        self.assertAlmostEqual(invoice_line.price_unit, 15.0, places=2)
+        self.assertAlmostEqual(invoice_line.price_subtotal, 90.0, places=2)
+        self.assertAlmostEqual(invoice.amount_untaxed, 90.0, places=2)
+
     def _create_payment_provider(self):
         payment_method = self.env.ref('payment.payment_method_unknown')
         redirect_form = self.env['ir.ui.view'].create({

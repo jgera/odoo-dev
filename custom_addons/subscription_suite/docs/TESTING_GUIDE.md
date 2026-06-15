@@ -102,6 +102,7 @@ After an upgrade, validate:
 - Portal subscription detail shows scheduled cancellation status, cancellation request history, and **Request Cancellation** when cancellation is allowed.
 - Portal subscription detail shows lifecycle request history and **Request Pause** or **Request Resume** when the subscription state allows it.
 - Portal subscription detail shows a payment recovery banner when a posted subscription invoice is unpaid or partially paid.
+- Portal subscription detail shows a read-only **Seats** summary when recurring seat lines exist, and omits it when no seat lines exist.
 
 ## 7. Phase 1 Billing Demo
 
@@ -505,3 +506,21 @@ Automated coverage:
 - `subscription_suite_dunning` tests cover auto retry using the backup method after a primary-method failure.
 - `subscription_suite_dunning` tests cover retry exhaustion.
 - `subscription_suite_dunning` tests cover retry setting validation.
+
+## 18. Seat Billing Foundation Demo
+
+1. Open **Subscriptions -> Configuration -> Plans**.
+2. Open **Team Seats Monthly** and confirm the plan has a base recurring line and a seat recurring line.
+3. Confirm each plan line has the expected **Component Type**: **Base** for the platform line and **Seat** for the team-seat line.
+4. Open the demo subscription **Team Seats Monthly**.
+5. Confirm the subscription shows **Seats** with the expected quantity from recurring seat lines.
+6. Create a renewal quote and confirm the copied seat line keeps its component type and quantity.
+7. Generate an invoice for the subscription and confirm the seat line uses normal Odoo quantity times unit-price billing.
+8. Open the same subscription in the customer portal and confirm **Seats** appears as read-only summary data.
+9. Open a subscription without seat lines and confirm the portal does not show a seat summary.
+
+Automated coverage:
+
+- `subscription_suite` tests cover default component type, plan application, seat quantity computation, renewal preservation, and upsell component preservation.
+- `subscription_suite_billing` tests cover seat invoice quantity and unit-price behavior plus existing MRR and billing recovery coverage.
+- `subscription_suite_portal` tests cover read-only portal seat data and existing ownership/payment recovery flows.

@@ -467,6 +467,59 @@ class TestSubscriptionLifecycle(TransactionCase):
         self.assertEqual(sub.subscription_end_date, quote.subscription_end_date)
         self.assertTrue(sub.subscription_log_ids.filtered(lambda log: log.event_type == 'renewed'))
 
+    def test_plan_and_order_lines_default_to_base_component(self):
+        plan_line = self.env['subscription.plan.line'].create({
+            'plan_id': self.plan.id,
+            'product_id': self.product.id,
+            'quantity': 1.0,
+            'price_unit': 100.0,
+            'description': 'Base plan line',
+        })
+        sub = self._create_active_subscription()
+
+        self.assertEqual(plan_line.subscription_component_type, 'base')
+        self.assertEqual(sub.order_line[:1].subscription_component_type, 'base')
+
+    def test_seat_quantity_counts_only_recurring_seat_lines(self):
+        sub = self._create_active_subscription()
+        sub.write({
+            'order_line': [
+                (0, 0, {
+                    'product_id': self.addon_product.id,
+                    'name': 'User Seats',
+                    'is_recurring': True,
+                    'subscription_component_type': 'seat',
+                    'price_unit': 12.0,
+                    'product_uom_qty': 7,
+                }),
+                (0, 0, {
+                    'product_id': self.addon_product.id,
+                    'name': 'One-time onboarding',
+                    'is_recurring': False,
+                    'subscription_component_type': 'seat',
+                    'price_unit': 20.0,
+                    'product_uom_qty': 3,
+                }),
+            ],
+        })
+
+        self.assertEqual(sub.seat_quantity, 7.0)
+
+    def test_renewal_quote_preserves_component_type_and_seat_quantity(self):
+        sub = self._create_active_subscription()
+        line = sub.order_line.filtered('is_recurring')[:1]
+        line.write({
+            'subscription_component_type': 'seat',
+            'product_uom_qty': 5,
+        })
+
+        quote = self.env['sale.order'].browse(sub.action_renew_subscription()['res_id'])
+        quote_line = quote.order_line.filtered('is_recurring')[:1]
+
+        self.assertEqual(quote_line.subscription_component_type, 'seat')
+        self.assertEqual(quote_line.product_uom_qty, 5.0)
+        self.assertEqual(quote.seat_quantity, 5.0)
+
     def test_renewal_quote_respects_plan_policy(self):
         sub = self._create_active_subscription()
         sub.subscription_plan_id.allow_renewal_quote = False
@@ -493,6 +546,7 @@ class TestSubscriptionLifecycle(TransactionCase):
                 'product_id': self.addon_product.id,
                 'name': 'Support Add-on',
                 'is_recurring': True,
+                'subscription_component_type': 'addon',
                 'price_unit': 40.0,
                 'product_uom_qty': 1,
             })],
@@ -502,6 +556,7 @@ class TestSubscriptionLifecycle(TransactionCase):
 
         addon_lines = sub.order_line.filtered(lambda line: line.product_id == self.addon_product and line.is_recurring)
         self.assertEqual(len(addon_lines), 1)
+        self.assertEqual(addon_lines.subscription_component_type, 'addon')
         self.assertGreater(sub.mrr, old_mrr)
         self.assertTrue(sub.subscription_log_ids.filtered(lambda log: log.event_type == 'upsold'))
         self.assertTrue(self.env['subscription.mrr.movement'].search([

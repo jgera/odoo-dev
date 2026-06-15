@@ -107,7 +107,23 @@ class TestPortalAccess(TransactionCase):
         ])
         self.assertNotIn(regular_so, subs)
 
-    def test_03_portal_plan_change_status_data_exists(self):
+    def test_03_portal_seat_count_is_read_only_subscription_data(self):
+        """Portal detail can display computed seats without exposing seat self-service."""
+        self.assertFalse(self.sub.seat_quantity)
+        self.sub.write({
+            'order_line': [(0, 0, {
+                'product_id': self.product.id,
+                'name': 'Portal Seats',
+                'product_uom_qty': 4.0,
+                'price_unit': 20.0,
+                'is_recurring': True,
+                'subscription_component_type': 'seat',
+            })],
+        })
+
+        self.assertEqual(self.sub.seat_quantity, 4.0)
+
+    def test_04_portal_plan_change_status_data_exists(self):
         """Portal detail values can include pending plan changes and approval requests."""
         today = fields.Date.today()
         self.sub.write({

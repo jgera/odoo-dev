@@ -130,6 +130,7 @@ class TestPlanChange(TransactionCase):
         recurring_lines = subscription.order_line.filtered('is_recurring')
         self.assertEqual(len(recurring_lines), 1)
         self.assertEqual(recurring_lines.product_id, self.basic_product)
+        self.assertEqual(recurring_lines.subscription_component_type, 'base')
         self.assertAlmostEqual(recurring_lines.price_unit, 29.0, places=2)
 
         self.assertEqual(proration.state, 'applied')

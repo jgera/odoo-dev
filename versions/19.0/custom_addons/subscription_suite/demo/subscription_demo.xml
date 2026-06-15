@@ -23,6 +23,14 @@
             <field name="list_price">49.00</field>
         </record>
 
+        <record id="demo_product_team_seat" model="product.product">
+            <field name="name">Team Seat License</field>
+            <field name="type">service</field>
+            <field name="is_subscription_product">True</field>
+            <field name="invoice_policy">order</field>
+            <field name="list_price">12.00</field>
+        </record>
+
         <!-- Demo Subscription Plans -->
         <record id="demo_plan_basic" model="subscription.plan">
             <field name="name">Basic Monthly</field>
@@ -64,6 +72,37 @@
             <field name="description">Pro Subscription Tier</field>
             <field name="quantity">1.0</field>
             <field name="price_unit">299.00</field>
+        </record>
+
+        <record id="demo_plan_team_seats" model="subscription.plan">
+            <field name="name">Team Seats Monthly</field>
+            <field name="code">TEAM-SEATS-MONTHLY</field>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="trial_days">0</field>
+            <field name="allow_renewal_quote">1</field>
+            <field name="allow_upsell_quote">1</field>
+            <field name="allow_past_due_renewal_quote">1</field>
+            <field name="allow_past_due_upsell_quote">1</field>
+            <field name="active">True</field>
+        </record>
+
+        <record id="demo_plan_team_seats_base_line" model="subscription.plan.line">
+            <field name="plan_id" ref="demo_plan_team_seats"/>
+            <field name="subscription_component_type">base</field>
+            <field name="product_id" ref="demo_product_basic"/>
+            <field name="description">Team Workspace Base</field>
+            <field name="quantity">1.0</field>
+            <field name="price_unit">29.00</field>
+        </record>
+
+        <record id="demo_plan_team_seats_seat_line" model="subscription.plan.line">
+            <field name="plan_id" ref="demo_plan_team_seats"/>
+            <field name="subscription_component_type">seat</field>
+            <field name="product_id" ref="demo_product_team_seat"/>
+            <field name="description">Team Seat License</field>
+            <field name="quantity">10.0</field>
+            <field name="price_unit">12.00</field>
         </record>
 
         <!-- Demo Cancellation Reasons -->
@@ -308,6 +347,39 @@
             <field name="product_uom_qty">1.0</field>
             <field name="price_unit">29.00</field>
             <field name="is_recurring">True</field>
+        </record>
+
+        <!-- 8. Active Seat-Based Subscription -->
+        <record id="demo_subscription_team_seats" model="sale.order">
+            <field name="partner_id" ref="base.res_partner_2"/>
+            <field name="is_subscription">True</field>
+            <field name="subscription_plan_id" ref="demo_plan_team_seats"/>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="subscription_state">active</field>
+            <field name="subscription_start_date" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d')"/>
+            <field name="last_invoice_date" eval="(DateTime.today() - relativedelta(days=20)).strftime('%Y-%m-%d')"/>
+            <field name="next_invoice_date" eval="(DateTime.today() + relativedelta(days=10)).strftime('%Y-%m-%d')"/>
+        </record>
+
+        <record id="demo_subscription_team_seats_base_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_team_seats"/>
+            <field name="product_id" ref="demo_product_basic"/>
+            <field name="name">Team Workspace Base</field>
+            <field name="product_uom_qty">1.0</field>
+            <field name="price_unit">29.00</field>
+            <field name="is_recurring">True</field>
+            <field name="subscription_component_type">base</field>
+        </record>
+
+        <record id="demo_subscription_team_seats_seat_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_team_seats"/>
+            <field name="product_id" ref="demo_product_team_seat"/>
+            <field name="name">Team Seat License</field>
+            <field name="product_uom_qty">10.0</field>
+            <field name="price_unit">12.00</field>
+            <field name="is_recurring">True</field>
+            <field name="subscription_component_type">seat</field>
         </record>
 
         <!-- Demo MRR movements for revenue analytics -->

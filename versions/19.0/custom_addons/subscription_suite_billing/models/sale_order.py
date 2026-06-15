@@ -612,6 +612,7 @@ class SaleOrder(models.Model):
                 'price_unit': plan_line.price_unit,
                 'discount': plan_line.discount,
                 'is_recurring': True,
+                'subscription_component_type': plan_line.subscription_component_type,
                 'recurring_interval_count': plan.billing_interval_count,
                 'recurring_interval_unit': plan.billing_interval_unit,
             }))

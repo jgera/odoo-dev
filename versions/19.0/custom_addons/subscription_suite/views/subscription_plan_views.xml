@@ -47,6 +47,7 @@
                             <field name="plan_line_ids">
                                 <list editable="bottom">
                                     <field name="sequence" widget="handle"/>
+                                    <field name="subscription_component_type"/>
                                     <field name="product_id"/>
                                     <field name="description"/>
                                     <field name="quantity"/>

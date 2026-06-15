@@ -45,6 +45,9 @@
                 <button class="oe_stat_button" icon="fa-repeat" invisible="not is_subscription">
                     <field name="recurring_total" widget="statinfo" string="Recurring"/>
                 </button>
+                <button class="oe_stat_button" icon="fa-users" invisible="not is_subscription or seat_quantity &lt;= 0">
+                    <field name="seat_quantity" widget="statinfo" string="Seats"/>
+                </button>
                 <button name="action_view_subscription_sales_history" type="object" class="oe_stat_button" icon="fa-history"
                         invisible="not is_subscription">
                     <field name="subscription_quote_count" widget="statinfo" string="Sales History"/>
@@ -75,6 +78,7 @@
                         <group name="subscription_revenue" string="Revenue">
                             <field name="recurring_total" widget="monetary"/>
                             <field name="mrr" widget="monetary"/>
+                            <field name="seat_quantity" invisible="seat_quantity &lt;= 0"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
                         <group name="subscription_health" string="Health">
@@ -140,6 +144,7 @@
 
             <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="after">
                 <field name="is_recurring" column_invisible="parent.is_subscription == False"/>
+                <field name="subscription_component_type" column_invisible="parent.is_subscription == False"/>
             </xpath>
         </field>
     </record>

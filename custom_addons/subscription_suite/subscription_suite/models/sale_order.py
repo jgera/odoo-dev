@@ -72,6 +72,7 @@ class SaleOrder(models.Model):
     
     recurring_total = fields.Monetary(string='Recurring Total', compute='_compute_recurring_total', store=True)
     mrr = fields.Monetary(string='MRR', compute='_compute_mrr', store=True)
+    seat_quantity = fields.Float(string='Seats', compute='_compute_seat_quantity', store=True)
     
     pause_date = fields.Date(string='Pause Date', copy=False)
     resume_date = fields.Date(string='Resume Date', copy=False)
@@ -132,6 +133,16 @@ class SaleOrder(models.Model):
         for order in self:
             recurring_lines = order.order_line.filtered(lambda l: l.is_recurring)
             order.recurring_total = sum(recurring_lines.mapped('price_subtotal'))
+
+    @api.depends('order_line.product_uom_qty', 'order_line.is_recurring', 'order_line.subscription_component_type')
+    def _compute_seat_quantity(self):
+        for order in self:
+            seat_lines = order.order_line.filtered(
+                lambda line: line.is_recurring
+                and line.subscription_component_type == 'seat'
+                and not line.display_type
+            )
+            order.seat_quantity = sum(seat_lines.mapped('product_uom_qty'))
 
     @api.depends('recurring_total', 'billing_interval_count', 'billing_interval_unit')
     def _compute_mrr(self):
@@ -286,6 +297,8 @@ class SaleOrder(models.Model):
             'discount': line.discount,
             'is_recurring': line.is_recurring,
         }
+        if 'subscription_component_type' in line._fields:
+            values['subscription_component_type'] = line.subscription_component_type
         if 'product_uom' in line._fields and line.product_uom:
             values['product_uom'] = line.product_uom.id
         elif 'product_uom_id' in line._fields and line.product_uom_id:

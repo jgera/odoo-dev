@@ -168,6 +168,12 @@
                                     <span t-if="not subscription.is_auto_pay" class="badge text-bg-secondary">Off</span>
                                 </div>
                             </div>
+                            <div t-if="subscription.seat_quantity" class="col-12 col-md-4">
+                                <div class="text-muted small">Seats</div>
+                                <div>
+                                    <span t-field="subscription.seat_quantity"/>
+                                </div>
+                            </div>
                         </div>
 
                         <div t-if="subscription.pending_plan_change_id" class="alert alert-info d-flex align-items-start gap-2" role="status">
