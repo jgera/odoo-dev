@@ -30,6 +30,7 @@ Handles advanced billing scenarios:
         'views/sale_order_views.xml',
         'wizard/res_config_settings_views.xml',
         'wizard/subscription_change_plan_wizard_views.xml',
+        'wizard/subscription_change_seats_wizard_views.xml',
     ],
     'demo': [
         'demo/plan_change_approval_demo.xml',

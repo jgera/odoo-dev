@@ -12,10 +12,13 @@
                     <group>
                         <group string="Change Details">
                             <field name="subscription_id" readonly="1"/>
+                            <field name="proration_scope" readonly="1"/>
                             <field name="change_type" readonly="1"/>
                             <field name="change_date" readonly="1"/>
                             <field name="old_plan_id" readonly="1"/>
                             <field name="new_plan_id" readonly="1"/>
+                            <field name="old_seat_quantity" readonly="1" invisible="proration_scope != 'seat_change'"/>
+                            <field name="new_seat_quantity" readonly="1" invisible="proration_scope != 'seat_change'"/>
                         </group>
                         <group string="Period Information">
                             <field name="period_start" readonly="1"/>
@@ -49,9 +52,12 @@
             <list string="Proration Records" create="0" edit="0">
                 <field name="subscription_id"/>
                 <field name="change_date"/>
+                <field name="proration_scope"/>
                 <field name="change_type"/>
                 <field name="old_plan_id"/>
                 <field name="new_plan_id"/>
+                <field name="old_seat_quantity" optional="hide"/>
+                <field name="new_seat_quantity" optional="hide"/>
                 <field name="net_amount" widget="monetary"/>
                 <field name="state" widget="badge" decoration-success="state == 'applied'"/>
                 <field name="currency_id" column_invisible="1"/>

@@ -66,6 +66,22 @@ class SaleOrder(models.Model):
             },
         }
 
+    def action_change_seats(self):
+        self.ensure_one()
+        self._check_seat_change_allowed()
+        return {
+            'name': _('Change Seats'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.change.seats.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_subscription_id': self.id,
+                'default_current_seat_quantity': self.seat_quantity,
+                'default_new_seat_quantity': self.seat_quantity,
+            },
+        }
+
     def action_view_billing_attempts(self):
         self.ensure_one()
         return {
@@ -300,6 +316,106 @@ class SaleOrder(models.Model):
         old_mrr = old_mrr if old_mrr is not None else self.mrr
         new_mrr = new_plan._get_plan_mrr()
         return 'upgrade' if new_mrr > old_mrr else 'downgrade'
+
+    def _get_single_seat_line(self):
+        self.ensure_one()
+        seat_lines = self.order_line.filtered(
+            lambda line: line.is_recurring
+            and line.subscription_component_type == 'seat'
+            and not line.display_type
+        )
+        if not seat_lines:
+            raise ValidationError(_("Add one recurring seat line before changing seats."))
+        if len(seat_lines) > 1:
+            raise ValidationError(_("Seat changes require exactly one recurring seat line."))
+        return seat_lines
+
+    def _check_seat_change_allowed(self, new_quantity=None):
+        self.ensure_one()
+        if not self.is_subscription:
+            raise ValidationError(_("Only subscriptions can change seats."))
+        if self.state not in ('sale', 'done'):
+            raise ValidationError(_("Confirm the subscription before changing seats."))
+        if self.subscription_state not in ('active', 'paused', 'past_due'):
+            raise ValidationError(_("Seats can only be changed on active, paused, or past-due subscriptions."))
+        seat_line = self._get_single_seat_line()
+        if new_quantity is not None:
+            if new_quantity < 1:
+                raise ValidationError(_("Seat quantity must be at least 1."))
+            if new_quantity == seat_line.product_uom_qty:
+                raise ValidationError(_("The new seat quantity must be different from the current quantity."))
+        return seat_line
+
+    def _monthly_equivalent_amount(self, amount):
+        self.ensure_one()
+        count = self.billing_interval_count or 1
+        unit = self.billing_interval_unit
+        if unit == 'day':
+            return (amount / count) * 30
+        if unit == 'week':
+            return (amount / count) * 4.33
+        if unit == 'month':
+            return amount / count
+        if unit == 'year':
+            return amount / (12 * count)
+        return 0.0
+
+    def _get_mrr_after_seat_change(self, seat_line, new_quantity):
+        self.ensure_one()
+        new_seat_subtotal = new_quantity * seat_line.price_unit * (1 - (seat_line.discount or 0.0) / 100.0)
+        new_recurring_total = self.recurring_total - seat_line.price_subtotal + new_seat_subtotal
+        return self._monthly_equivalent_amount(new_recurring_total)
+
+    def _execute_seat_change(self, new_quantity, effective_date=None):
+        self.ensure_one()
+        effective_date = effective_date or fields.Date.today()
+        seat_line = self._check_seat_change_allowed(new_quantity=new_quantity)
+
+        old_quantity = seat_line.product_uom_qty
+        old_mrr = self.mrr
+        new_mrr = self._get_mrr_after_seat_change(seat_line, new_quantity)
+        period_start = self.current_period_start or self.last_invoice_date or self.subscription_start_date or effective_date
+        period_end = self.current_period_end or self.next_invoice_date or self.subscription_plan_id.get_next_invoice_date(period_start)
+        if effective_date < period_start:
+            effective_date = period_start
+
+        proration = self.env['subscription.proration'].create({
+            'subscription_id': self.id,
+            'proration_scope': 'seat_change',
+            'change_type': 'upgrade' if new_mrr > old_mrr else 'downgrade',
+            'change_date': effective_date,
+            'old_plan_id': self.subscription_plan_id.id,
+            'new_plan_id': self.subscription_plan_id.id,
+            'old_seat_quantity': old_quantity,
+            'new_seat_quantity': new_quantity,
+            'period_start': period_start,
+            'period_end': period_end,
+            'old_daily_rate': old_mrr / 30.0,
+            'new_daily_rate': new_mrr / 30.0,
+        })
+
+        seat_line.write({'product_uom_qty': new_quantity})
+        self.invalidate_recordset(['seat_quantity', 'recurring_total', 'mrr'])
+        proration.action_apply_proration()
+        movement_type = 'expansion' if new_mrr > old_mrr else 'contraction'
+        self._log_subscription_event(
+            'plan_changed',
+            _('Seats changed from %(old_qty)s to %(new_qty)s', old_qty=old_quantity, new_qty=new_quantity),
+            old_values={'seats': old_quantity, 'mrr': old_mrr},
+            new_values={'seats': new_quantity, 'mrr': new_mrr, 'effective_date': effective_date},
+        )
+        self._log_mrr_movement(
+            movement_type,
+            old_mrr,
+            new_mrr,
+            _('MRR %s from seat change: %s to %s seats') % (
+                'expansion' if movement_type == 'expansion' else 'contraction',
+                old_quantity,
+                new_quantity,
+            ),
+            movement_date=effective_date,
+        )
+        return proration
 
     def _plan_change_requires_approval(self, old_plan, new_plan, old_mrr=None):
         self.ensure_one()

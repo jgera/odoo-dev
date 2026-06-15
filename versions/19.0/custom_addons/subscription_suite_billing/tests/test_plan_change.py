@@ -50,6 +50,12 @@ class TestPlanChange(TransactionCase):
             'list_price': 89.0,
             'invoice_policy': 'order',
         })
+        self.seat_product = self.env['product.product'].create({
+            'name': 'Team Seat',
+            'type': 'service',
+            'list_price': 12.0,
+            'invoice_policy': 'order',
+        })
         self.premium_plan = self.env['subscription.plan'].create({
             'name': 'Premium Monthly',
             'code': 'TEST-PREMIUM-MONTHLY',
@@ -93,6 +99,154 @@ class TestPlanChange(TransactionCase):
         }
         defaults.update(values)
         return self.env['sale.order'].create(defaults)
+
+    def _create_seat_subscription(self, seat_quantity=10.0, state='active', confirm=True, **values):
+        defaults = {
+            'partner_id': self.partner.id,
+            'is_subscription': True,
+            'subscription_state': state,
+            'subscription_plan_id': self.basic_plan.id,
+            'billing_interval_count': 1,
+            'billing_interval_unit': 'month',
+            'subscription_start_date': date(2026, 1, 1),
+            'last_invoice_date': date(2026, 1, 1),
+            'next_invoice_date': date(2026, 1, 31),
+            'order_line': [
+                (0, 0, {
+                    'product_id': self.basic_product.id,
+                    'name': 'Basic Subscription',
+                    'product_uom_qty': 1.0,
+                    'price_unit': 29.0,
+                    'is_recurring': True,
+                    'subscription_component_type': 'base',
+                }),
+                (0, 0, {
+                    'product_id': self.seat_product.id,
+                    'name': 'Team Seats',
+                    'product_uom_qty': seat_quantity,
+                    'price_unit': 12.0,
+                    'is_recurring': True,
+                    'subscription_component_type': 'seat',
+                }),
+            ],
+        }
+        defaults.update(values)
+        subscription = self.env['sale.order'].create(defaults)
+        if confirm:
+            subscription.action_confirm()
+        return subscription
+
+    def test_immediate_seat_increase_updates_mrr_and_creates_adjustment_invoice(self):
+        subscription = self._create_seat_subscription()
+        old_mrr = subscription.mrr
+
+        proration = subscription._execute_seat_change(15.0, effective_date=date(2026, 1, 16))
+        subscription.invalidate_recordset()
+        seat_line = subscription.order_line.filtered(lambda line: line.subscription_component_type == 'seat')
+
+        self.assertEqual(seat_line.product_uom_qty, 15.0)
+        self.assertEqual(subscription.seat_quantity, 15.0)
+        self.assertAlmostEqual(subscription.recurring_total, 209.0, places=2)
+        self.assertAlmostEqual(subscription.mrr, 209.0, places=2)
+        self.assertEqual(proration.proration_scope, 'seat_change')
+        self.assertEqual(proration.change_type, 'upgrade')
+        self.assertEqual(proration.old_seat_quantity, 10.0)
+        self.assertEqual(proration.new_seat_quantity, 15.0)
+        self.assertEqual(proration.state, 'applied')
+        self.assertTrue(proration.adjustment_invoice_id)
+        self.assertEqual(proration.adjustment_invoice_id.move_type, 'out_invoice')
+        self.assertAlmostEqual(proration.net_amount, 30.0, places=2)
+
+        movement = self.env['subscription.mrr.movement'].search([
+            ('subscription_id', '=', subscription.id),
+        ], order='id desc', limit=1)
+        self.assertEqual(movement.movement_type, 'expansion')
+        self.assertAlmostEqual(movement.previous_mrr, old_mrr, places=2)
+        self.assertAlmostEqual(movement.new_mrr, 209.0, places=2)
+
+        log = self.env['subscription.log'].search([
+            ('subscription_id', '=', subscription.id),
+            ('description', 'ilike', 'Seats changed from 10'),
+        ], limit=1)
+        self.assertTrue(log)
+
+    def test_immediate_seat_decrease_creates_credit_note(self):
+        subscription = self._create_seat_subscription()
+
+        proration = subscription._execute_seat_change(5.0, effective_date=date(2026, 1, 16))
+        subscription.invalidate_recordset()
+
+        self.assertEqual(subscription.seat_quantity, 5.0)
+        self.assertAlmostEqual(subscription.mrr, 89.0, places=2)
+        self.assertEqual(proration.change_type, 'downgrade')
+        self.assertTrue(proration.credit_note_id)
+        self.assertEqual(proration.credit_note_id.move_type, 'out_refund')
+        self.assertAlmostEqual(proration.net_amount, -30.0, places=2)
+
+        movement = self.env['subscription.mrr.movement'].search([
+            ('subscription_id', '=', subscription.id),
+        ], order='id desc', limit=1)
+        self.assertEqual(movement.movement_type, 'contraction')
+
+    def test_change_seats_action_and_wizard_apply_immediate_change(self):
+        subscription = self._create_seat_subscription()
+        action = subscription.action_change_seats()
+        self.assertEqual(action['res_model'], 'subscription.change.seats.wizard')
+
+        wizard = self.env['subscription.change.seats.wizard'].with_context(action['context']).create({
+            'subscription_id': subscription.id,
+            'new_seat_quantity': 12.0,
+            'effective_date': date(2026, 1, 16),
+        })
+        self.assertAlmostEqual(wizard.current_mrr, 149.0, places=2)
+        self.assertAlmostEqual(wizard.new_mrr, 173.0, places=2)
+        self.assertAlmostEqual(wizard.net_amount, 12.0, places=2)
+        wizard.action_confirm_change()
+        subscription.invalidate_recordset()
+        self.assertEqual(subscription.seat_quantity, 12.0)
+
+    def test_immediate_seat_change_guards(self):
+        subscription = self._create_seat_subscription()
+        with self.assertRaises(ValidationError):
+            subscription._execute_seat_change(10.0, effective_date=date(2026, 1, 16))
+        with self.assertRaises(ValidationError):
+            subscription._execute_seat_change(0.0, effective_date=date(2026, 1, 16))
+
+        missing_seats = self._create_basic_subscription()
+        missing_seats.action_confirm()
+        with self.assertRaises(ValidationError):
+            missing_seats._execute_seat_change(2.0, effective_date=date(2026, 1, 16))
+
+        multiple_seats = self._create_seat_subscription(confirm=False)
+        multiple_seats.write({
+            'order_line': [(0, 0, {
+                'product_id': self.seat_product.id,
+                'name': 'Extra Seat Pool',
+                'product_uom_qty': 1.0,
+                'price_unit': 12.0,
+                'is_recurring': True,
+                'subscription_component_type': 'seat',
+            })],
+        })
+        multiple_seats.action_confirm()
+        with self.assertRaises(ValidationError):
+            multiple_seats._execute_seat_change(12.0, effective_date=date(2026, 1, 16))
+
+        cancelled = self._create_seat_subscription(state='cancelled')
+        with self.assertRaises(ValidationError):
+            cancelled._execute_seat_change(12.0, effective_date=date(2026, 1, 16))
+
+        expired = self._create_seat_subscription(state='expired')
+        with self.assertRaises(ValidationError):
+            expired._execute_seat_change(12.0, effective_date=date(2026, 1, 16))
+
+        quote = self._create_seat_subscription(confirm=False)
+        with self.assertRaises(ValidationError):
+            quote._execute_seat_change(12.0, effective_date=date(2026, 1, 16))
+
+        regular_order = self.env['sale.order'].create({'partner_id': self.partner.id})
+        with self.assertRaises(ValidationError):
+            regular_order._execute_seat_change(12.0, effective_date=date(2026, 1, 16))
 
     def test_plan_change_updates_subscription_and_logs_mrr_movement(self):
         subscription = self.env['sale.order'].create({

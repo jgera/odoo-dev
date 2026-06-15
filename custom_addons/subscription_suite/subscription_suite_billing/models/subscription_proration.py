@@ -7,6 +7,10 @@ class SubscriptionProration(models.Model):
     _order = 'create_date desc'
 
     subscription_id = fields.Many2one('sale.order', string='Subscription', required=True, ondelete='cascade')
+    proration_scope = fields.Selection([
+        ('plan_change', 'Plan Change'),
+        ('seat_change', 'Seat Change'),
+    ], string='Scope', default='plan_change', required=True)
     change_type = fields.Selection([
         ('upgrade', 'Upgrade'),
         ('downgrade', 'Downgrade'),
@@ -16,6 +20,8 @@ class SubscriptionProration(models.Model):
     change_date = fields.Date(string='Change Date', required=True, default=fields.Date.context_today)
     old_plan_id = fields.Many2one('subscription.plan', string='Old Plan', required=True)
     new_plan_id = fields.Many2one('subscription.plan', string='New Plan')
+    old_seat_quantity = fields.Float(string='Old Seats', readonly=True)
+    new_seat_quantity = fields.Float(string='New Seats', readonly=True)
     
     period_start = fields.Date(string='Period Start', required=True)
     period_end = fields.Date(string='Period End', required=True)
@@ -71,6 +77,15 @@ class SubscriptionProration(models.Model):
 
     def _get_proration_product(self):
         self.ensure_one()
+        if self.proration_scope == 'seat_change':
+            seat_line = self.subscription_id.order_line.filtered(
+                lambda line: line.is_recurring
+                and line.subscription_component_type == 'seat'
+                and not line.display_type
+                and line.product_id
+            )[:1]
+            if seat_line:
+                return seat_line.product_id
         plan = self.new_plan_id or self.old_plan_id
         product = plan.plan_line_ids[:1].product_id if plan and plan.plan_line_ids else False
         if not product:
@@ -151,14 +166,25 @@ class SubscriptionProration(models.Model):
         self.state = 'applied'
         self.subscription_id.subscription_plan_id = self.new_plan_id
         
-        # Log event
-        self.subscription_id._log_subscription_event(
-            'plan_changed',
-            _(
-                'Plan changed from %(old_plan)s to %(new_plan)s with proration net amount %(amount)s%(document)s',
-                old_plan=self.old_plan_id.name,
-                new_plan=self.new_plan_id.name,
-                amount=self.net_amount,
-                document=_(' and document %s') % move.name if move else '',
+        if self.proration_scope == 'seat_change':
+            self.subscription_id._log_subscription_event(
+                'plan_changed',
+                _(
+                    'Seats changed from %(old_qty)s to %(new_qty)s with proration net amount %(amount)s%(document)s',
+                    old_qty=self.old_seat_quantity,
+                    new_qty=self.new_seat_quantity,
+                    amount=self.net_amount,
+                    document=_(' and document %s') % move.name if move else '',
+                ),
             )
-        )
+        else:
+            self.subscription_id._log_subscription_event(
+                'plan_changed',
+                _(
+                    'Plan changed from %(old_plan)s to %(new_plan)s with proration net amount %(amount)s%(document)s',
+                    old_plan=self.old_plan_id.name,
+                    new_plan=self.new_plan_id.name,
+                    amount=self.net_amount,
+                    document=_(' and document %s') % move.name if move else '',
+                )
+            )

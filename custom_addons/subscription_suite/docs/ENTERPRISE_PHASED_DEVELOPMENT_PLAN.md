@@ -660,7 +660,7 @@ For every phase, update or create:
 
 **Objective:** Support the monetization patterns expected by SaaS and enterprise subscription businesses.
 
-**Current slice:** Seat Billing Foundation. This slice formalizes `base`, `seat`, and `addon` recurring line types, computes read-only subscription seat totals from recurring seat lines, shows seats in backend and portal summaries, and keeps existing sale order quantity, price, discount, tax, recurring interval, and invoice behavior unchanged.
+**Current slice:** Immediate Backend Seat Change Operations. This slice lets managers change the single recurring seat line quantity immediately, creates proration documents through the existing proration engine, records MRR movement, and leaves portal self-service, scheduled seat changes, tiered pricing, usage metering, and external seat sync deferred.
 
 **Build items:**
 
@@ -675,8 +675,9 @@ For every phase, update or create:
 2. Seat management
    - Seat quantity on subscription line - foundation done through recurring sale order lines marked as `seat`.
    - Portal-visible seat count - read-only summary done.
+   - Immediate backend seat increase/decrease with proration - current slice.
    - Optional seat sync hooks for external applications.
-   - Seat increase/decrease proration.
+   - Scheduled seat increase/decrease proration.
 
 3. Usage-based billing
    - Add `subscription.usage.meter`.
@@ -710,13 +711,14 @@ For every phase, update or create:
 - Seat subscription invoices use Odoo's existing quantity times unit-price mechanics.
 - Renewal and upsell quotes preserve subscription component type on copied recurring lines.
 - Backend and portal summaries show read-only seat totals when recurring seat lines exist.
+- Immediate backend seat changes create proration, subscription logs, and MRR movement.
 - Usage invoice lines are reproducible from usage events/summaries.
-- Seat changes can be prorated.
+- Scheduled seat changes can be prorated.
 - Discount expiration does not require manual invoice edits.
 
 **Tests:**
 
-- Seat increase/decrease.
+- Immediate backend seat increase/decrease.
 - Tiered and volume calculations.
 - Usage event aggregation.
 - Overage invoice generation.

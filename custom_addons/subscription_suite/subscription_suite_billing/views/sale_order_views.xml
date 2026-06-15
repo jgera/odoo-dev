@@ -16,6 +16,8 @@
             <xpath expr="//button[@name='action_pause_subscription']" position="before">
                 <button name="action_change_plan" type="object" string="Change Plan" 
                         class="oe_highlight" invisible="subscription_state != 'active'"/>
+                <button name="action_change_seats" type="object" string="Change Seats"
+                        invisible="not is_subscription or seat_quantity &lt;= 0 or subscription_state not in ('active', 'paused', 'past_due')"/>
                 <button name="action_cancel_pending_plan_change" type="object" string="Cancel Plan Change"
                         invisible="not pending_plan_change_id"/>
             </xpath>

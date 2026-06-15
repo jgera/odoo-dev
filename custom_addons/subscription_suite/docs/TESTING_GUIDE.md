@@ -524,3 +524,19 @@ Automated coverage:
 - `subscription_suite` tests cover default component type, plan application, seat quantity computation, renewal preservation, and upsell component preservation.
 - `subscription_suite_billing` tests cover seat invoice quantity and unit-price behavior plus existing MRR and billing recovery coverage.
 - `subscription_suite_portal` tests cover read-only portal seat data and existing ownership/payment recovery flows.
+
+## 19. Immediate Seat Change Demo
+
+1. Open the demo subscription **Team Seats Monthly**.
+2. Confirm the subscription is active or past due and has exactly one recurring line with **Component Type** set to **Seat**.
+3. Click **Change Seats**.
+4. Increase the seat quantity and confirm the wizard shows current seats, new seats, effective date, current MRR, new MRR, net amount, and a proration preview.
+5. Confirm the change.
+6. Open **Prorations** from the subscription and confirm a **Seat Change** proration exists with old seats, new seats, applied state, and an adjustment invoice for an increase.
+7. Repeat with a lower seat quantity and confirm a credit note is created for a decrease.
+8. Confirm the subscription **Seats**, recurring total, and MRR update after each change.
+9. Confirm subscription logs and MRR movement history record the seat change.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover immediate seat increase, decrease, wizard apply, proration audit fields, adjustment invoice, credit note, MRR movement, logs, and blocked states.
