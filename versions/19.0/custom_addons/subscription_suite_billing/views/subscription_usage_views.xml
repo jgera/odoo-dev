@@ -54,13 +54,13 @@
         <field name="name">subscription.usage.event.list</field>
         <field name="model">subscription.usage.event</field>
         <field name="arch" type="xml">
-            <list string="Usage Events" decoration-muted="state == 'invoiced'">
+            <list string="Usage Events" decoration-muted="state in ('invoiced', 'cancelled')">
                 <field name="event_date"/>
                 <field name="subscription_id"/>
                 <field name="meter_id"/>
                 <field name="quantity"/>
                 <field name="external_reference" optional="show"/>
-                <field name="state" widget="badge" decoration-success="state == 'invoiced'" decoration-info="state == 'ready'"/>
+                <field name="state" widget="badge" decoration-success="state == 'invoiced'" decoration-info="state == 'ready'" decoration-muted="state == 'cancelled'"/>
                 <field name="summary_id" optional="show"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
@@ -72,17 +72,20 @@
         <field name="model">subscription.usage.event</field>
         <field name="arch" type="xml">
             <form string="Usage Event">
+                <header>
+                    <button name="action_cancel_event" type="object" string="Cancel Event" invisible="state != 'ready'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="ready,invoiced,cancelled"/>
+                </header>
                 <sheet>
                     <group>
                         <group>
-                            <field name="subscription_id"/>
-                            <field name="meter_id"/>
-                            <field name="quantity"/>
-                            <field name="event_date"/>
+                            <field name="subscription_id" readonly="state != 'ready'"/>
+                            <field name="meter_id" readonly="state != 'ready'"/>
+                            <field name="quantity" readonly="state != 'ready'"/>
+                            <field name="event_date" readonly="state != 'ready'"/>
                         </group>
                         <group>
-                            <field name="external_reference"/>
-                            <field name="state"/>
+                            <field name="external_reference" readonly="state != 'ready'"/>
                             <field name="summary_id" readonly="1"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
@@ -102,7 +105,9 @@
                 <field name="external_reference"/>
                 <filter string="Ready" name="ready" domain="[('state', '=', 'ready')]"/>
                 <filter string="Invoiced" name="invoiced" domain="[('state', '=', 'invoiced')]"/>
+                <filter string="Cancelled" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
                 <group>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
                     <filter string="Meter" name="group_meter" context="{'group_by': 'meter_id'}"/>
                     <filter string="Subscription" name="group_subscription" context="{'group_by': 'subscription_id'}"/>
                     <filter string="Event Date" name="group_event_date" context="{'group_by': 'event_date:month'}"/>
@@ -137,6 +142,9 @@
         <field name="model">subscription.usage.summary</field>
         <field name="arch" type="xml">
             <form string="Usage Summary" create="0" edit="0">
+                <header>
+                    <button name="action_recompute_usage" type="object" string="Recompute Usage" class="btn-primary" invisible="invoice_id"/>
+                </header>
                 <sheet>
                     <group>
                         <group>

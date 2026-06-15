@@ -617,3 +617,18 @@ Automated coverage:
 Automated coverage:
 
 - `subscription_suite_billing` tests cover usage rule validation, one-summary aggregation by subscription/meter/period, no-event summary suppression, included usage with no invoice line, overage invoice line quantity/subtotal, event invoicing, and idempotent reruns.
+
+## 24. Usage Metering Audit Hardening Demo
+
+1. Open **Subscriptions -> Billing -> Usage Events**.
+2. Create or open a **Ready** usage event that has not been invoiced.
+3. Click **Cancel Event** and confirm the event moves to **Cancelled**.
+4. Confirm cancelled events do not appear in the linked draft usage summary after recomputation.
+5. Open an uninvoiced usage summary and click **Recompute Usage** after adding another ready event in the same period.
+6. Confirm the summary used quantity, billable quantity, and amount update from ready events only.
+7. Generate the recurring invoice for a subscription with usage.
+8. Confirm invoiced events cannot be cancelled or edited and the linked usage summary cannot be recomputed.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover cancelled usage exclusion, cancellation-driven summary recomputation/clearing, recomputing draft summaries with new events, and locked invoiced usage records.

@@ -22,6 +22,7 @@ class SubscriptionUsageEvent(models.Model):
     state = fields.Selection([
         ('ready', 'Ready'),
         ('invoiced', 'Invoiced'),
+        ('cancelled', 'Cancelled'),
     ], default='ready', required=True, copy=False)
     summary_id = fields.Many2one('subscription.usage.summary', string='Usage Summary', copy=False, readonly=True)
     company_id = fields.Many2one('res.company', related='subscription_id.company_id', store=True)
@@ -37,3 +38,41 @@ class SubscriptionUsageEvent(models.Model):
             precision_rounding = (event.meter_id.uom_id.rounding or 0.01) if event.meter_id else 0.01
             if float_compare(event.quantity, 0.0, precision_rounding=precision_rounding) <= 0:
                 raise ValidationError(_('Usage quantity must be positive.'))
+
+    def _check_mutable(self, vals):
+        if 'state' in vals and not self.env.context.get('allow_usage_state_change'):
+            raise ValidationError(_('Use the usage event actions to change status.'))
+        protected_fields = {
+            'subscription_id',
+            'meter_id',
+            'quantity',
+            'event_date',
+            'external_reference',
+        }
+        if protected_fields.intersection(vals):
+            locked = self.filtered(lambda event: event.state in ('invoiced', 'cancelled'))
+            if locked:
+                raise ValidationError(_('Invoiced or cancelled usage events cannot be edited.'))
+
+    def write(self, vals):
+        self._check_mutable(vals)
+        return super().write(vals)
+
+    def unlink(self):
+        locked = self.filtered(lambda event: event.state in ('invoiced', 'cancelled'))
+        if locked:
+            raise ValidationError(_('Invoiced or cancelled usage events cannot be deleted.'))
+        return super().unlink()
+
+    def action_cancel_event(self):
+        for event in self:
+            if event.state != 'ready':
+                raise ValidationError(_('Only ready usage events can be cancelled.'))
+            summary = event.summary_id
+            event.with_context(allow_usage_state_change=True).write({
+                'state': 'cancelled',
+                'summary_id': False,
+            })
+            if summary and not summary.invoice_id:
+                summary.action_recompute_usage()
+        return True

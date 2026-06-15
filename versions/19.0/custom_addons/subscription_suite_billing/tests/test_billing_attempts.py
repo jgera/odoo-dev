@@ -126,6 +126,23 @@ class TestBillingAttempts(TransactionCase):
         self.assertEqual(summaries.billable_quantity, 15.0)
         self.assertAlmostEqual(summaries.amount, 7.5, places=2)
 
+    def test_cancelled_usage_events_are_ignored_during_aggregation(self):
+        self._add_usage_rule(included_quantity=100.0, overage_price_unit=0.5)
+        subscription = self._create_usage_period_subscription()
+        self._create_usage_event(subscription, 40.0, reference='USAGE-CANCEL-IGNORE-1')
+        cancelled_event = self._create_usage_event(subscription, 75.0, reference='USAGE-CANCEL-IGNORE-2')
+        cancelled_event.action_cancel_event()
+
+        summary = subscription._prepare_usage_summaries_for_invoice(
+            subscription.last_invoice_date,
+            subscription.next_invoice_date,
+        )
+
+        self.assertEqual(len(summary), 1)
+        self.assertEqual(summary.used_quantity, 40.0)
+        self.assertEqual(summary.billable_quantity, 0.0)
+        self.assertNotIn(cancelled_event, summary.event_ids)
+
     def test_included_usage_creates_summary_without_invoice_line(self):
         self._add_usage_rule(included_quantity=200.0, overage_price_unit=0.5)
         subscription = self._create_usage_period_subscription()
@@ -143,6 +160,63 @@ class TestBillingAttempts(TransactionCase):
         self.assertEqual(summary.billable_quantity, 0.0)
         self.assertFalse(invoice.invoice_line_ids.filtered('usage_summary_id'))
         self.assertEqual(summary.event_ids.state, 'invoiced')
+
+    def test_cancel_linked_uninvoiced_event_recomputes_or_clears_summary(self):
+        self._add_usage_rule(included_quantity=100.0, overage_price_unit=0.5)
+        subscription = self._create_usage_period_subscription()
+        kept_event = self._create_usage_event(subscription, 80.0, reference='USAGE-CANCEL-LINKED-1')
+        cancelled_event = self._create_usage_event(subscription, 75.0, reference='USAGE-CANCEL-LINKED-2')
+        summary = subscription._prepare_usage_summaries_for_invoice(
+            subscription.last_invoice_date,
+            subscription.next_invoice_date,
+        )
+
+        cancelled_event.action_cancel_event()
+        summary.invalidate_recordset()
+
+        self.assertTrue(summary.exists())
+        self.assertEqual(summary.used_quantity, 80.0)
+        self.assertEqual(summary.billable_quantity, 0.0)
+        self.assertEqual(summary.event_ids, kept_event)
+
+        kept_event.action_cancel_event()
+        self.assertFalse(summary.exists())
+
+    def test_recompute_uninvoiced_summary_pulls_new_ready_events(self):
+        self._add_usage_rule(included_quantity=100.0, overage_price_unit=0.5)
+        subscription = self._create_usage_period_subscription()
+        self._create_usage_event(subscription, 80.0, reference='USAGE-RECOMPUTE-1')
+        summary = subscription._prepare_usage_summaries_for_invoice(
+            subscription.last_invoice_date,
+            subscription.next_invoice_date,
+        )
+        new_event = self._create_usage_event(subscription, 50.0, reference='USAGE-RECOMPUTE-2')
+
+        summary.action_recompute_usage()
+
+        self.assertEqual(summary.used_quantity, 130.0)
+        self.assertEqual(summary.billable_quantity, 30.0)
+        self.assertIn(new_event, summary.event_ids)
+
+    def test_invoiced_usage_records_are_locked(self):
+        self._add_usage_rule(included_quantity=100.0, overage_price_unit=0.5)
+        subscription = self._create_usage_period_subscription()
+        event = self._create_usage_event(subscription, 125.0, reference='USAGE-LOCKED-1')
+
+        self._create_subscription_invoice(subscription)
+        summary = self.env['subscription.usage.summary'].search([
+            ('subscription_id', '=', subscription.id),
+            ('meter_id', '=', self.usage_meter.id),
+        ])
+
+        with self.assertRaises(ValidationError):
+            event.action_cancel_event()
+        with self.assertRaises(ValidationError):
+            event.quantity = 130.0
+        with self.assertRaises(ValidationError):
+            event.write({'state': 'ready'})
+        with self.assertRaises(ValidationError):
+            summary.action_recompute_usage()
 
     def test_no_usage_events_create_no_summary_or_invoice_line(self):
         self._add_usage_rule(included_quantity=200.0, overage_price_unit=0.5)

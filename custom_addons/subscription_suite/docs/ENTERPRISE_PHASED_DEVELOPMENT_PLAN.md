@@ -666,7 +666,7 @@ For every phase, update or create:
 
 **Objective:** Support the monetization patterns expected by SaaS and enterprise subscription businesses.
 
-**Current slice:** Usage Metering Foundation. This adds reusable usage meters, plan-level included allowance and overage rules, backend usage events, billing-period summaries, and one overage invoice line per billable meter during recurring invoice generation. Portal usage display, external ingestion APIs, tiered usage pricing, customer self-service, coupons, invoice line-per-tier breakdowns, and external entitlement sync remain deferred.
+**Current slice:** Usage Metering Audit Hardening. This builds on the usage-metering foundation by adding cancellable uninvoiced usage events, immutable invoiced usage records, draft summary recomputation, and billing safeguards that exclude cancelled events. Portal usage display, external ingestion APIs, tiered usage pricing, customer self-service, coupons, invoice line-per-tier breakdowns, and external entitlement sync remain deferred.
 
 **Build items:**
 
@@ -692,6 +692,7 @@ For every phase, update or create:
    - Add `subscription.usage.summary` - foundation done with one summary per subscription, meter, and billing period.
    - Generate invoice lines from usage summaries - foundation done with one overage line per billable meter.
    - Support included usage and overage rates - foundation done for summed usage.
+   - Usage event audit hardening - done for cancelling ready events, recomputing draft summaries, and locking invoiced events.
 
 4. Discounts and coupons
    - Time-limited discounts.
@@ -730,6 +731,8 @@ For every phase, update or create:
 - Usage event aggregation is idempotent per subscription, meter, and billing period.
 - Configured usage rules with no events do not create empty summaries.
 - Included usage creates an audit summary without adding an invoice line.
+- Cancelled usage events are excluded from billing and draft summary recomputation.
+- Invoiced usage events and summaries are immutable from manager correction actions.
 - Discount expiration does not require manual invoice edits.
 
 **Tests:**
@@ -739,6 +742,7 @@ For every phase, update or create:
 - Backend add-on add/remove, scheduling, cancellation, and proration.
 - Tiered and volume calculations, invalid tier validation, copied tier metadata, tiered invoices, and tier-aware seat changes.
 - Usage event aggregation, no-event summary suppression, included-allowance summaries, overage invoice line generation, and no-duplicate billing reruns.
+- Usage event cancellation, draft summary recomputation, locked invoiced usage records, and cancelled-event billing exclusion.
 - Coupon expiry.
 - Mixed flat plus usage subscription.
 

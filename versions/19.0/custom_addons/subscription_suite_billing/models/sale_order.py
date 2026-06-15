@@ -377,7 +377,7 @@ class SaleOrder(models.Model):
         ]
         new_events = Event.search(domain)
         if summary and not summary.invoice_id:
-            events = summary.event_ids | new_events
+            events = summary.event_ids.filtered(lambda event: event.state == 'ready') | new_events
         elif summary:
             return summary
         else:
@@ -468,7 +468,9 @@ class SaleOrder(models.Model):
                 'invoice_id': invoice.id,
                 'invoice_line_id': invoice_line.id if invoice_line else False,
             })
-            summary.event_ids.filtered(lambda event: event.state == 'ready').write({'state': 'invoiced'})
+            summary.event_ids.filtered(lambda event: event.state == 'ready').with_context(
+                allow_usage_state_change=True,
+            ).write({'state': 'invoiced'})
 
     def _execute_plan_change(self, new_plan, effective_date=None):
         self.ensure_one()
