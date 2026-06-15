@@ -3,6 +3,7 @@ from odoo import models, fields, api, _
 from odoo.addons.payment import utils as payment_utils
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools import consteq
+from odoo.tools.float_utils import float_compare
 
 _logger = logging.getLogger(__name__)
 
@@ -342,7 +343,13 @@ class SaleOrder(models.Model):
         if new_quantity is not None:
             if new_quantity < 1:
                 raise ValidationError(_("Seat quantity must be at least 1."))
-            if new_quantity == seat_line.product_uom_qty:
+            line_uom = seat_line.product_uom_id or seat_line.product_id.uom_id
+            precision_rounding = line_uom.rounding or 0.01
+            if float_compare(
+                new_quantity,
+                seat_line.product_uom_qty,
+                precision_rounding=precision_rounding,
+            ) == 0:
                 raise ValidationError(_("The new seat quantity must be different from the current quantity."))
         return seat_line
 
