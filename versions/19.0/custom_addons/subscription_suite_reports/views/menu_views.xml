@@ -37,15 +37,28 @@
               sequence="28"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_mrr_reconciliation"
+              name="MRR Reconciliation"
+              parent="menu_subscription_reporting"
+              action="action_subscription_mrr_reconciliation_report"
+              sequence="29"/>
+
+    <menuitem id="menu_generate_mrr_reconciliation"
+              name="Generate MRR Reconciliation"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_mrr_reconciliation"
+              sequence="30"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"
               action="action_subscription_churn_report"
-              sequence="30"/>
+              sequence="35"/>
 
     <menuitem id="menu_salesperson_analysis"
               name="Salesperson Analysis"
               parent="menu_subscription_reporting"
               action="action_subscription_salesperson_report"
-              sequence="40"/>
+              sequence="45"/>
 </odoo>

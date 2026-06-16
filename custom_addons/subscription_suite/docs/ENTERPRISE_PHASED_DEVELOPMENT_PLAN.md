@@ -771,8 +771,9 @@ For every phase, update or create:
 
 - SQL report includes MRR, ARR, active/churned/trial/past-due counts and MRR.
 - MRR movement model exists for new, expansion, contraction, churn.
+- Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** MRR Snapshot Foundation. This adds persistent daily `subscription.mrr.snapshot` records by company, currency, and subscription plan so managers can trend MRR/ARR over time from auditable point-in-time records. Cohorts, NRR/GRR, normalized company-currency analytics, forecasting, LTV, ARPU, and executive dashboards remain deferred.
+**Current slice:** MRR Movement Reconciliation. This compares point-in-time snapshot deltas with recorded `subscription.mrr.movement` totals so managers can spot missing or inconsistent movement history before trusting trend analytics. Cohorts, NRR/GRR, normalized company-currency analytics, forecasting, LTV, ARPU, and executive dashboards remain deferred.
 
 **Build items:**
 
@@ -795,6 +796,7 @@ For every phase, update or create:
 2. Snapshot models
    - `subscription.mrr.snapshot` - foundation done with daily company/currency/plan buckets.
    - Daily snapshots by company/currency/plan - foundation done with idempotent manual generation and daily cron.
+   - `subscription.mrr.reconciliation` - current slice for comparing snapshot deltas to MRR movements.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
@@ -817,6 +819,7 @@ For every phase, update or create:
 **Demo data updates:**
 
 - Generate MRR snapshots from existing demo subscriptions after installing/upgrading the reports module; static snapshot demo XML is intentionally avoided so the records reflect the current demo subscription state.
+- Generate MRR reconciliations from existing snapshots and MRR movements; static reconciliation demo XML is intentionally avoided so rows reflect the selected snapshot range.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -833,6 +836,8 @@ For every phase, update or create:
 - Managers can generate or regenerate daily MRR snapshots for a date without duplicate rows.
 - Snapshot records separate values by company, currency, and subscription plan.
 - Snapshot counts and MRR buckets match the current subscription records at generation time.
+- Managers can generate or regenerate reconciliation rows for a date range without duplicates.
+- Reconciliation rows clearly identify matched buckets, variance buckets, and missing opening or closing snapshots.
 - KPI definitions are documented and match SQL outputs.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
@@ -842,6 +847,7 @@ For every phase, update or create:
 
 - SQL report correctness.
 - Snapshot generation, state bucket totals, MRR bucket totals, ARR, plan grouping, and idempotent reruns.
+- MRR reconciliation matched/variance/missing-snapshot statuses, movement buckets, drilldowns, plan grouping, and idempotent reruns.
 - NRR/GRR formula tests.
 - Cohort retention tests.
 - Performance smoke test with generated records.

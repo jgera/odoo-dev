@@ -24,6 +24,7 @@ Provides analytics:
         'views/subscription_report_views.xml',
         'views/mrr_movement_views.xml',
         'views/subscription_mrr_snapshot_views.xml',
+        'views/subscription_mrr_reconciliation_views.xml',
         'views/menu_views.xml',
     ],
     'installable': True,

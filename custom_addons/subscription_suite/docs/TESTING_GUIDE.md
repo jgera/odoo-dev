@@ -693,3 +693,25 @@ Automated coverage:
 Implementation note:
 
 - Snapshot values are point-in-time operational analytics in each order currency. They are not accounting revenue recognition and do not normalize multiple currencies into company currency yet.
+
+## 28. MRR Movement Reconciliation Demo
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Generate an opening snapshot from **Subscriptions -> Reporting -> Generate MRR Snapshot** for the first date in the period.
+3. Generate a closing snapshot for a later date.
+4. Confirm there are MRR movement records between the two dates in **Subscriptions -> Reporting -> MRR Movements**.
+5. Open **Subscriptions -> Reporting -> Generate MRR Reconciliation**.
+6. Choose the opening date, closing date, and optionally a company or plan.
+7. Click **Generate**.
+8. Confirm **Subscriptions -> Reporting -> MRR Reconciliation** shows one row per company, currency, and plan bucket where either snapshot exists.
+9. Confirm matched rows have zero variance and variance rows show the difference between snapshot delta and net movement MRR.
+10. Open a reconciliation row and use **Snapshots** and **Movements** to drill into the source records.
+11. Generate the same date range again and confirm duplicate reconciliation rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover matched, variance, missing opening snapshot, missing closing snapshot, movement bucket totals, plan grouping, rerun idempotency, and source-record drilldowns.
+
+Implementation note:
+
+- Reconciliation values remain plan-bucketed and currency-separated. They are operational analytics, not accounting revenue recognition or multi-currency normalization.
