@@ -666,7 +666,7 @@ For every phase, update or create:
 
 **Objective:** Support the monetization patterns expected by SaaS and enterprise subscription businesses.
 
-**Current slice:** Backend Discount Operations Hardening. This builds on time-limited recurring discounts by adding manager-side discount changes, promotion clearing, manual lifecycle refresh, clearer backend visibility, and audit logs. Coupon codes, portal promo entry, discount proration credits, discount analytics, accounting deferrals, invoice line-per-tier breakdowns, public usage ingestion, customer self-service, and external entitlement sync remain deferred.
+**Current slice status:** Phase 5 backend discount operations are complete. Coupon codes, portal promo entry, discount proration credits, discount analytics, accounting deferrals, invoice line-per-tier breakdowns, public usage ingestion, customer self-service, and external entitlement sync remain deferred.
 
 **Build items:**
 
@@ -772,6 +772,8 @@ For every phase, update or create:
 - SQL report includes MRR, ARR, active/churned/trial/past-due counts and MRR.
 - MRR movement model exists for new, expansion, contraction, churn.
 
+**Current slice:** MRR Snapshot Foundation. This adds persistent daily `subscription.mrr.snapshot` records by company, currency, and subscription plan so managers can trend MRR/ARR over time from auditable point-in-time records. Cohorts, NRR/GRR, normalized company-currency analytics, forecasting, LTV, ARPU, and executive dashboards remain deferred.
+
 **Build items:**
 
 1. Metric definitions
@@ -791,8 +793,9 @@ For every phase, update or create:
    - LTV.
 
 2. Snapshot models
-   - `subscription.mrr.snapshot`.
-   - Daily/monthly snapshots by company/currency/plan.
+   - `subscription.mrr.snapshot` - foundation done with daily company/currency/plan buckets.
+   - Daily snapshots by company/currency/plan - foundation done with idempotent manual generation and daily cron.
+   - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
 3. Dashboards
@@ -813,6 +816,7 @@ For every phase, update or create:
 
 **Demo data updates:**
 
+- Generate MRR snapshots from existing demo subscriptions after installing/upgrading the reports module; static snapshot demo XML is intentionally avoided so the records reflect the current demo subscription state.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -826,6 +830,9 @@ For every phase, update or create:
 
 **Acceptance gates:**
 
+- Managers can generate or regenerate daily MRR snapshots for a date without duplicate rows.
+- Snapshot records separate values by company, currency, and subscription plan.
+- Snapshot counts and MRR buckets match the current subscription records at generation time.
 - KPI definitions are documented and match SQL outputs.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
@@ -834,7 +841,7 @@ For every phase, update or create:
 **Tests:**
 
 - SQL report correctness.
-- Snapshot generation.
+- Snapshot generation, state bucket totals, MRR bucket totals, ARR, plan grouping, and idempotent reruns.
 - NRR/GRR formula tests.
 - Cohort retention tests.
 - Performance smoke test with generated records.

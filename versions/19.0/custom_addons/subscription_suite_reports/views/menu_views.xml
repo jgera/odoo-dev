@@ -24,6 +24,19 @@
               action="action_subscription_mrr_movement_report"
               sequence="25"/>
 
+    <menuitem id="menu_mrr_snapshot_analysis"
+              name="MRR Snapshots"
+              parent="menu_subscription_reporting"
+              action="action_subscription_mrr_snapshot_report"
+              sequence="27"/>
+
+    <menuitem id="menu_generate_mrr_snapshot"
+              name="Generate MRR Snapshot"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_mrr_snapshot"
+              sequence="28"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"

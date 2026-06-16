@@ -98,6 +98,7 @@ After an upgrade, validate:
 - Recurring values and MRR show correctly.
 - Reporting menus open.
 - MRR movement report opens.
+- MRR Snapshots report opens and managers can generate a snapshot for today's date.
 - Dunning policies open when dunning is installed.
 - Billing Runs, Billing Attempts, Failed Billing, and Repeated Failures menus open when billing is installed.
 - Operations Dashboard and Manager Operations open under **Subscriptions -> Operations** when billing is installed.
@@ -671,3 +672,24 @@ Implementation note:
 Automated coverage:
 
 - `subscription_suite_billing` tests cover active promotional update, future promotional storage, promotion clearing, manual refresh idempotency, blocked records, invalid percentages, invalid dates, and non-recurring line rejection.
+
+## 27. MRR Snapshot Foundation Demo
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Open **Subscriptions -> Reporting -> Generate MRR Snapshot**.
+3. Choose today's date, or any date you want to use as a point-in-time snapshot label.
+4. Click **Generate**.
+5. Confirm **Subscriptions -> Reporting -> MRR Snapshots** opens with one row per company, currency, and subscription plan bucket.
+6. Confirm counts are split across trial, active, paused, past-due, cancelled, and expired subscriptions.
+7. Confirm MRR is split into trial, active, paused, past-due, churned, and total recurring MRR.
+8. Confirm ARR equals total recurring MRR times 12.
+9. Generate the same date again and confirm no duplicate snapshot rows are created.
+10. In Scheduled Actions, confirm **Subscription: Generate MRR Snapshot** is active and scheduled daily near end of day.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover state counts, MRR buckets, ARR, plan grouping, wizard generation, and idempotent reruns.
+
+Implementation note:
+
+- Snapshot values are point-in-time operational analytics in each order currency. They are not accounting revenue recognition and do not normalize multiple currencies into company currency yet.

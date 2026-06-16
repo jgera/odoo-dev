@@ -6,5 +6,11 @@
             <field name="model_id" ref="model_subscription_report"/>
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
+
+        <record id="subscription_mrr_snapshot_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription MRR Snapshot Multi-Company</field>
+            <field name="model_id" ref="model_subscription_mrr_snapshot"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
     </data>
 </odoo>
