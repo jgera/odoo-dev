@@ -22,6 +22,10 @@
                         invisible="not pending_seat_change_date"/>
                 <button name="action_change_addons" type="object" string="Change Add-ons"
                         invisible="not is_subscription or subscription_state not in ('active', 'paused', 'past_due')"/>
+                <button name="action_change_discounts" type="object" string="Change Discounts"
+                        invisible="not is_subscription or subscription_state not in ('active', 'paused', 'past_due')"/>
+                <button name="action_refresh_discounts" type="object" string="Refresh Discounts"
+                        invisible="not is_subscription or subscription_state not in ('active', 'paused', 'past_due')"/>
                 <button name="action_cancel_pending_addon_change" type="object" string="Cancel Add-on Change"
                         invisible="not pending_addon_change_date"/>
                 <button name="action_cancel_pending_plan_change" type="object" string="Cancel Plan Change"

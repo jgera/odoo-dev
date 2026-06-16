@@ -245,6 +245,9 @@
                 <filter string="Trials" name="trial_subscriptions" domain="[('subscription_state', '=', 'trial')]"/>
                 <filter string="Paused" name="paused_subscriptions" domain="[('subscription_state', '=', 'paused')]"/>
                 <filter string="Past Due" name="past_due_subscriptions" domain="[('subscription_state', '=', 'past_due')]"/>
+                <filter string="Active Promo" name="active_promo" domain="[('order_line.subscription_promo_discount_state', '=', 'active')]"/>
+                <filter string="Expired Promo" name="expired_promo" domain="[('order_line.subscription_promo_discount_state', '=', 'expired')]"/>
+                <filter string="Future Promo" name="future_promo" domain="[('order_line.subscription_promo_discount', '&gt;', 0.0), ('order_line.subscription_promo_discount_state', '=', 'inactive'), ('order_line.subscription_promo_discount_start_date', '&gt;', context_today())]"/>
                 <filter string="At Risk" name="at_risk_subscriptions" domain="[('health_score', 'in', ['at_risk', 'churning'])]"/>
                 <group>
                     <filter string="Status" name="group_status" context="{'group_by': 'subscription_state'}"/>

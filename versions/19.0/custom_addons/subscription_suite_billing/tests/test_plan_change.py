@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from odoo import fields
 from odoo.tests.common import TransactionCase
@@ -549,6 +549,158 @@ class TestPlanChange(TransactionCase):
         cancelled = self._create_seat_subscription(state='cancelled')
         with self.assertRaises(ValidationError):
             cancelled._schedule_addon_change('add', product=self.addon_product, quantity=1.0, price_unit=20.0)
+
+    def test_discount_wizard_applies_active_promotion_and_logs(self):
+        subscription = self._create_basic_subscription()
+        line = subscription.order_line.filtered('is_recurring')[:1]
+        wizard = self.env['subscription.change.discounts.wizard'].create({
+            'subscription_id': subscription.id,
+            'line_id': line.id,
+            'base_discount': 10.0,
+            'promo_discount': 20.0,
+            'promo_start_date': fields.Date.today() - timedelta(days=1),
+            'promo_end_date': fields.Date.today() + timedelta(days=10),
+        })
+
+        wizard.action_confirm_change()
+        subscription.invalidate_recordset(['recurring_total', 'mrr'])
+
+        self.assertAlmostEqual(line.subscription_base_discount, 10.0, places=2)
+        self.assertAlmostEqual(line.subscription_promo_discount, 20.0, places=2)
+        self.assertEqual(line.subscription_promo_discount_state, 'active')
+        self.assertAlmostEqual(line.discount, 28.0, places=2)
+        self.assertAlmostEqual(subscription.recurring_total, 20.88, places=2)
+        self.assertAlmostEqual(subscription.mrr, 20.88, places=2)
+        self.assertTrue(subscription.subscription_log_ids.filtered(
+            lambda log: log.event_type == 'discount_changed' and 'updated' in (log.description or '')
+        ))
+
+    def test_discount_wizard_stores_future_promotion_without_applying_it(self):
+        subscription = self._create_basic_subscription()
+        line = subscription.order_line.filtered('is_recurring')[:1]
+        wizard = self.env['subscription.change.discounts.wizard'].create({
+            'subscription_id': subscription.id,
+            'line_id': line.id,
+            'base_discount': 5.0,
+            'promo_discount': 20.0,
+            'promo_start_date': fields.Date.today() + timedelta(days=5),
+            'promo_end_date': fields.Date.today() + timedelta(days=15),
+        })
+
+        wizard.action_confirm_change()
+        subscription.invalidate_recordset(['recurring_total', 'mrr'])
+
+        self.assertAlmostEqual(line.subscription_base_discount, 5.0, places=2)
+        self.assertAlmostEqual(line.subscription_promo_discount, 20.0, places=2)
+        self.assertEqual(line.subscription_promo_discount_state, 'inactive')
+        self.assertAlmostEqual(line.discount, 5.0, places=2)
+        self.assertAlmostEqual(subscription.recurring_total, 27.55, places=2)
+
+    def test_discount_wizard_clear_promotion_restores_base_discount(self):
+        subscription = self._create_basic_subscription()
+        line = subscription.order_line.filtered('is_recurring')[:1]
+        line.write({
+            'subscription_base_discount': 5.0,
+            'subscription_promo_discount': 20.0,
+            'subscription_promo_discount_start_date': fields.Date.today() - timedelta(days=1),
+            'subscription_promo_discount_end_date': fields.Date.today() + timedelta(days=10),
+            'subscription_promo_discount_state': 'active',
+            'discount': 24.0,
+        })
+        wizard = self.env['subscription.change.discounts.wizard'].create({
+            'subscription_id': subscription.id,
+            'operation': 'clear_promo',
+            'line_id': line.id,
+            'base_discount': 5.0,
+        })
+
+        wizard.action_confirm_change()
+        subscription.invalidate_recordset(['recurring_total', 'mrr'])
+
+        self.assertAlmostEqual(line.subscription_base_discount, 5.0, places=2)
+        self.assertFalse(line.subscription_promo_discount)
+        self.assertFalse(line.subscription_promo_discount_start_date)
+        self.assertFalse(line.subscription_promo_discount_end_date)
+        self.assertEqual(line.subscription_promo_discount_state, 'inactive')
+        self.assertAlmostEqual(line.discount, 5.0, places=2)
+        self.assertAlmostEqual(subscription.recurring_total, 27.55, places=2)
+        self.assertTrue(subscription.subscription_log_ids.filtered(
+            lambda log: log.event_type == 'discount_changed' and 'cleared' in (log.description or '')
+        ))
+
+    def test_manual_discount_refresh_activates_due_promo_once(self):
+        subscription = self._create_basic_subscription()
+        line = subscription.order_line.filtered('is_recurring')[:1]
+        line.write({
+            'subscription_base_discount': 5.0,
+            'subscription_promo_discount': 20.0,
+            'subscription_promo_discount_start_date': fields.Date.today() - timedelta(days=1),
+            'subscription_promo_discount_end_date': fields.Date.today() + timedelta(days=10),
+            'subscription_promo_discount_state': 'inactive',
+            'discount': 5.0,
+        })
+
+        subscription.action_refresh_discounts()
+        subscription.action_refresh_discounts()
+
+        self.assertEqual(line.subscription_promo_discount_state, 'active')
+        self.assertAlmostEqual(line.discount, 24.0, places=2)
+        activation_logs = subscription.subscription_log_ids.filtered(
+            lambda log: log.event_type == 'discount_changed' and 'activated' in (log.description or '')
+        )
+        self.assertEqual(len(activation_logs), 1)
+
+    def test_discount_wizard_guards(self):
+        subscription = self._create_basic_subscription()
+        line = subscription.order_line.filtered('is_recurring')[:1]
+        regular_order = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'order_line': [(0, 0, {
+                'product_id': self.basic_product.id,
+                'name': 'Regular line',
+                'product_uom_qty': 1.0,
+                'price_unit': 29.0,
+            })],
+        })
+        quote = self._create_basic_subscription(subscription_quote_type='renewal')
+        cancelled = self._create_basic_subscription(subscription_state='cancelled')
+        expired = self._create_basic_subscription(subscription_state='expired')
+
+        with self.assertRaises(ValidationError):
+            regular_order.action_change_discounts()
+        with self.assertRaises(ValidationError):
+            quote.action_change_discounts()
+        with self.assertRaises(ValidationError):
+            cancelled.action_change_discounts()
+        with self.assertRaises(ValidationError):
+            expired.action_change_discounts()
+        with self.assertRaises(ValidationError):
+            self.env['subscription.change.discounts.wizard'].create({
+                'subscription_id': subscription.id,
+                'line_id': line.id,
+                'base_discount': 101.0,
+            })
+        with self.assertRaises(ValidationError):
+            self.env['subscription.change.discounts.wizard'].create({
+                'subscription_id': subscription.id,
+                'line_id': line.id,
+                'promo_discount': 10.0,
+                'promo_start_date': fields.Date.today(),
+                'promo_end_date': fields.Date.today(),
+            })
+        nonrecurring = self.env['sale.order.line'].create({
+            'order_id': subscription.id,
+            'product_id': self.basic_product.id,
+            'name': 'Non-recurring',
+            'product_uom_qty': 1.0,
+            'price_unit': 10.0,
+            'is_recurring': False,
+        })
+        with self.assertRaises(ValidationError):
+            self.env['subscription.change.discounts.wizard'].create({
+                'subscription_id': subscription.id,
+                'line_id': nonrecurring.id,
+            })
 
     def test_immediate_seat_change_guards(self):
         subscription = self._create_seat_subscription()

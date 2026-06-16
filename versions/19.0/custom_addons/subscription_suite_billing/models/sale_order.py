@@ -130,6 +130,31 @@ class SaleOrder(models.Model):
             },
         }
 
+    def action_change_discounts(self):
+        self.ensure_one()
+        self._check_discount_change_allowed()
+        return {
+            'name': _('Change Discounts'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.change.discounts.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_subscription_id': self.id,
+            },
+        }
+
+    def action_refresh_discounts(self):
+        for subscription in self:
+            subscription._check_discount_change_allowed()
+            changed_count = subscription._refresh_subscription_line_discounts()
+            subscription._log_subscription_event(
+                'discount_changed',
+                _('Subscription discounts refreshed manually'),
+                new_values={'changed_line_count': changed_count or 0},
+            )
+        return True
+
     def action_cancel_pending_addon_change(self):
         for subscription in self:
             if not subscription.pending_addon_change_date:
@@ -191,6 +216,100 @@ class SaleOrder(models.Model):
             'domain': [('subscription_id', '=', self.id)],
             'context': {'default_subscription_id': self.id},
         }
+
+    def _check_discount_change_allowed(self):
+        self.ensure_one()
+        if not self.is_subscription:
+            raise ValidationError(_("Only subscriptions can change discounts."))
+        if self.subscription_quote_type:
+            raise ValidationError(_("Subscription quotations cannot change discounts."))
+        if self.subscription_state not in ('active', 'paused', 'past_due'):
+            raise ValidationError(_("Discounts can only be changed on active, paused, or past-due subscriptions."))
+        if not self._get_discount_candidate_lines():
+            raise ValidationError(_("Add at least one recurring subscription line before changing discounts."))
+        return True
+
+    def _get_discount_candidate_lines(self):
+        self.ensure_one()
+        return self.order_line.filtered(lambda line: line.is_recurring and not line.display_type and line.product_id)
+
+    def _apply_line_discount_change(self, line, base_discount=0.0, promo_discount=0.0, promo_start_date=False, promo_end_date=False):
+        self.ensure_one()
+        self._check_discount_change_allowed()
+        line.ensure_one()
+        if line.order_id != self or line not in self._get_discount_candidate_lines():
+            raise ValidationError(_("Select a recurring line from this subscription."))
+        old_values = {
+            'line_id': line.id,
+            'base_discount': line.subscription_base_discount,
+            'promo_discount': line.subscription_promo_discount,
+            'promo_start_date': line.subscription_promo_discount_start_date,
+            'promo_end_date': line.subscription_promo_discount_end_date,
+            'effective_discount': line.discount,
+            'mrr': self.mrr,
+        }
+        line.write({
+            'subscription_base_discount': base_discount,
+            'subscription_promo_discount': promo_discount,
+            'subscription_promo_discount_start_date': promo_start_date,
+            'subscription_promo_discount_end_date': promo_end_date,
+        })
+        line._refresh_subscription_effective_discount()
+        self.invalidate_recordset(['recurring_total', 'mrr'])
+        self._log_subscription_event(
+            'discount_changed',
+            _('Subscription discount updated on %s') % (line.product_id.display_name or line.name),
+            old_values=old_values,
+            new_values={
+                'line_id': line.id,
+                'base_discount': line.subscription_base_discount,
+                'promo_discount': line.subscription_promo_discount,
+                'promo_start_date': line.subscription_promo_discount_start_date,
+                'promo_end_date': line.subscription_promo_discount_end_date,
+                'promo_state': line.subscription_promo_discount_state,
+                'effective_discount': line.discount,
+                'mrr': self.mrr,
+            },
+        )
+        return True
+
+    def _clear_line_promotion(self, line, base_discount=0.0):
+        self.ensure_one()
+        self._check_discount_change_allowed()
+        line.ensure_one()
+        if line.order_id != self or line not in self._get_discount_candidate_lines():
+            raise ValidationError(_("Select a recurring line from this subscription."))
+        old_values = {
+            'line_id': line.id,
+            'base_discount': line.subscription_base_discount,
+            'promo_discount': line.subscription_promo_discount,
+            'promo_start_date': line.subscription_promo_discount_start_date,
+            'promo_end_date': line.subscription_promo_discount_end_date,
+            'promo_state': line.subscription_promo_discount_state,
+            'effective_discount': line.discount,
+            'mrr': self.mrr,
+        }
+        line.write({
+            'subscription_base_discount': base_discount,
+            'subscription_promo_discount': 0.0,
+            'subscription_promo_discount_start_date': False,
+            'subscription_promo_discount_end_date': False,
+            'subscription_promo_discount_state': 'inactive',
+            'discount': base_discount,
+        })
+        self.invalidate_recordset(['recurring_total', 'mrr'])
+        self._log_subscription_event(
+            'discount_changed',
+            _('Promotional discount cleared on %s') % (line.product_id.display_name or line.name),
+            old_values=old_values,
+            new_values={
+                'line_id': line.id,
+                'base_discount': line.subscription_base_discount,
+                'effective_discount': line.discount,
+                'mrr': self.mrr,
+            },
+        )
+        return True
 
     def _get_billing_period(self):
         self.ensure_one()

@@ -666,7 +666,7 @@ For every phase, update or create:
 
 **Objective:** Support the monetization patterns expected by SaaS and enterprise subscription businesses.
 
-**Current slice:** Time-Limited Recurring Discounts Foundation. This adds plan-defined promotional discount metadata, copies it to recurring subscription lines, refreshes Odoo-native sale line discounts before recurring billing, recalculates MRR after activation or expiry, and records subscription audit logs. Coupon codes, portal promo entry, discount analytics, accounting deferrals, invoice line-per-tier breakdowns, public usage ingestion, customer self-service, and external entitlement sync remain deferred.
+**Current slice:** Backend Discount Operations Hardening. This builds on time-limited recurring discounts by adding manager-side discount changes, promotion clearing, manual lifecycle refresh, clearer backend visibility, and audit logs. Coupon codes, portal promo entry, discount proration credits, discount analytics, accounting deferrals, invoice line-per-tier breakdowns, public usage ingestion, customer self-service, and external entitlement sync remain deferred.
 
 **Build items:**
 
@@ -696,6 +696,7 @@ For every phase, update or create:
 
 4. Discounts and coupons
    - Time-limited recurring discounts - foundation done using plan-line and sale-line metadata plus Odoo sale line `discount`.
+   - Backend discount operations - hardening done for manager updates, promotion clearing, manual refresh, and audit logs.
    - Coupon application history.
    - Discount expiration handling - foundation done before recurring billing with subscription logs and MRR recalculation.
 
@@ -706,6 +707,7 @@ For every phase, update or create:
 - Volume and graduated seat-pricing demo plans exist for validating tier setup and effective unit prices.
 - API-call usage meter, overage product, usage rule, and demo events exist for overage billing walkthroughs.
 - Promotional monthly plan and subscriptions exist for active and expired promotional discount walkthroughs.
+- Future-dated promotional subscription exists for backend refresh and search-filter walkthroughs.
 - Add coupon examples later when coupon-code support exists.
 
 **Documentation updates:**
@@ -738,6 +740,7 @@ For every phase, update or create:
 - Discount expiration does not require manual invoice edits.
 - Active promotional discounts update recurring total, MRR, and invoice line discount before billing.
 - Expired promotional discounts revert the invoice-facing discount to the copied base discount without deleting promotion metadata or duplicating logs.
+- Managers can update recurring-line discount metadata, clear promotions, and manually refresh discount status without generating proration documents.
 
 **Tests:**
 
@@ -748,6 +751,7 @@ For every phase, update or create:
 - Usage event aggregation, no-event summary suppression, included-allowance summaries, overage invoice line generation, and no-duplicate billing reruns.
 - Usage event cancellation, draft summary recomputation, locked invoiced usage records, and cancelled-event billing exclusion.
 - Promotional discount metadata copying, validation, activation, expiry, invoice discount, MRR recalculation, renewal preservation, and idempotent expiry logging.
+- Backend discount wizard guards, active/future/expired behavior, promotion clearing, manual refresh, search visibility, and audit logs.
 - Coupon expiry.
 - Mixed flat plus usage subscription.
 
@@ -755,6 +759,7 @@ For every phase, update or create:
 
 - Demo invoices must clearly show flat charges, seat charges, add-ons, usage overages, and discounts.
 - Tests must reconcile usage events to invoice lines.
+- Discount changes must remain forward-looking until a later proration/credit slice explicitly adds mid-period discount adjustments.
 
 ---
 

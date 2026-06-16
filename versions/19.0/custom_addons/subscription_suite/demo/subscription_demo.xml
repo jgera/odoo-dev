@@ -419,6 +419,33 @@
             <field name="is_recurring">True</field>
         </record>
 
+        <record id="demo_subscription_future_discount" model="sale.order">
+            <field name="partner_id" ref="base.res_partner_4"/>
+            <field name="is_subscription">True</field>
+            <field name="subscription_plan_id" ref="demo_plan_discounted_monthly"/>
+            <field name="billing_interval_count">1</field>
+            <field name="billing_interval_unit">month</field>
+            <field name="subscription_state">active</field>
+            <field name="subscription_start_date" eval="(DateTime.today() - relativedelta(days=3)).strftime('%Y-%m-%d')"/>
+            <field name="last_invoice_date" eval="(DateTime.today() - relativedelta(days=3)).strftime('%Y-%m-%d')"/>
+            <field name="next_invoice_date" eval="(DateTime.today() + relativedelta(days=27)).strftime('%Y-%m-%d')"/>
+        </record>
+
+        <record id="demo_subscription_future_discount_line" model="sale.order.line">
+            <field name="order_id" ref="demo_subscription_future_discount"/>
+            <field name="product_id" ref="demo_product_basic"/>
+            <field name="name">Basic Subscription Tier - Future Promo</field>
+            <field name="product_uom_qty">1.0</field>
+            <field name="price_unit">29.00</field>
+            <field name="discount">5.0</field>
+            <field name="subscription_base_discount">5.0</field>
+            <field name="subscription_promo_discount">20.0</field>
+            <field name="subscription_promo_discount_start_date" eval="(DateTime.today() + relativedelta(days=7)).strftime('%Y-%m-%d')"/>
+            <field name="subscription_promo_discount_end_date" eval="(DateTime.today() + relativedelta(days=21)).strftime('%Y-%m-%d')"/>
+            <field name="subscription_promo_discount_state">inactive</field>
+            <field name="is_recurring">True</field>
+        </record>
+
         <!-- 5. Cancelled Subscription -->
         <record id="demo_subscription_cancelled" model="sale.order">
             <field name="partner_id" ref="base.res_partner_1"/>

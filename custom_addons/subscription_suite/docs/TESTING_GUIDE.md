@@ -654,3 +654,20 @@ Automated coverage:
 Implementation note:
 
 - Future discount features should continue using subscription metadata for lifecycle/audit decisions and Odoo sale order line `discount` as the invoice-facing effective discount. Do not add coupon-code or stacking behavior into this foundation without a separate validated slice.
+
+## 26. Backend Discount Operations Demo
+
+1. Open an active subscription with recurring lines.
+2. Click **Change Discounts**.
+3. Select a recurring line and enter a base discount plus a promotional discount with a date range that includes today.
+4. Confirm the change and verify the recurring line's effective **Discount (%)**, promo status, recurring total, and MRR update immediately.
+5. Open subscription logs and confirm a **Discount Changed** entry records the manager update.
+6. Repeat with a future promo start date and confirm the promotional metadata is stored while the promo discount is not applied yet.
+7. Click **Refresh Discounts** after editing a due/future promo into an active date range and confirm the promo activates once.
+8. Use **Change Discounts** with **Clear Promotion** and confirm promo percent/dates/status are cleared while the base discount remains.
+9. Use the subscription search filters **Active Promo**, **Expired Promo**, and **Future Promo** to find matching demo subscriptions.
+10. Confirm no proration document or credit note is created; discount changes affect recurring billing forward only.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover active promotional update, future promotional storage, promotion clearing, manual refresh idempotency, blocked records, invalid percentages, invalid dates, and non-recurring line rejection.

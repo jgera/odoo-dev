@@ -334,17 +334,19 @@ class SaleOrder(models.Model):
         return values
 
     def _refresh_subscription_line_discounts(self, on_date=None):
+        changed_count = 0
         for subscription in self:
             if not subscription.is_subscription:
                 continue
-            changed = False
+            subscription_changed = False
             for line in subscription.order_line.filtered(lambda order_line: order_line.is_recurring and not order_line.display_type):
                 if 'subscription_base_discount' not in line._fields:
                     continue
                 change = line._refresh_subscription_effective_discount(on_date=on_date)
                 if not change:
                     continue
-                changed = True
+                changed_count += 1
+                subscription_changed = True
                 if change['new_state'] == 'active' and change['old_state'] != 'active':
                     subscription._log_subscription_event(
                         'discount_changed',
@@ -359,9 +361,9 @@ class SaleOrder(models.Model):
                         old_values={'discount': change['old_discount'], 'state': change['old_state']},
                         new_values={'discount': change['new_discount'], 'state': change['new_state'], 'line_id': line.id},
                     )
-            if changed:
+            if subscription_changed:
                 subscription.invalidate_recordset(['recurring_total', 'mrr'])
-        return True
+        return changed_count
 
     def _prepare_subscription_quote_values(self, quote_type):
         self.ensure_one()

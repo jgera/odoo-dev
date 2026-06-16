@@ -68,6 +68,7 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | `subscription_suite.demo_subscription_due_billing` | Active | `base.res_partner_2` | Active monthly subscription due for Phase 1 billing-run validation; confirm before running cron |
 | `subscription_suite.demo_subscription_active_discount` | Active | `base.res_partner_2` | Active monthly subscription with an active expiring promotional discount |
 | `subscription_suite.demo_subscription_expired_discount` | Active | `base.res_partner_3` | Due monthly subscription with expired promotional metadata for billing expiry validation |
+| `subscription_suite.demo_subscription_future_discount` | Active | `base.res_partner_4` | Active monthly subscription with future-dated promotional metadata for manager refresh/search validation |
 | `subscription_suite.demo_subscription_cancelled` | Cancelled | `base.res_partner_1` | Churned annual subscription |
 | `subscription_suite.demo_subscription_pause_resume_example` | Paused | `base.res_partner_3` | Paused subscription with next invoice date for resume-date validation |
 | `subscription_suite.demo_subscription_scheduled_cancellation` | Active | `base.res_partner_4` | Active subscription with end-of-period cancellation already scheduled |
@@ -115,6 +116,7 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | Upsell quotation | Yes | `demo_subscription_upsell_quote` |
 | Usage billing | Yes | API-call meter/rule/events support usage billing walkthroughs |
 | Time-limited recurring discount | Yes | `demo_plan_discounted_monthly`, `demo_subscription_active_discount`, and `demo_subscription_expired_discount` |
+| Backend discount operations | Yes | `demo_subscription_active_discount`, `demo_subscription_expired_discount`, and `demo_subscription_future_discount` |
 | Revenue recognition | No | Phase 7 |
 
 ## Demo Expansion Rules
