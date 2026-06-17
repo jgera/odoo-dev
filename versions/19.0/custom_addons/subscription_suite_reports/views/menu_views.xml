@@ -63,6 +63,19 @@
               sequence="32"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_mrr_kpi_summary"
+              name="MRR KPI Summary"
+              parent="menu_subscription_reporting"
+              action="action_subscription_mrr_kpi_summary_report"
+              sequence="33"/>
+
+    <menuitem id="menu_generate_mrr_kpi_summary"
+              name="Generate MRR KPI Summary"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_mrr_kpi_summary"
+              sequence="34"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"

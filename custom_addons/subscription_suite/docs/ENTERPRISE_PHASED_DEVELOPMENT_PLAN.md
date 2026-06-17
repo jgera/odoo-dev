@@ -773,7 +773,7 @@ For every phase, update or create:
 - MRR movement model exists for new, expansion, contraction, churn.
 - Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** Movement-Only Analytics Anomaly Detection. This builds on MRR reconciliation by surfacing MRR movement buckets that have no matching opening or closing snapshot bucket, plus movements with missing plan data. Cohorts, NRR/GRR, normalized company-currency analytics, forecasting, LTV, ARPU, and executive dashboards remain deferred.
+**Current slice:** MRR KPI Summary Foundation. This turns snapshots, reconciliations, and MRR movements into period-level KPI records for opening MRR, closing MRR, net new MRR, NRR, and GRR. Executive dashboard cards, cohorts, normalized company-currency analytics, forecasting, LTV, and ARPU remain deferred.
 
 **Build items:**
 
@@ -797,7 +797,8 @@ For every phase, update or create:
    - `subscription.mrr.snapshot` - foundation done with daily company/currency/plan buckets.
    - Daily snapshots by company/currency/plan - foundation done with idempotent manual generation and daily cron.
    - `subscription.mrr.reconciliation` - foundation done for comparing snapshot deltas to MRR movements.
-   - `subscription.mrr.movement.anomaly` - current slice for movement-only and missing-plan analytics audit buckets.
+   - `subscription.mrr.movement.anomaly` - foundation done for movement-only and missing-plan analytics audit buckets.
+   - `subscription.mrr.kpi.summary` - current slice for generated period-level MRR KPI metrics.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
@@ -822,6 +823,7 @@ For every phase, update or create:
 - Generate MRR snapshots from existing demo subscriptions after installing/upgrading the reports module; static snapshot demo XML is intentionally avoided so the records reflect the current demo subscription state.
 - Generate MRR reconciliations from existing snapshots and MRR movements; static reconciliation demo XML is intentionally avoided so rows reflect the selected snapshot range.
 - Generate MRR movement anomalies from existing movement records; static anomaly demo XML is intentionally avoided so rows reflect the selected audit range.
+- Generate MRR KPI summaries from snapshots, reconciliation rows, and MRR movements; static KPI summary demo XML is intentionally avoided so rows reflect the selected period.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -842,6 +844,8 @@ For every phase, update or create:
 - Reconciliation rows clearly identify matched buckets, variance buckets, and missing opening or closing snapshots.
 - Managers can generate movement-only anomaly rows for date ranges without duplicates.
 - Anomaly rows expose source movement drilldowns for buckets missing both snapshots or missing plan data.
+- Managers can generate KPI summary rows for date ranges without duplicates.
+- KPI summaries expose Net New MRR, NRR, and GRR by company, currency, and plan.
 - KPI definitions are documented and match SQL outputs.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
@@ -853,7 +857,7 @@ For every phase, update or create:
 - Snapshot generation, state bucket totals, MRR bucket totals, ARR, plan grouping, and idempotent reruns.
 - MRR reconciliation matched/variance/missing-snapshot statuses, movement buckets, drilldowns, plan grouping, and idempotent reruns.
 - MRR movement anomaly detection for movement-only buckets, missing-plan buckets, ignored normal buckets, drilldowns, plan grouping, and idempotent reruns.
-- NRR/GRR formula tests.
+- MRR KPI summary formulas for Net New MRR, NRR, GRR, missing inputs, missing reconciliation fallback, drilldowns, plan grouping, and idempotent reruns.
 - Cohort retention tests.
 - Performance smoke test with generated records.
 

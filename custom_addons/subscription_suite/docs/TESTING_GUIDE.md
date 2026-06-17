@@ -735,3 +735,35 @@ Automated coverage:
 Implementation note:
 
 - Movement anomalies are an analytics audit tool. They do not change MRR reconciliation totals and do not normalize currencies.
+
+## 30. MRR KPI Summary Demo
+
+Metric definitions:
+
+- **Net New MRR** is the signed sum of new, expansion, contraction, and churned MRR movement amounts in the selected period.
+- **NRR (%)** is `(opening MRR + expansion MRR + contraction MRR + churned MRR) / opening MRR * 100`.
+- **GRR (%)** is `(opening MRR + contraction MRR + churned MRR) / opening MRR * 100`.
+- If opening MRR is zero, NRR and GRR remain zero to avoid misleading divide-by-zero metrics.
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Generate opening and closing snapshots from **Subscriptions -> Reporting -> Generate MRR Snapshot**.
+3. Generate reconciliation from **Subscriptions -> Reporting -> Generate MRR Reconciliation**.
+4. Generate movement anomalies from **Subscriptions -> Reporting -> Generate MRR Movement Anomalies** if reconciliation shows missing buckets.
+5. Open **Subscriptions -> Reporting -> Generate MRR KPI Summary**.
+6. Choose the opening date, closing date, and optionally a company or plan.
+7. Click **Generate**.
+8. Confirm **Subscriptions -> Reporting -> MRR KPI Summary** shows one row per company, currency, and plan bucket.
+9. Confirm rows show opening MRR, closing MRR, snapshot delta, movement buckets, net new MRR, NRR, and GRR.
+10. Confirm rows are marked **Missing Reconciliation** when snapshots exist but reconciliation was not generated.
+11. Open a KPI row and use **Snapshots**, **Reconciliation**, and **Movements** to drill into source records.
+12. Generate the same date range again and confirm duplicate KPI rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover KPI calculations, NRR/GRR formulas, zero-opening safety, missing snapshots, missing reconciliation fallback, multi-plan grouping, rerun idempotency, and source drilldowns.
+
+Implementation note:
+
+- KPI summaries are operational analytics in each source currency. They do not normalize currencies and are not accounting revenue recognition.

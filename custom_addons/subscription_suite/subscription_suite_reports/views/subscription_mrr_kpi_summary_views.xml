@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_mrr_kpi_summary_list" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.summary.list</field>
+        <field name="model">subscription.mrr.kpi.summary</field>
+        <field name="arch" type="xml">
+            <list string="MRR KPI Summary" create="0" edit="0" delete="0"
+                  decoration-success="status == 'ready'"
+                  decoration-warning="status == 'missing_reconciliation'"
+                  decoration-danger="status in ['missing_opening_snapshot', 'missing_closing_snapshot']">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="status"/>
+                <field name="subscription_plan_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="opening_mrr" sum="Opening MRR"/>
+                <field name="closing_mrr" sum="Closing MRR"/>
+                <field name="snapshot_delta_mrr" sum="Snapshot Delta"/>
+                <field name="new_mrr" sum="New MRR"/>
+                <field name="expansion_mrr" sum="Expansion MRR"/>
+                <field name="contraction_mrr" sum="Contraction MRR"/>
+                <field name="churned_mrr" sum="Churned MRR"/>
+                <field name="net_new_mrr" sum="Net New MRR"/>
+                <field name="nrr"/>
+                <field name="grr"/>
+                <field name="variance_mrr" sum="Variance"/>
+                <field name="generated_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_kpi_summary_form" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.summary.form</field>
+        <field name="model">subscription.mrr.kpi.summary</field>
+        <field name="arch" type="xml">
+            <form string="MRR KPI Summary" create="0" edit="0" delete="0">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_snapshots" type="object" class="oe_stat_button" icon="fa-bar-chart">
+                            <span>Snapshots</span>
+                        </button>
+                        <button name="action_view_reconciliation" type="object" class="oe_stat_button" icon="fa-check-square-o">
+                            <span>Reconciliation</span>
+                        </button>
+                        <button name="action_view_movements" type="object" class="oe_stat_button" icon="fa-exchange">
+                            <span>Movements</span>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="opening_date"/>
+                            <field name="closing_date"/>
+                            <field name="status"/>
+                            <field name="generated_at"/>
+                        </group>
+                        <group>
+                            <field name="subscription_plan_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="bucket_key"/>
+                        </group>
+                    </group>
+                    <group string="MRR">
+                        <field name="opening_mrr" widget="monetary"/>
+                        <field name="closing_mrr" widget="monetary"/>
+                        <field name="snapshot_delta_mrr" widget="monetary"/>
+                        <field name="net_new_mrr" widget="monetary"/>
+                        <field name="variance_mrr" widget="monetary"/>
+                    </group>
+                    <group string="Movement Buckets">
+                        <field name="new_mrr" widget="monetary"/>
+                        <field name="expansion_mrr" widget="monetary"/>
+                        <field name="contraction_mrr" widget="monetary"/>
+                        <field name="churned_mrr" widget="monetary"/>
+                    </group>
+                    <group string="Retention">
+                        <field name="nrr"/>
+                        <field name="grr"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_kpi_summary_pivot" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.summary.pivot</field>
+        <field name="model">subscription.mrr.kpi.summary</field>
+        <field name="arch" type="xml">
+            <pivot string="MRR KPI Summary" sample="1">
+                <field name="closing_date" type="row" interval="month"/>
+                <field name="status" type="col"/>
+                <field name="opening_mrr" type="measure"/>
+                <field name="closing_mrr" type="measure"/>
+                <field name="snapshot_delta_mrr" type="measure"/>
+                <field name="new_mrr" type="measure"/>
+                <field name="expansion_mrr" type="measure"/>
+                <field name="contraction_mrr" type="measure"/>
+                <field name="churned_mrr" type="measure"/>
+                <field name="net_new_mrr" type="measure"/>
+                <field name="variance_mrr" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_kpi_summary_graph" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.summary.graph</field>
+        <field name="model">subscription.mrr.kpi.summary</field>
+        <field name="arch" type="xml">
+            <graph string="MRR KPI Summary" type="line" sample="1">
+                <field name="closing_date" interval="month"/>
+                <field name="net_new_mrr" type="measure"/>
+                <field name="closing_mrr" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_kpi_summary_search" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.summary.search</field>
+        <field name="model">subscription.mrr.kpi.summary</field>
+        <field name="arch" type="xml">
+            <search string="MRR KPI Summary">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="subscription_plan_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <filter string="Ready" name="ready" domain="[('status', '=', 'ready')]"/>
+                <filter string="Missing Inputs" name="missing_inputs" domain="[('status', '!=', 'ready')]"/>
+                <filter string="Missing Reconciliation" name="missing_reconciliation" domain="[('status', '=', 'missing_reconciliation')]"/>
+                <filter string="Positive Net New" name="positive_net_new" domain="[('net_new_mrr', '&gt;', 0)]"/>
+                <filter string="Negative Net New" name="negative_net_new" domain="[('net_new_mrr', '&lt;', 0)]"/>
+                <separator/>
+                <filter string="Closing Month" name="group_closing_month" context="{'group_by':'closing_date:month'}"/>
+                <filter string="Status" name="group_status" context="{'group_by':'status'}"/>
+                <filter string="Plan" name="group_plan_id" context="{'group_by':'subscription_plan_id'}"/>
+                <filter string="Currency" name="group_currency_id" context="{'group_by':'currency_id'}"/>
+                <filter string="Company" name="group_company_id" context="{'group_by':'company_id'}" groups="base.group_multi_company"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_kpi_summary_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.summary.generate.wizard.form</field>
+        <field name="model">subscription.mrr.kpi.summary.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate MRR KPI Summary">
+                <group>
+                    <field name="opening_date"/>
+                    <field name="closing_date"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="subscription_plan_id"/>
+                </group>
+                <footer>
+                    <button name="action_generate_summary" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_mrr_kpi_summary_report" model="ir.actions.act_window">
+        <field name="name">MRR KPI Summary</field>
+        <field name="res_model">subscription.mrr.kpi.summary</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="context">{'search_default_group_closing_month': 1, 'search_default_group_status': 1}</field>
+    </record>
+
+    <record id="action_generate_subscription_mrr_kpi_summary" model="ir.actions.act_window">
+        <field name="name">Generate MRR KPI Summary</field>
+        <field name="res_model">subscription.mrr.kpi.summary.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
