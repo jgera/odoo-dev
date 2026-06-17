@@ -50,6 +50,19 @@
               sequence="30"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_mrr_movement_anomaly"
+              name="MRR Movement Anomalies"
+              parent="menu_subscription_reporting"
+              action="action_subscription_mrr_movement_anomaly_report"
+              sequence="31"/>
+
+    <menuitem id="menu_generate_mrr_movement_anomaly"
+              name="Generate MRR Movement Anomalies"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_mrr_movement_anomaly"
+              sequence="32"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"

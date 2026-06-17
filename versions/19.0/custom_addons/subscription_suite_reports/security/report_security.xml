@@ -18,5 +18,11 @@
             <field name="model_id" ref="model_subscription_mrr_reconciliation"/>
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
+
+        <record id="subscription_mrr_movement_anomaly_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription MRR Movement Anomaly Multi-Company</field>
+            <field name="model_id" ref="model_subscription_mrr_movement_anomaly"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
     </data>
 </odoo>

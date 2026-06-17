@@ -715,3 +715,23 @@ Automated coverage:
 Implementation note:
 
 - Reconciliation values remain plan-bucketed and currency-separated. They are operational analytics, not accounting revenue recognition or multi-currency normalization.
+
+## 29. MRR Movement Anomaly Demo
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Confirm the selected period has MRR movement records in **Subscriptions -> Reporting -> MRR Movements**.
+3. Open **Subscriptions -> Reporting -> Generate MRR Movement Anomalies**.
+4. Choose the opening date, closing date, and optionally a company or plan.
+5. Click **Generate**.
+6. Confirm **Subscriptions -> Reporting -> MRR Movement Anomalies** shows movement buckets that have no opening or closing snapshot bucket.
+7. Confirm **Missing Plan** rows identify movements whose source subscription has no subscription plan.
+8. Open an anomaly row and use **Movements** to drill into the source movement records.
+9. Generate the same date range again and confirm duplicate anomaly rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover movement-only buckets, missing-plan buckets, ignored buckets with snapshots, multi-plan grouping, rerun idempotency, and source movement drilldowns.
+
+Implementation note:
+
+- Movement anomalies are an analytics audit tool. They do not change MRR reconciliation totals and do not normalize currencies.
