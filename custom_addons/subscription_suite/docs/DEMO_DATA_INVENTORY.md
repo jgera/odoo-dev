@@ -121,6 +121,7 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | MRR reconciliation | Generated | Generate from **Subscriptions -> Reporting -> Generate MRR Reconciliation** after creating opening/closing snapshots; static XML is intentionally avoided |
 | MRR movement anomalies | Generated | Generate from **Subscriptions -> Reporting -> Generate MRR Movement Anomalies** for audit ranges; static XML is intentionally avoided |
 | MRR KPI summaries | Generated | Generate from **Subscriptions -> Reporting -> Generate MRR KPI Summary** after snapshots and reconciliation; static XML is intentionally avoided |
+| MRR KPI dashboards | Generated | Generate from **Subscriptions -> Reporting -> Generate MRR KPI Dashboard** after KPI summaries; static XML is intentionally avoided |
 | Revenue recognition | No | Phase 7 |
 
 ## Demo Expansion Rules
@@ -141,6 +142,6 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | Phase 3 | Portal users and subscriptions with allowed/blocked actions |
 | Phase 4 | Past-due subscriptions, dunning stages, payment attempts, recovery path |
 | Phase 5 | Seat, add-on, tiered, volume, usage, and time-limited discount examples |
-| Phase 6 | MRR snapshots, reconciliation rows, movement anomalies, and KPI summaries are generated from current demo records; later add multi-month MRR movement history, cohorts, churn reasons, and forecast records |
+| Phase 6 | MRR snapshots, reconciliation rows, movement anomalies, KPI summaries, and KPI dashboards are generated from current demo records; later add multi-month MRR movement history, cohorts, churn reasons, and forecast records |
 | Phase 7 | Deferred revenue schedule and recognition examples |
 | Phase 8 | Complete end-to-end demo story and optional large-data generator |

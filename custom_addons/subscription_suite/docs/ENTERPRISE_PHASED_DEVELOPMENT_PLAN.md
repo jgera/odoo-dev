@@ -773,7 +773,7 @@ For every phase, update or create:
 - MRR movement model exists for new, expansion, contraction, churn.
 - Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** MRR KPI Summary Foundation. This turns snapshots, reconciliations, and MRR movements into period-level KPI records for opening MRR, closing MRR, net new MRR, NRR, and GRR. Executive dashboard cards, cohorts, normalized company-currency analytics, forecasting, LTV, and ARPU remain deferred.
+**Current slice:** MRR KPI Dashboard Foundation. This turns generated KPI summaries into an Odoo-native manager dashboard with KPI cards, status visibility, and source drilldowns. Cohorts, normalized company-currency analytics, forecasting, LTV, ARPU, custom Owl widgets, and executive board packs remain deferred.
 
 **Build items:**
 
@@ -798,13 +798,15 @@ For every phase, update or create:
    - Daily snapshots by company/currency/plan - foundation done with idempotent manual generation and daily cron.
    - `subscription.mrr.reconciliation` - foundation done for comparing snapshot deltas to MRR movements.
    - `subscription.mrr.movement.anomaly` - foundation done for movement-only and missing-plan analytics audit buckets.
-   - `subscription.mrr.kpi.summary` - current slice for generated period-level MRR KPI metrics.
+   - `subscription.mrr.kpi.summary` - foundation done for generated period-level MRR KPI metrics.
+   - `subscription.mrr.kpi.dashboard` - current slice for generated dashboard records from KPI summaries.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
 3. Dashboards
-   - Backend dashboard action.
-   - KPI cards.
+   - Backend dashboard action - current slice.
+   - KPI cards - current slice.
+   - Source drilldowns to KPI summaries, snapshots, reconciliations, anomalies, and movements - current slice.
    - MRR waterfall.
    - Retention cohort.
    - Churn reasons.
@@ -824,6 +826,7 @@ For every phase, update or create:
 - Generate MRR reconciliations from existing snapshots and MRR movements; static reconciliation demo XML is intentionally avoided so rows reflect the selected snapshot range.
 - Generate MRR movement anomalies from existing movement records; static anomaly demo XML is intentionally avoided so rows reflect the selected audit range.
 - Generate MRR KPI summaries from snapshots, reconciliation rows, and MRR movements; static KPI summary demo XML is intentionally avoided so rows reflect the selected period.
+- Generate MRR KPI dashboards from KPI summaries; static dashboard demo XML is intentionally avoided so dashboard values reflect the selected period, company, currency, and optional plan.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -847,6 +850,8 @@ For every phase, update or create:
 - Managers can generate KPI summary rows for date ranges without duplicates.
 - KPI summaries expose Net New MRR, NRR, and GRR by company, currency, and plan.
 - KPI definitions are documented and match SQL outputs.
+- Managers can generate KPI dashboard rows for one company/currency/period and optional plan without duplicates.
+- KPI dashboard rows aggregate plan-level KPI summaries only within the selected currency and expose source drilldowns.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
 - Filters by company, plan, salesperson, country, and period work.
@@ -858,6 +863,7 @@ For every phase, update or create:
 - MRR reconciliation matched/variance/missing-snapshot statuses, movement buckets, drilldowns, plan grouping, and idempotent reruns.
 - MRR movement anomaly detection for movement-only buckets, missing-plan buckets, ignored normal buckets, drilldowns, plan grouping, and idempotent reruns.
 - MRR KPI summary formulas for Net New MRR, NRR, GRR, missing inputs, missing reconciliation fallback, drilldowns, plan grouping, and idempotent reruns.
+- MRR KPI dashboard generation, multi-plan aggregation, currency separation, missing summary/input status, source drilldowns, and idempotent reruns.
 - Cohort retention tests.
 - Performance smoke test with generated records.
 

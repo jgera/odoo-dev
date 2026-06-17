@@ -767,3 +767,27 @@ Automated coverage:
 Implementation note:
 
 - KPI summaries are operational analytics in each source currency. They do not normalize currencies and are not accounting revenue recognition.
+
+## 31. MRR KPI Dashboard Demo
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Generate opening and closing snapshots, MRR reconciliation, movement anomalies when needed, and MRR KPI summaries for the selected period.
+3. Open **Subscriptions -> Reporting -> Generate MRR KPI Dashboard**.
+4. Choose the opening date, closing date, company, currency, and optionally a subscription plan.
+5. Click **Generate**.
+6. Confirm the dashboard opens with KPI cards for opening MRR, closing MRR, net new MRR, NRR, and GRR.
+7. Confirm movement fields show new, expansion, contraction, churned, net new, and variance values.
+8. Generate without a plan and confirm the dashboard aggregates all plan KPI summaries for the selected company/currency only.
+9. Generate with a plan and confirm the dashboard is limited to that plan.
+10. Use **KPI Summaries**, **Snapshots**, **Reconciliations**, **Anomalies**, and **Movements** to drill into source records.
+11. Generate the same dashboard period/scope again and confirm duplicate dashboard rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover dashboard generation, KPI summary aggregation, plan filtering, currency separation, missing summary/input statuses, rerun idempotency, wizard action output, and source drilldowns.
+
+Implementation note:
+
+- KPI dashboards are generated from KPI summaries and remain source-currency operational analytics. They do not generate missing upstream analytics records, normalize currencies, or act as accounting revenue recognition.

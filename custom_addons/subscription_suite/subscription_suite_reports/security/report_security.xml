@@ -30,5 +30,11 @@
             <field name="model_id" ref="model_subscription_mrr_kpi_summary"/>
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
+
+        <record id="subscription_mrr_kpi_dashboard_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription MRR KPI Dashboard Multi-Company</field>
+            <field name="model_id" ref="model_subscription_mrr_kpi_dashboard"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
     </data>
 </odoo>

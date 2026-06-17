@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_mrr_kpi_dashboard_list" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.dashboard.list</field>
+        <field name="model">subscription.mrr.kpi.dashboard</field>
+        <field name="arch" type="xml">
+            <list string="MRR KPI Dashboards" create="0" edit="0"
+                  decoration-success="status == 'ready'"
+                  decoration-warning="status == 'missing_inputs'"
+                  decoration-danger="status == 'missing_kpi_summary'">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'ready'"
+                       decoration-warning="status == 'missing_inputs'"
+                       decoration-danger="status == 'missing_kpi_summary'"/>
+                <field name="summary_count"/>
+                <field name="opening_mrr" widget="monetary"/>
+                <field name="closing_mrr" widget="monetary"/>
+                <field name="net_new_mrr" widget="monetary"/>
+                <field name="nrr"/>
+                <field name="grr"/>
+                <field name="variance_mrr" widget="monetary"/>
+                <field name="generated_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_kpi_dashboard_form" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.dashboard.form</field>
+        <field name="model">subscription.mrr.kpi.dashboard</field>
+        <field name="arch" type="xml">
+            <form string="MRR KPI Dashboard" create="0" edit="0">
+                <header>
+                    <button name="action_view_kpi_summaries" type="object" string="KPI Summaries" class="btn-primary"/>
+                    <button name="action_view_snapshots" type="object" string="Snapshots"/>
+                    <button name="action_view_reconciliations" type="object" string="Reconciliations"/>
+                    <button name="action_view_anomalies" type="object" string="Anomalies"/>
+                    <button name="action_view_movements" type="object" string="Movements"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_kpi_summaries" type="object" class="oe_stat_button" icon="fa-line-chart">
+                            <field name="opening_mrr" widget="statinfo" string="Opening MRR"/>
+                        </button>
+                        <button name="action_view_kpi_summaries" type="object" class="oe_stat_button" icon="fa-bar-chart">
+                            <field name="closing_mrr" widget="statinfo" string="Closing MRR"/>
+                        </button>
+                        <button name="action_view_movements" type="object" class="oe_stat_button" icon="fa-plus-circle">
+                            <field name="net_new_mrr" widget="statinfo" string="Net New"/>
+                        </button>
+                        <button name="action_view_kpi_summaries" type="object" class="oe_stat_button" icon="fa-percent">
+                            <field name="nrr" widget="statinfo" string="NRR %"/>
+                        </button>
+                        <button name="action_view_kpi_summaries" type="object" class="oe_stat_button" icon="fa-percent">
+                            <field name="grr" widget="statinfo" string="GRR %"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="opening_date"/>
+                            <field name="closing_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="subscription_plan_id"/>
+                        </group>
+                        <group string="Generation">
+                            <field name="status" widget="badge"
+                                   decoration-success="status == 'ready'"
+                                   decoration-warning="status == 'missing_inputs'"
+                                   decoration-danger="status == 'missing_kpi_summary'"/>
+                            <field name="summary_count"/>
+                            <field name="generated_at"/>
+                            <field name="bucket_key"/>
+                        </group>
+                    </group>
+                    <group string="MRR Movement">
+                        <group>
+                            <field name="opening_mrr" widget="monetary"/>
+                            <field name="closing_mrr" widget="monetary"/>
+                            <field name="snapshot_delta_mrr" widget="monetary"/>
+                            <field name="variance_mrr" widget="monetary"/>
+                        </group>
+                        <group>
+                            <field name="new_mrr" widget="monetary"/>
+                            <field name="expansion_mrr" widget="monetary"/>
+                            <field name="contraction_mrr" widget="monetary"/>
+                            <field name="churned_mrr" widget="monetary"/>
+                            <field name="net_new_mrr" widget="monetary"/>
+                        </group>
+                    </group>
+                    <group string="Retention">
+                        <field name="nrr"/>
+                        <field name="grr"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_kpi_dashboard_search" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.dashboard.search</field>
+        <field name="model">subscription.mrr.kpi.dashboard</field>
+        <field name="arch" type="xml">
+            <search string="MRR KPI Dashboards">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <filter string="Ready" name="ready" domain="[('status', '=', 'ready')]"/>
+                <filter string="Missing Inputs" name="missing_inputs" domain="[('status', '=', 'missing_inputs')]"/>
+                <filter string="Missing KPI Summary" name="missing_kpi_summary" domain="[('status', '=', 'missing_kpi_summary')]"/>
+                <filter string="Positive Net New" name="positive_net_new" domain="[('net_new_mrr', '&gt;', 0)]"/>
+                <filter string="Negative Net New" name="negative_net_new" domain="[('net_new_mrr', '&lt;', 0)]"/>
+                <group>
+                    <filter string="Closing Date" name="group_closing_date" context="{'group_by': 'closing_date'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'currency_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_kpi_dashboard_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.mrr.kpi.dashboard.generate.wizard.form</field>
+        <field name="model">subscription.mrr.kpi.dashboard.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate MRR KPI Dashboard">
+                <group>
+                    <field name="opening_date"/>
+                    <field name="closing_date"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="currency_id"/>
+                    <field name="subscription_plan_id"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_mrr_kpi_dashboard_report" model="ir.actions.act_window">
+        <field name="name">MRR KPI Dashboard</field>
+        <field name="res_model">subscription.mrr.kpi.dashboard</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_subscription_mrr_kpi_dashboard_search"/>
+        <field name="context">{'search_default_group_closing_date': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate an MRR KPI dashboard from existing KPI summaries.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_mrr_kpi_dashboard" model="ir.actions.act_window">
+        <field name="name">Generate MRR KPI Dashboard</field>
+        <field name="res_model">subscription.mrr.kpi.dashboard.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

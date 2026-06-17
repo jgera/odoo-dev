@@ -7,3 +7,5 @@ from . import subscription_mrr_movement_anomaly
 from . import subscription_mrr_movement_anomaly_wizard
 from . import subscription_mrr_kpi_summary
 from . import subscription_mrr_kpi_summary_wizard
+from . import subscription_mrr_kpi_dashboard
+from . import subscription_mrr_kpi_dashboard_wizard
