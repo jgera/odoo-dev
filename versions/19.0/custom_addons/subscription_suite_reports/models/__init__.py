@@ -9,3 +9,5 @@ from . import subscription_mrr_kpi_summary
 from . import subscription_mrr_kpi_summary_wizard
 from . import subscription_mrr_kpi_dashboard
 from . import subscription_mrr_kpi_dashboard_wizard
+from . import subscription_mrr_waterfall
+from . import subscription_mrr_waterfall_wizard

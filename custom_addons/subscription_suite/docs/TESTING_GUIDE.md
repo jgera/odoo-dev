@@ -791,3 +791,31 @@ Automated coverage:
 Implementation note:
 
 - KPI dashboards are generated from KPI summaries and remain source-currency operational analytics. They do not generate missing upstream analytics records, normalize currencies, or act as accounting revenue recognition.
+
+## 32. MRR Waterfall Demo
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Generate opening and closing snapshots, MRR reconciliation, movement anomalies when needed, MRR KPI summaries, and an MRR KPI dashboard for the selected period.
+3. Open **Subscriptions -> Reporting -> Generate MRR Waterfall**.
+4. Choose the opening date, closing date, company, currency, and optionally a subscription plan.
+5. Click **Generate**.
+6. Confirm **Subscriptions -> Reporting -> MRR Waterfall** shows ordered rows for opening MRR, new MRR, expansion MRR, contraction MRR, churned MRR, and closing MRR.
+7. Confirm opening plus movement buckets explains the closing MRR when the source KPI summary is consistent.
+8. Generate without a plan and confirm rows aggregate all plan KPI summaries for the selected company/currency only.
+9. Generate with a plan and confirm rows are limited to that plan.
+10. Open opening or closing rows and use **Open Bucket Sources** to drill into source snapshots.
+11. Open movement rows and use **Open Bucket Sources** to drill into the matching MRR movement type.
+12. Confirm **Expected Closing MRR**, **Actual Closing MRR**, and **Variance** are visible on waterfall rows.
+13. Treat **Missing Inputs** as incomplete upstream analytics and **Variance** as source KPI movement math not explaining closing MRR.
+14. Generate the same waterfall period/scope again and confirm duplicate waterfall rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover ordered waterfall buckets, movement math, variance status, multi-plan aggregation, plan filtering, all-plan drilldowns, currency separation, missing summary/input statuses, rerun idempotency, wizard action output, and source drilldowns.
+
+Implementation note:
+
+- MRR waterfalls are generated from KPI summaries and remain source-currency operational analytics. They do not generate missing upstream analytics records, normalize currencies, or act as accounting revenue recognition.
+- **Missing Inputs** means at least one source KPI summary exists but upstream analytics are incomplete. **Variance** means opening MRR plus movement buckets does not match closing MRR using currency precision.

@@ -89,15 +89,28 @@
               sequence="36"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_mrr_waterfall"
+              name="MRR Waterfall"
+              parent="menu_subscription_reporting"
+              action="action_subscription_mrr_waterfall_report"
+              sequence="37"/>
+
+    <menuitem id="menu_generate_mrr_waterfall"
+              name="Generate MRR Waterfall"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_mrr_waterfall"
+              sequence="38"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"
               action="action_subscription_churn_report"
-              sequence="45"/>
+              sequence="55"/>
 
     <menuitem id="menu_salesperson_analysis"
               name="Salesperson Analysis"
               parent="menu_subscription_reporting"
               action="action_subscription_salesperson_report"
-              sequence="55"/>
+              sequence="65"/>
 </odoo>

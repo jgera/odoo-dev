@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_mrr_waterfall_list" model="ir.ui.view">
+        <field name="name">subscription.mrr.waterfall.list</field>
+        <field name="model">subscription.mrr.waterfall</field>
+        <field name="arch" type="xml">
+            <list string="MRR Waterfall" create="0" edit="0"
+                  decoration-success="status == 'ready'"
+                  decoration-info="status == 'variance'"
+                  decoration-warning="status == 'missing_inputs'"
+                  decoration-danger="status == 'missing_kpi_summary'">
+                <field name="bucket_sequence" optional="hide"/>
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="bucket_label"/>
+                <field name="bucket_type" widget="badge"/>
+                <field name="status" widget="badge"
+                       decoration-success="status == 'ready'"
+                       decoration-info="status == 'variance'"
+                       decoration-warning="status == 'missing_inputs'"
+                       decoration-danger="status == 'missing_kpi_summary'"/>
+                <field name="source_count"/>
+                <field name="starting_mrr" widget="monetary"/>
+                <field name="amount" widget="monetary" sum="Amount"/>
+                <field name="ending_mrr" widget="monetary"/>
+                <field name="variance_mrr" widget="monetary"/>
+                <field name="generated_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_waterfall_form" model="ir.ui.view">
+        <field name="name">subscription.mrr.waterfall.form</field>
+        <field name="model">subscription.mrr.waterfall</field>
+        <field name="arch" type="xml">
+            <form string="MRR Waterfall" create="0" edit="0">
+                <header>
+                    <button name="action_view_sources" type="object" string="Open Bucket Sources" class="btn-primary"/>
+                    <button name="action_view_kpi_summaries" type="object" string="KPI Summaries"/>
+                    <button name="action_view_snapshots" type="object" string="Snapshots"/>
+                    <button name="action_view_movements" type="object" string="Movements"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="bucket_label"/></h1>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="opening_date"/>
+                            <field name="closing_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="subscription_plan_id"/>
+                        </group>
+                        <group string="Bucket">
+                            <field name="bucket_sequence"/>
+                            <field name="bucket_type"/>
+                            <field name="status" widget="badge"
+                                   decoration-success="status == 'ready'"
+                                   decoration-info="status == 'variance'"
+                                   decoration-warning="status == 'missing_inputs'"
+                                   decoration-danger="status == 'missing_kpi_summary'"/>
+                            <field name="source_count"/>
+                            <field name="generated_at"/>
+                        </group>
+                    </group>
+                    <group string="Waterfall Values">
+                        <field name="starting_mrr" widget="monetary"/>
+                        <field name="amount" widget="monetary"/>
+                        <field name="ending_mrr" widget="monetary"/>
+                    </group>
+                    <group string="Reconciliation Check">
+                        <field name="expected_closing_mrr" widget="monetary"/>
+                        <field name="actual_closing_mrr" widget="monetary"/>
+                        <field name="variance_mrr" widget="monetary"/>
+                    </group>
+                    <group string="Technical">
+                        <field name="bucket_key"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_waterfall_graph" model="ir.ui.view">
+        <field name="name">subscription.mrr.waterfall.graph</field>
+        <field name="model">subscription.mrr.waterfall</field>
+        <field name="arch" type="xml">
+            <graph string="MRR Waterfall" type="bar" sample="1">
+                <field name="bucket_label"/>
+                <field name="amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_waterfall_search" model="ir.ui.view">
+        <field name="name">subscription.mrr.waterfall.search</field>
+        <field name="model">subscription.mrr.waterfall</field>
+        <field name="arch" type="xml">
+            <search string="MRR Waterfall">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="bucket_type"/>
+                <filter string="Ready" name="ready" domain="[('status', '=', 'ready')]"/>
+                <filter string="Variance" name="variance" domain="[('status', '=', 'variance')]"/>
+                <filter string="Missing Inputs" name="missing_inputs" domain="[('status', '=', 'missing_inputs')]"/>
+                <filter string="Missing KPI Summary" name="missing_kpi_summary" domain="[('status', '=', 'missing_kpi_summary')]"/>
+                <filter string="Positive Buckets" name="positive_buckets" domain="[('amount', '&gt;', 0)]"/>
+                <filter string="Negative Buckets" name="negative_buckets" domain="[('amount', '&lt;', 0)]"/>
+                <separator/>
+                <filter string="Opening" name="opening" domain="[('bucket_type', '=', 'opening')]"/>
+                <filter string="New" name="new" domain="[('bucket_type', '=', 'new')]"/>
+                <filter string="Expansion" name="expansion" domain="[('bucket_type', '=', 'expansion')]"/>
+                <filter string="Contraction" name="contraction" domain="[('bucket_type', '=', 'contraction')]"/>
+                <filter string="Churn" name="churn" domain="[('bucket_type', '=', 'churn')]"/>
+                <filter string="Closing" name="closing" domain="[('bucket_type', '=', 'closing')]"/>
+                <group>
+                    <filter string="Closing Date" name="group_closing_date" context="{'group_by': 'closing_date'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'currency_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                    <filter string="Bucket" name="group_bucket" context="{'group_by': 'bucket_type'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_waterfall_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.mrr.waterfall.generate.wizard.form</field>
+        <field name="model">subscription.mrr.waterfall.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate MRR Waterfall">
+                <group>
+                    <field name="opening_date"/>
+                    <field name="closing_date"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="currency_id"/>
+                    <field name="subscription_plan_id"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_mrr_waterfall_report" model="ir.actions.act_window">
+        <field name="name">MRR Waterfall</field>
+        <field name="res_model">subscription.mrr.waterfall</field>
+        <field name="view_mode">list,graph,form</field>
+        <field name="search_view_id" ref="view_subscription_mrr_waterfall_search"/>
+        <field name="context">{'search_default_group_closing_date': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate an MRR waterfall from existing KPI summaries.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_mrr_waterfall" model="ir.actions.act_window">
+        <field name="name">Generate MRR Waterfall</field>
+        <field name="res_model">subscription.mrr.waterfall.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
