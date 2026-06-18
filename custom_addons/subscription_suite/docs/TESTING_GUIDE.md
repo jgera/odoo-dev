@@ -1114,3 +1114,30 @@ Implementation note:
 
 - Payment recovery summaries are generated operational analytics. Source-specific rows are based on payment attempts for that source. Source-independent backlog signals such as open invoices, dunning escalation, and at-risk rows are shown on the `All Sources` bucket to avoid multiplying the same recovery workload across portal, cron, and manual rows.
 - `Recovery Amount` is operational workload, not recognized revenue. It includes pending/failed/cancelled/error attempt amounts plus unpaid or partial posted subscription invoice residuals that have no payment attempt in the selected period, so the same invoice is not counted once through an attempt and again as open backlog.
+
+## 43. Trial Conversion Analytics Demo
+
+Purpose: verify manager-facing trial conversion analytics from existing subscription trial fields.
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Create or select trial-origin subscriptions with `trial_start_date` in the selected period.
+3. Include examples for converted trials, expired trials, and still-active trials.
+4. Open **Subscriptions -> Reporting -> Generate Trial Conversion**.
+5. Choose opening date, closing date, company, and optionally a subscription plan.
+6. Click **Generate**.
+7. Confirm **Subscriptions -> Reporting -> Trial Conversion** shows plan-level rows plus all-plan rows when no plan is selected.
+8. Verify metrics: trials started, converted, expired, active trials, converted MRR, active trial MRR, conversion rate, expiry rate, and average trial length.
+9. Open a generated row and use **Started Trials**, **Converted Trials**, **Expired Trials**, and **Active Trials** to verify source drilldowns.
+10. Re-run the same scope and confirm duplicate rows are not created.
+11. Re-run one plan and confirm adjacent plan rows remain intact.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover trial start period filtering, converted/expired/active trial buckets, zero-safe rates, converted and active trial MRR, plan/currency separation, all-plan aggregation, plan-filtered drilldowns, idempotent reruns, scoped reruns, wizard action output, and manager-only generation.
+- The analytics smoke test includes trial conversion generation so the full generated analytics chain covers trial rows and idempotent reruns.
+
+Implementation note:
+
+- Trial conversion summaries are generated operational analytics. This slice does not add a conversion-date field; conversion is inferred from `subscription_start_date` for subscriptions that started as trials.

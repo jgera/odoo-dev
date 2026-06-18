@@ -90,5 +90,11 @@
             <field name="model_id" ref="model_subscription_payment_recovery_summary"/>
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
+
+        <record id="subscription_trial_conversion_summary_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Trial Conversion Summary Multi-Company</field>
+            <field name="model_id" ref="model_subscription_trial_conversion_summary"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
     </data>
 </odoo>

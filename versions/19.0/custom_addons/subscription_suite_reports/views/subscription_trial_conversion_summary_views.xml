@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_trial_conversion_summary_list" model="ir.ui.view">
+        <field name="name">subscription.trial.conversion.summary.list</field>
+        <field name="model">subscription.trial.conversion.summary</field>
+        <field name="arch" type="xml">
+            <list string="Trial Conversion" create="0" edit="0"
+                  decoration-success="conversion_rate &gt;= 50"
+                  decoration-warning="conversion_rate &lt; 50 and conversion_rate &gt; 0"
+                  decoration-danger="trials_expired_count &gt; 0 and trials_converted_count == 0">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="trials_started_count" sum="Trials Started"/>
+                <field name="trials_converted_count" sum="Converted"/>
+                <field name="trials_expired_count" sum="Expired"/>
+                <field name="active_trial_count" sum="Active Trials"/>
+                <field name="converted_mrr" widget="monetary" sum="Converted MRR"/>
+                <field name="active_trial_mrr" widget="monetary" sum="Active Trial MRR"/>
+                <field name="conversion_rate"/>
+                <field name="expiry_rate"/>
+                <field name="average_trial_length_days"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_trial_conversion_summary_form" model="ir.ui.view">
+        <field name="name">subscription.trial.conversion.summary.form</field>
+        <field name="model">subscription.trial.conversion.summary</field>
+        <field name="arch" type="xml">
+            <form string="Trial Conversion Summary" create="0" edit="0">
+                <header>
+                    <button name="action_view_started_trials" type="object" string="Started Trials" class="btn-primary"/>
+                    <button name="action_view_converted_trials" type="object" string="Converted Trials"/>
+                    <button name="action_view_expired_trials" type="object" string="Expired Trials"/>
+                    <button name="action_view_active_trials" type="object" string="Active Trials"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="subscription_plan_id" placeholder="All Plans"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="opening_date"/>
+                            <field name="closing_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="subscription_plan_id"/>
+                            <field name="status" widget="badge"/>
+                            <field name="generated_at"/>
+                            <field name="bucket_key"/>
+                        </group>
+                        <group string="Rates">
+                            <field name="conversion_rate"/>
+                            <field name="expiry_rate"/>
+                            <field name="average_trial_length_days"/>
+                        </group>
+                    </group>
+                    <group string="Trial Funnel">
+                        <field name="trials_started_count"/>
+                        <field name="trials_converted_count"/>
+                        <field name="trials_expired_count"/>
+                        <field name="active_trial_count"/>
+                    </group>
+                    <group string="MRR">
+                        <field name="converted_mrr" widget="monetary"/>
+                        <field name="active_trial_mrr" widget="monetary"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_trial_conversion_summary_pivot" model="ir.ui.view">
+        <field name="name">subscription.trial.conversion.summary.pivot</field>
+        <field name="model">subscription.trial.conversion.summary</field>
+        <field name="arch" type="xml">
+            <pivot string="Trial Conversion" sample="1">
+                <field name="subscription_plan_id" type="row"/>
+                <field name="currency_id" type="col"/>
+                <field name="trials_started_count" type="measure"/>
+                <field name="trials_converted_count" type="measure"/>
+                <field name="trials_expired_count" type="measure"/>
+                <field name="active_trial_count" type="measure"/>
+                <field name="converted_mrr" type="measure"/>
+                <field name="active_trial_mrr" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_subscription_trial_conversion_summary_graph" model="ir.ui.view">
+        <field name="name">subscription.trial.conversion.summary.graph</field>
+        <field name="model">subscription.trial.conversion.summary</field>
+        <field name="arch" type="xml">
+            <graph string="Trial Conversion" type="bar" sample="1">
+                <field name="subscription_plan_id"/>
+                <field name="trials_started_count" type="measure"/>
+                <field name="trials_converted_count" type="measure"/>
+                <field name="trials_expired_count" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_trial_conversion_summary_search" model="ir.ui.view">
+        <field name="name">subscription.trial.conversion.summary.search</field>
+        <field name="model">subscription.trial.conversion.summary</field>
+        <field name="arch" type="xml">
+            <search string="Trial Conversion">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <filter string="Converted Trials" name="converted" domain="[('trials_converted_count', '&gt;', 0)]"/>
+                <filter string="Expired Trials" name="expired" domain="[('trials_expired_count', '&gt;', 0)]"/>
+                <filter string="Active Trials" name="active_trials" domain="[('active_trial_count', '&gt;', 0)]"/>
+                <filter string="Weak Conversion" name="weak_conversion" domain="[('conversion_rate', '&lt;', 25)]"/>
+                <group>
+                    <filter string="Opening Date" name="group_opening_date" context="{'group_by': 'opening_date'}"/>
+                    <filter string="Closing Date" name="group_closing_date" context="{'group_by': 'closing_date'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'currency_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_trial_conversion_summary_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.trial.conversion.summary.generate.wizard.form</field>
+        <field name="model">subscription.trial.conversion.summary.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Trial Conversion">
+                <group>
+                    <field name="opening_date"/>
+                    <field name="closing_date"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="subscription_plan_id"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_trial_conversion_summary_report" model="ir.actions.act_window">
+        <field name="name">Trial Conversion</field>
+        <field name="res_model">subscription.trial.conversion.summary</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="search_view_id" ref="view_subscription_trial_conversion_summary_search"/>
+        <field name="context">{'search_default_group_plan': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate trial conversion summaries from trial subscriptions and inferred conversion dates.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_trial_conversion_summary" model="ir.actions.act_window">
+        <field name="name">Generate Trial Conversion</field>
+        <field name="res_model">subscription.trial.conversion.summary.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

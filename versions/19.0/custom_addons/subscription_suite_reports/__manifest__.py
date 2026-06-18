@@ -37,6 +37,7 @@ Provides analytics:
         'views/subscription_plan_performance_summary_views.xml',
         'views/subscription_at_risk_summary_views.xml',
         'views/subscription_payment_recovery_summary_views.xml',
+        'views/subscription_trial_conversion_summary_views.xml',
         'views/menu_views.xml',
     ],
     'installable': True,

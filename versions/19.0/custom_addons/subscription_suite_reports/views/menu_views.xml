@@ -206,6 +206,19 @@
               sequence="54"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_trial_conversion_summary"
+              name="Trial Conversion"
+              parent="menu_subscription_reporting"
+              action="action_subscription_trial_conversion_summary_report"
+              sequence="55"/>
+
+    <menuitem id="menu_generate_trial_conversion_summary"
+              name="Generate Trial Conversion"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_trial_conversion_summary"
+              sequence="56"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"

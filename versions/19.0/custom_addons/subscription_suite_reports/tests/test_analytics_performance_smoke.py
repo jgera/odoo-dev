@@ -67,6 +67,8 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         state='active',
         price=100.0,
         start_date=None,
+        trial_start_date=False,
+        trial_end_date=False,
         next_invoice_date=False,
         subscription_end_date=False,
         pending_cancellation=False,
@@ -85,6 +87,8 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
             'subscription_state': state,
             'subscription_plan_id': (plan or self.plan).id,
             'subscription_start_date': start_date or self.cohort_start_month,
+            'trial_start_date': trial_start_date,
+            'trial_end_date': trial_end_date,
             'next_invoice_date': next_invoice_date,
             'subscription_end_date': subscription_end_date,
             'pending_cancellation': pending_cancellation,
@@ -148,6 +152,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         ChurnReason = self.env['subscription.churn.reason.summary'].sudo()
         TopPlan = self.env['subscription.plan.performance.summary'].sudo()
         PaymentRecovery = self.env['subscription.payment.recovery.summary'].sudo()
+        TrialConversion = self.env['subscription.trial.conversion.summary'].sudo()
 
         Snapshot.generate_for_date(self.opening_date, company=self.company)
         Snapshot.generate_for_date(self.closing_date, company=self.company)
@@ -162,6 +167,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         ChurnReason.generate_for_period(self.opening_date, self.closing_date, company=self.company)
         TopPlan.generate_for_period(self.opening_date, self.closing_date, company=self.company)
         PaymentRecovery.generate_for_period(self.opening_date, self.closing_date, company=self.company)
+        TrialConversion.generate_for_period(self.opening_date, self.closing_date, company=self.company)
 
     def _count_rows(self, model_name, domain):
         return self.env[model_name].search_count(domain)
@@ -212,6 +218,21 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         self._create_payment_attempt(monthly, 'failed', 'portal', 100.0)
         self._create_payment_attempt(pro, 'pending', 'cron', 200.0)
         self._create_payment_attempt(alternate_currency, 'success', 'manual', 500.0)
+        self._create_subscription(
+            plan=self.plan,
+            state='trial',
+            price=40.0,
+            trial_start_date=self.opening_date + relativedelta(days=2),
+            trial_end_date=self.closing_date + relativedelta(days=10),
+        )
+        self._create_subscription(
+            plan=self.plan,
+            state='active',
+            price=45.0,
+            trial_start_date=self.opening_date + relativedelta(days=3),
+            trial_end_date=self.opening_date + relativedelta(days=17),
+            start_date=self.opening_date + relativedelta(days=12),
+        )
 
         self._generate_chain()
         counts_after_first_run = {
@@ -228,6 +249,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
                 'subscription.churn.reason.summary': [('company_id', '=', self.company.id)],
                 'subscription.plan.performance.summary': [('company_id', '=', self.company.id)],
                 'subscription.payment.recovery.summary': [('company_id', '=', self.company.id)],
+                'subscription.trial.conversion.summary': [('company_id', '=', self.company.id)],
             }.items()
         }
         self._generate_chain()
@@ -245,6 +267,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
                 'subscription.churn.reason.summary': [('company_id', '=', self.company.id)],
                 'subscription.plan.performance.summary': [('company_id', '=', self.company.id)],
                 'subscription.payment.recovery.summary': [('company_id', '=', self.company.id)],
+                'subscription.trial.conversion.summary': [('company_id', '=', self.company.id)],
             }.items()
         }
 
@@ -315,3 +338,11 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         self.assertIn('cron', recovery_sources)
         self.assertIn('manual', recovery_sources)
         self.assertIn('all', recovery_sources)
+
+        trial_conversion = self.env['subscription.trial.conversion.summary'].search([
+            ('company_id', '=', self.company.id),
+            ('currency_id', '=', self.currency.id),
+            ('subscription_plan_id', '=', self.plan.id),
+        ], limit=1)
+        self.assertTrue(trial_conversion)
+        self.assertGreater(trial_conversion.trials_started_count, 0)
