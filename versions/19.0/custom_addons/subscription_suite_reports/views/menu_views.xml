@@ -167,15 +167,28 @@
               sequence="48"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_plan_performance_summary"
+              name="Top Plans"
+              parent="menu_subscription_reporting"
+              action="action_subscription_plan_performance_summary_report"
+              sequence="49"/>
+
+    <menuitem id="menu_generate_plan_performance_summary"
+              name="Generate Top Plans"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_plan_performance_summary"
+              sequence="50"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"
               action="action_subscription_churn_report"
-              sequence="55"/>
+              sequence="60"/>
 
     <menuitem id="menu_salesperson_analysis"
               name="Salesperson Analysis"
               parent="menu_subscription_reporting"
               action="action_subscription_salesperson_report"
-              sequence="65"/>
+              sequence="70"/>
 </odoo>

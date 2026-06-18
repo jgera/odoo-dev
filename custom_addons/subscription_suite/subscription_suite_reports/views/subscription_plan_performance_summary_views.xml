@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_plan_performance_summary_list" model="ir.ui.view">
+        <field name="name">subscription.plan.performance.summary.list</field>
+        <field name="model">subscription.plan.performance.summary</field>
+        <field name="arch" type="xml">
+            <list string="Top Plans" create="0" edit="0"
+                  decoration-success="status == 'ready'"
+                  decoration-warning="status != 'ready'">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="status"/>
+                <field name="closing_mrr" widget="monetary" sum="Closing MRR"/>
+                <field name="arr" widget="monetary" sum="ARR"/>
+                <field name="net_new_mrr" widget="monetary" sum="Net New MRR"/>
+                <field name="arpu" widget="monetary" avg="Average ARPU"/>
+                <field name="ltv" widget="monetary" avg="Average LTV"/>
+                <field name="subscription_count" sum="Subscriptions"/>
+                <field name="churned_subscription_count" sum="Churned Subscriptions"/>
+                <field name="churned_mrr" widget="monetary" sum="Churned MRR"/>
+                <field name="feedback_coverage" avg="Feedback Coverage"/>
+                <field name="upcoming_invoice_mrr" widget="monetary" sum="Upcoming Invoice MRR"/>
+                <field name="scheduled_churn_mrr" widget="monetary" sum="Scheduled Churn MRR"/>
+                <field name="net_forecast_mrr" widget="monetary" sum="Net Forecast MRR"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_plan_performance_summary_form" model="ir.ui.view">
+        <field name="name">subscription.plan.performance.summary.form</field>
+        <field name="model">subscription.plan.performance.summary</field>
+        <field name="arch" type="xml">
+            <form string="Top Plan Summary" create="0" edit="0">
+                <header>
+                    <button name="action_view_source_subscriptions" type="object" string="Subscriptions" class="btn-primary"/>
+                    <button name="action_view_snapshots" type="object" string="Snapshots"/>
+                    <button name="action_view_kpi_summaries" type="object" string="KPI"/>
+                    <button name="action_view_arpu_summaries" type="object" string="ARPU"/>
+                    <button name="action_view_ltv_summaries" type="object" string="LTV"/>
+                    <button name="action_view_churn_reason_summaries" type="object" string="Churn Reasons"/>
+                    <button name="action_view_forecasts" type="object" string="Forecast"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="subscription_plan_id"/></h1>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="opening_date"/>
+                            <field name="closing_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="generated_at"/>
+                        </group>
+                        <group string="Status">
+                            <field name="status" widget="badge"
+                                   decoration-success="status == 'ready'"
+                                   decoration-warning="status != 'ready'"/>
+                            <field name="bucket_key"/>
+                        </group>
+                    </group>
+                    <group string="Plan Performance">
+                        <field name="opening_mrr" widget="monetary"/>
+                        <field name="closing_mrr" widget="monetary"/>
+                        <field name="arr" widget="monetary"/>
+                        <field name="net_new_mrr" widget="monetary"/>
+                        <field name="arpu" widget="monetary"/>
+                        <field name="ltv" widget="monetary"/>
+                    </group>
+                    <group string="Subscription Mix">
+                        <field name="subscription_count"/>
+                        <field name="trial_count"/>
+                        <field name="active_count"/>
+                        <field name="paused_count"/>
+                        <field name="past_due_count"/>
+                        <field name="cancelled_count"/>
+                        <field name="expired_count"/>
+                    </group>
+                    <group string="Churn And Forecast">
+                        <field name="churned_subscription_count"/>
+                        <field name="churned_mrr" widget="monetary"/>
+                        <field name="feedback_coverage"/>
+                        <field name="upcoming_invoice_mrr" widget="monetary"/>
+                        <field name="scheduled_churn_mrr" widget="monetary"/>
+                        <field name="net_forecast_mrr" widget="monetary"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_plan_performance_summary_pivot" model="ir.ui.view">
+        <field name="name">subscription.plan.performance.summary.pivot</field>
+        <field name="model">subscription.plan.performance.summary</field>
+        <field name="arch" type="xml">
+            <pivot string="Top Plans" sample="1">
+                <field name="subscription_plan_id" type="row"/>
+                <field name="currency_id" type="col"/>
+                <field name="closing_mrr" type="measure"/>
+                <field name="net_new_mrr" type="measure"/>
+                <field name="arpu" type="measure"/>
+                <field name="ltv" type="measure"/>
+                <field name="churned_mrr" type="measure"/>
+                <field name="net_forecast_mrr" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_subscription_plan_performance_summary_graph" model="ir.ui.view">
+        <field name="name">subscription.plan.performance.summary.graph</field>
+        <field name="model">subscription.plan.performance.summary</field>
+        <field name="arch" type="xml">
+            <graph string="Top Plans" type="bar" sample="1">
+                <field name="subscription_plan_id"/>
+                <field name="closing_mrr" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_plan_performance_summary_search" model="ir.ui.view">
+        <field name="name">subscription.plan.performance.summary.search</field>
+        <field name="model">subscription.plan.performance.summary</field>
+        <field name="arch" type="xml">
+            <search string="Top Plans">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="status"/>
+                <filter string="Ready" name="ready" domain="[('status', '=', 'ready')]"/>
+                <filter string="Missing Inputs" name="missing_inputs" domain="[('status', '!=', 'ready')]"/>
+                <filter string="Positive Net New" name="positive_net_new" domain="[('net_new_mrr', '&gt;', 0)]"/>
+                <filter string="Negative Net New" name="negative_net_new" domain="[('net_new_mrr', '&lt;', 0)]"/>
+                <filter string="Churned Plans" name="churned_plans" domain="[('churned_subscription_count', '&gt;', 0)]"/>
+                <filter string="Scheduled Churn" name="scheduled_churn" domain="[('scheduled_churn_mrr', '&gt;', 0)]"/>
+                <filter string="High Feedback Coverage" name="high_feedback_coverage" domain="[('feedback_coverage', '&gt;=', 80)]"/>
+                <group>
+                    <filter string="Closing Date" name="group_closing_date" context="{'group_by': 'closing_date'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'currency_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_plan_performance_summary_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.plan.performance.summary.generate.wizard.form</field>
+        <field name="model">subscription.plan.performance.summary.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Top Plans">
+                <group>
+                    <field name="opening_date"/>
+                    <field name="closing_date"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="subscription_plan_id"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_plan_performance_summary_report" model="ir.actions.act_window">
+        <field name="name">Top Plans</field>
+        <field name="res_model">subscription.plan.performance.summary</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="search_view_id" ref="view_subscription_plan_performance_summary_search"/>
+        <field name="context">{'search_default_group_plan': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate top plan summaries from existing subscription analytics records.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_plan_performance_summary" model="ir.actions.act_window">
+        <field name="name">Generate Top Plans</field>
+        <field name="res_model">subscription.plan.performance.summary.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

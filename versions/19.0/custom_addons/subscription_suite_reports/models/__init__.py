@@ -21,3 +21,5 @@ from . import subscription_ltv_summary
 from . import subscription_ltv_summary_wizard
 from . import subscription_churn_reason_summary
 from . import subscription_churn_reason_summary_wizard
+from . import subscription_plan_performance_summary
+from . import subscription_plan_performance_summary_wizard

@@ -11,3 +11,4 @@ from . import test_generated_analytics_lifecycle
 from . import test_arpu_summary
 from . import test_ltv_summary
 from . import test_churn_reason_summary
+from . import test_plan_performance_summary

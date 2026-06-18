@@ -120,6 +120,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         Cohort = self.env['subscription.retention.cohort'].sudo()
         Forecast = self.env['subscription.revenue.forecast'].sudo()
         ChurnReason = self.env['subscription.churn.reason.summary'].sudo()
+        TopPlan = self.env['subscription.plan.performance.summary'].sudo()
 
         Snapshot.generate_for_date(self.opening_date, company=self.company)
         Snapshot.generate_for_date(self.closing_date, company=self.company)
@@ -132,6 +133,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         Cohort.generate_for_period(self.cohort_start_month, self.forecast_end_month, company=self.company)
         Forecast.generate_for_period(self.forecast_start_month, self.forecast_end_month, company=self.company)
         ChurnReason.generate_for_period(self.opening_date, self.closing_date, company=self.company)
+        TopPlan.generate_for_period(self.opening_date, self.closing_date, company=self.company)
 
     def _count_rows(self, model_name, domain):
         return self.env[model_name].search_count(domain)
@@ -193,6 +195,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
                 'subscription.retention.cohort': [('company_id', '=', self.company.id)],
                 'subscription.revenue.forecast': [('company_id', '=', self.company.id)],
                 'subscription.churn.reason.summary': [('company_id', '=', self.company.id)],
+                'subscription.plan.performance.summary': [('company_id', '=', self.company.id)],
             }.items()
         }
         self._generate_chain()
@@ -208,6 +211,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
                 'subscription.retention.cohort': [('company_id', '=', self.company.id)],
                 'subscription.revenue.forecast': [('company_id', '=', self.company.id)],
                 'subscription.churn.reason.summary': [('company_id', '=', self.company.id)],
+                'subscription.plan.performance.summary': [('company_id', '=', self.company.id)],
             }.items()
         }
 
@@ -262,3 +266,11 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         self.assertIn(('subscription_plan_id', '!=', False), churn_action['domain'])
         self.assertNotIn(no_plan, churn_sources)
         self.assertIn(churned_with_reason, churn_sources)
+
+        top_plan = self.env['subscription.plan.performance.summary'].search([
+            ('company_id', '=', self.company.id),
+            ('currency_id', '=', self.currency.id),
+            ('subscription_plan_id', '=', self.plan.id),
+        ], limit=1)
+        self.assertTrue(top_plan)
+        self.assertEqual(top_plan.subscription_plan_id, self.plan)

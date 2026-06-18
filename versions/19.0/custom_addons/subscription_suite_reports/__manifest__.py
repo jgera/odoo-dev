@@ -34,6 +34,7 @@ Provides analytics:
         'views/subscription_arpu_summary_views.xml',
         'views/subscription_ltv_summary_views.xml',
         'views/subscription_churn_reason_summary_views.xml',
+        'views/subscription_plan_performance_summary_views.xml',
         'views/menu_views.xml',
     ],
     'installable': True,

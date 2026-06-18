@@ -1011,3 +1011,38 @@ Automated coverage:
 Implementation note:
 
 - Churn reason summaries are generated from existing subscription cancellation fields and cancellation requests. They remain source-currency operational analytics and do not classify free-text feedback with AI, create retention offers, score churn risk, normalize currencies, or act as accounting revenue recognition.
+
+## 40. Top Plan Performance Demo
+
+Metric definition:
+
+- Top plan summaries rank subscription plans by generated operational analytics in a selected period.
+- Source records are `subscription.mrr.snapshot`, `subscription.mrr.kpi.summary`, `subscription.arpu.summary`, `subscription.ltv.summary`, `subscription.churn.reason.summary`, and `subscription.revenue.forecast`.
+- Rows are plan-specific and currency-separated. This slice intentionally does not create all-plan aggregate rows.
+- Missing upstream records produce a missing-input status while preserving available metrics.
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Generate opening and closing MRR snapshots.
+3. Generate MRR reconciliation and MRR KPI summaries for the same period.
+4. Generate ARPU summaries for the same period.
+5. Generate retention cohorts and LTV summaries for the same closing month and period.
+6. Generate revenue forecasts for the period months.
+7. Generate churn reason summaries for the same period.
+8. Open **Subscriptions -> Reporting -> Generate Top Plans**.
+9. Choose opening date, closing date, company, and optionally a subscription plan.
+10. Click **Generate**.
+11. Confirm **Subscriptions -> Reporting -> Top Plans** ranks plan rows by closing MRR and net new MRR.
+12. Verify opening MRR, closing MRR, ARR, net new MRR, state counts, ARPU, LTV, churned MRR, feedback coverage, upcoming invoice MRR, scheduled churn MRR, and net forecast MRR.
+13. Use **Subscriptions**, **Snapshots**, **KPI**, **ARPU**, **LTV**, **Churn Reasons**, and **Forecast** buttons from the top plan form to verify source records.
+14. Re-run the same scope and confirm duplicate top-plan rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover top-plan metric aggregation, multi-currency separation, plan-filtered rows and drilldowns, missing-input statuses with partial metrics preserved, idempotent reruns, scoped reruns, wizard action output, and manager-only generation.
+- The analytics smoke test includes top-plan generation and verifies top-plan rows are generated as part of the full analytics chain.
+
+Implementation note:
+
+- Top plan summaries are generated from existing analytics rows. They remain source-currency operational analytics and do not provide AI insights, pricing recommendations, predictive scoring, normalized multi-currency values, or accounting revenue recognition.
