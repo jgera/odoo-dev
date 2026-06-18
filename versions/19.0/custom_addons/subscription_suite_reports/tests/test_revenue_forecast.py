@@ -110,6 +110,21 @@ class TestSubscriptionRevenueForecast(TransactionCase):
         self.assertAlmostEqual(first.active_base_mrr, 100.0, places=2)
         self.assertAlmostEqual(first.net_forecast_mrr, 200.0, places=2)
 
+    def test_active_base_includes_subscriptions_without_trigger_dates(self):
+        subscription = self._create_subscription(price=175.0)
+
+        rows = self._generate(plan=self.plan)
+        row = self._row(rows)
+        source_subscriptions = self.env['sale.order'].search(row.action_view_source_subscriptions()['domain'])
+
+        self.assertIn(subscription, source_subscriptions)
+        self.assertEqual(row.source_count, 1)
+        self.assertAlmostEqual(row.active_base_mrr, 175.0, places=2)
+        self.assertEqual(row.upcoming_invoice_count, 0)
+        self.assertEqual(row.renewal_due_count, 0)
+        self.assertEqual(row.scheduled_churn_count, 0)
+        self.assertAlmostEqual(row.net_forecast_mrr, 175.0, places=2)
+
     def test_upcoming_invoices_count_only_dates_inside_month(self):
         self._create_subscription(next_invoice_date=self._date_in_month(self.forecast_month), price=100.0)
         self._create_subscription(next_invoice_date=self._date_in_month(self.next_month), price=50.0)
@@ -209,6 +224,38 @@ class TestSubscriptionRevenueForecast(TransactionCase):
         self.assertNotIn(('subscription_plan_id', '=', self.plan.id), action['domain'])
         self.assertIn(('subscription_plan_id', '!=', False), action['domain'])
         self.assertNotIn(no_plan, source_subscriptions)
+
+    def test_source_drilldown_matches_forecast_source_scope(self):
+        active = self._create_subscription(price=100.0)
+        upcoming = self._create_subscription(next_invoice_date=self._date_in_month(self.forecast_month), price=75.0)
+        renewal = self._create_subscription(subscription_end_date=self._date_in_month(self.forecast_month), price=50.0)
+        churn = self._create_subscription(
+            pending_cancellation=True,
+            cancellation_effective_date=self._date_in_month(self.forecast_month),
+            price=25.0,
+        )
+        cancelled = self._create_subscription(
+            state='cancelled',
+            next_invoice_date=self._date_in_month(self.forecast_month),
+            subscription_end_date=self._date_in_month(self.forecast_month),
+            price=30.0,
+        )
+        other_month = self._create_subscription(
+            state='cancelled',
+            next_invoice_date=self._date_in_month(self.next_month),
+            subscription_end_date=self._date_in_month(self.next_month),
+            price=40.0,
+        )
+
+        rows = self._generate(plan=self.plan)
+        source_subscriptions = self.env['sale.order'].search(self._row(rows).action_view_source_subscriptions()['domain'])
+
+        self.assertIn(active, source_subscriptions)
+        self.assertIn(upcoming, source_subscriptions)
+        self.assertIn(renewal, source_subscriptions)
+        self.assertIn(churn, source_subscriptions)
+        self.assertNotIn(cancelled, source_subscriptions)
+        self.assertNotIn(other_month, source_subscriptions)
 
     def test_rerun_is_idempotent(self):
         self._create_subscription(next_invoice_date=self._date_in_month(self.forecast_month))

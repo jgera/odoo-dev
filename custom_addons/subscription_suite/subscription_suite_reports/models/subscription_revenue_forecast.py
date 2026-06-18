@@ -78,11 +78,19 @@ class SubscriptionRevenueForecast(models.Model):
             ('subscription_state', 'not in', ['draft']),
             '|',
             '|',
-            ('next_invoice_date', '!=', False),
-            ('subscription_end_date', '!=', False),
+            '|',
+            ('subscription_state', 'in', list(self._forecast_states())),
+            '&',
+            ('next_invoice_date', '>=', start_month),
+            ('next_invoice_date', '<=', self._month_end(end_month)),
+            '&',
+            ('subscription_end_date', '>=', start_month),
+            ('subscription_end_date', '<=', self._month_end(end_month)),
             '&',
             ('pending_cancellation', '=', True),
-            ('cancellation_effective_date', '!=', False),
+            '&',
+            ('cancellation_effective_date', '>=', start_month),
+            ('cancellation_effective_date', '<=', self._month_end(end_month)),
         ]
         if company:
             domain.append(('company_id', '=', company.id))
@@ -222,6 +230,31 @@ class SubscriptionRevenueForecast(models.Model):
             domain.append(('subscription_plan_id', '=', self.subscription_plan_id.id))
         return domain
 
+    def _source_subscription_domain(self):
+        self.ensure_one()
+        month_end = self._month_end(self.forecast_month)
+        return self._base_subscription_domain() + [
+            '|',
+            '|',
+            '|',
+            ('subscription_state', 'in', list(self._forecast_states())),
+            '&',
+            '&',
+            ('subscription_state', 'in', list(self._forecast_states())),
+            ('next_invoice_date', '>=', self.forecast_month),
+            ('next_invoice_date', '<=', month_end),
+            '&',
+            '&',
+            ('subscription_state', 'not in', ['cancelled', 'expired']),
+            ('subscription_end_date', '>=', self.forecast_month),
+            ('subscription_end_date', '<=', month_end),
+            '&',
+            '&',
+            ('pending_cancellation', '=', True),
+            ('cancellation_effective_date', '>=', self.forecast_month),
+            ('cancellation_effective_date', '<=', month_end),
+        ]
+
     def action_view_source_subscriptions(self):
         self.ensure_one()
         return {
@@ -229,7 +262,7 @@ class SubscriptionRevenueForecast(models.Model):
             'type': 'ir.actions.act_window',
             'res_model': 'sale.order',
             'view_mode': 'list,form',
-            'domain': self._base_subscription_domain(),
+            'domain': self._source_subscription_domain(),
         }
 
     def action_view_upcoming_invoices(self):

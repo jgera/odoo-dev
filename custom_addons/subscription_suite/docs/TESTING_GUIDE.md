@@ -853,15 +853,16 @@ Walkthrough:
 3. Choose the forecast start month, forecast end month, company, and optionally a subscription plan.
 4. Click **Generate**.
 5. Confirm **Subscriptions -> Reporting -> Revenue Forecast** shows rows by forecast month, company, currency, and plan.
-6. Confirm active base MRR, upcoming invoice MRR, renewal due MRR, scheduled churn MRR, and net forecast MRR are visible.
-7. Generate without a plan and confirm all-plan rows aggregate plan-level rows for the selected company/currency.
-8. Generate with a plan and confirm rows and drilldowns are limited to that plan.
-9. Use **Upcoming Invoices**, **Renewals Due**, **Scheduled Churn**, and **Sources** to verify source subscription records.
-10. Generate the same forecast range again and confirm duplicate forecast rows are not created.
+6. Confirm active base MRR includes active/trial/paused/past-due subscriptions even when they have no forecast trigger date in the selected month.
+7. Confirm upcoming invoice MRR, renewal due MRR, scheduled churn MRR, and net forecast MRR are visible.
+8. Generate without a plan and confirm all-plan rows aggregate plan-level rows for the selected company/currency.
+9. Generate with a plan and confirm rows and drilldowns are limited to that plan.
+10. Use **Upcoming Invoices**, **Renewals Due**, **Scheduled Churn**, and **Sources** to verify source subscription records. The **Sources** action should include active-base subscriptions and the month-specific forecast triggers, but should not open an unrelated broad subscription list.
+11. Generate the same forecast range again and confirm duplicate forecast rows are not created.
 
 Automated coverage:
 
-- `subscription_suite_reports` tests cover monthly forecast generation, upcoming invoice date buckets, renewal due buckets, scheduled cancellation buckets, cancelled/expired exclusions, plan/currency separation, plan-filtered and all-plan drilldowns, idempotent reruns, invalid month ranges, and wizard action output.
+- `subscription_suite_reports` tests cover monthly forecast generation, active-base subscriptions without trigger dates, upcoming invoice date buckets, renewal due buckets, scheduled cancellation buckets, source-drilldown scope, cancelled/expired exclusions, plan/currency separation, plan-filtered and all-plan drilldowns, idempotent reruns, invalid month ranges, and wizard action output.
 
 Implementation note:
 
