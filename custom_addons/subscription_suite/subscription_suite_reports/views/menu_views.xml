@@ -102,6 +102,19 @@
               sequence="38"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_retention_cohort"
+              name="Retention Cohorts"
+              parent="menu_subscription_reporting"
+              action="action_subscription_retention_cohort_report"
+              sequence="39"/>
+
+    <menuitem id="menu_generate_retention_cohort"
+              name="Generate Retention Cohorts"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_retention_cohort"
+              sequence="40"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"

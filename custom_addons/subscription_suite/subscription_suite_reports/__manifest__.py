@@ -29,6 +29,7 @@ Provides analytics:
         'views/subscription_mrr_kpi_summary_views.xml',
         'views/subscription_mrr_kpi_dashboard_views.xml',
         'views/subscription_mrr_waterfall_views.xml',
+        'views/subscription_retention_cohort_views.xml',
         'views/menu_views.xml',
     ],
     'installable': True,

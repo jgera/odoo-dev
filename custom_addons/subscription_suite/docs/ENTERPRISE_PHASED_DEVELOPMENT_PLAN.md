@@ -773,7 +773,7 @@ For every phase, update or create:
 - MRR movement model exists for new, expansion, contraction, churn.
 - Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** MRR Waterfall Foundation. This turns generated KPI summaries into ordered opening, movement, and closing MRR waterfall rows. Cohorts, normalized company-currency analytics, forecasting, LTV, ARPU, custom Owl widgets, and executive board packs remain deferred.
+**Current slice:** Retention Cohort Foundation. This turns subscription start and cancellation dates into generated monthly retention rows by company, currency, plan, cohort month, and cohort age. Normalized company-currency analytics, forecasting, LTV, ARPU, custom Owl widgets, and executive board packs remain deferred.
 
 **Build items:**
 
@@ -800,7 +800,8 @@ For every phase, update or create:
    - `subscription.mrr.movement.anomaly` - foundation done for movement-only and missing-plan analytics audit buckets.
    - `subscription.mrr.kpi.summary` - foundation done for generated period-level MRR KPI metrics.
    - `subscription.mrr.kpi.dashboard` - foundation done for generated dashboard records from KPI summaries.
-   - `subscription.mrr.waterfall` - current slice for generated MRR waterfall buckets.
+   - `subscription.mrr.waterfall` - foundation done for generated MRR waterfall buckets.
+   - `subscription.retention.cohort` - current slice for generated monthly retention cohorts.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
@@ -808,8 +809,8 @@ For every phase, update or create:
    - Backend dashboard action - foundation done.
    - KPI cards - foundation done.
    - Source drilldowns to KPI summaries, snapshots, reconciliations, anomalies, and movements - foundation done.
-   - MRR waterfall - current slice.
-   - Retention cohort.
+   - MRR waterfall - foundation done.
+   - Retention cohort - current slice.
    - Churn reasons.
    - Top plans.
    - At-risk subscriptions.
@@ -829,6 +830,7 @@ For every phase, update or create:
 - Generate MRR KPI summaries from snapshots, reconciliation rows, and MRR movements; static KPI summary demo XML is intentionally avoided so rows reflect the selected period.
 - Generate MRR KPI dashboards from KPI summaries; static dashboard demo XML is intentionally avoided so dashboard values reflect the selected period, company, currency, and optional plan.
 - Generate MRR waterfalls from KPI summaries; static waterfall demo XML is intentionally avoided so rows reflect the selected period, company, currency, and optional plan.
+- Generate retention cohorts from existing subscription start and cancellation dates; static cohort XML is intentionally avoided so rows reflect the selected cohort range.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -857,6 +859,8 @@ For every phase, update or create:
 - Managers can generate waterfall rows for one company/currency/period and optional plan without duplicates.
 - Waterfall rows show ordered opening, new, expansion, contraction, churned, and closing MRR buckets with source drilldowns.
 - Waterfall rows expose expected closing MRR, actual closing MRR, and variance so managers can spot source KPI math mismatches.
+- Managers can generate retention cohort rows for monthly cohort ranges without duplicates.
+- Retention cohort rows show starting, retained, and churned subscription/MRR buckets by cohort age and source drilldowns.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
 - Filters by company, plan, salesperson, country, and period work.
@@ -870,7 +874,7 @@ For every phase, update or create:
 - MRR KPI summary formulas for Net New MRR, NRR, GRR, missing inputs, missing reconciliation fallback, drilldowns, plan grouping, and idempotent reruns.
 - MRR KPI dashboard generation, multi-plan aggregation, currency separation, missing summary/input status, source drilldowns, and idempotent reruns.
 - MRR waterfall generation, ordered bucket math, variance status, multi-plan aggregation, all-plan drilldowns, currency separation, missing summary/input status, source drilldowns, and idempotent reruns.
-- Cohort retention tests.
+- Retention cohort generation, churn timing, trial-start fallback, plan/currency separation, all-plan drilldowns, and idempotent reruns.
 - Performance smoke test with generated records.
 
 **Continuous validation:**

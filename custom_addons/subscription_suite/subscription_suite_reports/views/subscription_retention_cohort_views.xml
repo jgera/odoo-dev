@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_retention_cohort_list" model="ir.ui.view">
+        <field name="name">subscription.retention.cohort.list</field>
+        <field name="model">subscription.retention.cohort</field>
+        <field name="arch" type="xml">
+            <list string="Retention Cohorts" create="0" edit="0"
+                  decoration-success="retention_rate &gt;= 80"
+                  decoration-warning="retention_rate &lt; 80 and retention_rate &gt;= 50"
+                  decoration-danger="retention_rate &lt; 50">
+                <field name="cohort_month"/>
+                <field name="period_month"/>
+                <field name="cohort_age_months"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="starting_subscription_count" sum="Starting"/>
+                <field name="retained_subscription_count" sum="Retained"/>
+                <field name="churned_subscription_count" sum="Churned"/>
+                <field name="retention_rate"/>
+                <field name="churn_rate"/>
+                <field name="starting_mrr" widget="monetary" sum="Starting MRR"/>
+                <field name="retained_mrr" widget="monetary" sum="Retained MRR"/>
+                <field name="churned_mrr" widget="monetary" sum="Churned MRR"/>
+                <field name="generated_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_retention_cohort_form" model="ir.ui.view">
+        <field name="name">subscription.retention.cohort.form</field>
+        <field name="model">subscription.retention.cohort</field>
+        <field name="arch" type="xml">
+            <form string="Retention Cohort" create="0" edit="0">
+                <header>
+                    <button name="action_view_subscriptions" type="object" string="Open Source Subscriptions" class="btn-primary"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="cohort_month"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="cohort_month"/>
+                            <field name="period_month"/>
+                            <field name="cohort_age_months"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="subscription_plan_id"/>
+                        </group>
+                        <group string="Status">
+                            <field name="status" widget="badge" decoration-success="status == 'ready'"/>
+                            <field name="generated_at"/>
+                        </group>
+                    </group>
+                    <group string="Subscription Retention">
+                        <field name="starting_subscription_count"/>
+                        <field name="retained_subscription_count"/>
+                        <field name="churned_subscription_count"/>
+                        <field name="retention_rate"/>
+                        <field name="churn_rate"/>
+                    </group>
+                    <group string="MRR Retention">
+                        <field name="starting_mrr" widget="monetary"/>
+                        <field name="retained_mrr" widget="monetary"/>
+                        <field name="churned_mrr" widget="monetary"/>
+                    </group>
+                    <group string="Technical">
+                        <field name="bucket_key"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_retention_cohort_pivot" model="ir.ui.view">
+        <field name="name">subscription.retention.cohort.pivot</field>
+        <field name="model">subscription.retention.cohort</field>
+        <field name="arch" type="xml">
+            <pivot string="Retention Cohorts" sample="1">
+                <field name="cohort_month" type="row"/>
+                <field name="cohort_age_months" type="col"/>
+                <field name="retention_rate" type="measure"/>
+                <field name="retained_subscription_count" type="measure"/>
+                <field name="churned_subscription_count" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_subscription_retention_cohort_graph" model="ir.ui.view">
+        <field name="name">subscription.retention.cohort.graph</field>
+        <field name="model">subscription.retention.cohort</field>
+        <field name="arch" type="xml">
+            <graph string="Retention Cohorts" type="line" sample="1">
+                <field name="cohort_age_months"/>
+                <field name="retention_rate" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_retention_cohort_search" model="ir.ui.view">
+        <field name="name">subscription.retention.cohort.search</field>
+        <field name="model">subscription.retention.cohort</field>
+        <field name="arch" type="xml">
+            <search string="Retention Cohorts">
+                <field name="cohort_month"/>
+                <field name="period_month"/>
+                <field name="cohort_age_months"/>
+                <field name="company_id"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <filter string="Retained" name="retained" domain="[('retained_subscription_count', '&gt;', 0)]"/>
+                <filter string="Churned" name="churned" domain="[('churned_subscription_count', '&gt;', 0)]"/>
+                <filter string="Weak Retention" name="weak_retention" domain="[('retention_rate', '&lt;', 80)]"/>
+                <separator/>
+                <group>
+                    <filter string="Cohort Month" name="group_cohort_month" context="{'group_by': 'cohort_month'}"/>
+                    <filter string="Period Month" name="group_period_month" context="{'group_by': 'period_month'}"/>
+                    <filter string="Age" name="group_age" context="{'group_by': 'cohort_age_months'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'currency_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_retention_cohort_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.retention.cohort.generate.wizard.form</field>
+        <field name="model">subscription.retention.cohort.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Retention Cohorts">
+                <group>
+                    <field name="cohort_start_month"/>
+                    <field name="cohort_end_month"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="subscription_plan_id"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_retention_cohort_report" model="ir.actions.act_window">
+        <field name="name">Retention Cohorts</field>
+        <field name="res_model">subscription.retention.cohort</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="search_view_id" ref="view_subscription_retention_cohort_search"/>
+        <field name="context">{'search_default_group_cohort_month': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate retention cohorts from subscription start and cancellation dates.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_retention_cohort" model="ir.actions.act_window">
+        <field name="name">Generate Retention Cohorts</field>
+        <field name="res_model">subscription.retention.cohort.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

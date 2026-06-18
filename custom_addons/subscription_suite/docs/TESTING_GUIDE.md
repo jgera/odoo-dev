@@ -819,3 +819,27 @@ Implementation note:
 
 - MRR waterfalls are generated from KPI summaries and remain source-currency operational analytics. They do not generate missing upstream analytics records, normalize currencies, or act as accounting revenue recognition.
 - **Missing Inputs** means at least one source KPI summary exists but upstream analytics are incomplete. **Variance** means opening MRR plus movement buckets does not match closing MRR using currency precision.
+
+## 33. Retention Cohort Demo
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Open **Subscriptions -> Reporting -> Generate Retention Cohorts**.
+3. Choose the cohort start month, cohort end month, company, and optionally a subscription plan.
+4. Click **Generate**.
+5. Confirm **Subscriptions -> Reporting -> Retention Cohorts** shows rows by cohort month, period month, and cohort age.
+6. Confirm starting, retained, and churned subscription counts match the source subscriptions for the cohort month.
+7. Confirm starting MRR, retained MRR, churned MRR, retention rate, and churn rate are visible.
+8. Generate without a plan and confirm all-plan rows omit plan filters in source drilldowns while plan-specific rows remain available.
+9. Generate with a plan and confirm rows and drilldowns are limited to that plan.
+10. Use **Open Source Subscriptions** to verify the source subscriptions for a cohort row.
+11. Generate the same cohort range again and confirm duplicate cohort rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover monthly cohort generation, active retention, cancellation-month churn, cancelled subscriptions without cancellation dates, trial-start fallback, plan/currency separation, plan-filtered and all-plan drilldowns, idempotent reruns, invalid month ranges, and wizard action output.
+
+Implementation note:
+
+- Retention cohorts are generated from current subscription records plus start and cancellation dates. They remain source-currency operational analytics, do not reconstruct full historical plan/customer state, and do not calculate LTV or forecasting.

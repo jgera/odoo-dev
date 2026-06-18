@@ -4,3 +4,4 @@ from . import test_mrr_movement_anomaly
 from . import test_mrr_kpi_summary
 from . import test_mrr_kpi_dashboard
 from . import test_mrr_waterfall
+from . import test_retention_cohort

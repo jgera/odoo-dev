@@ -11,3 +11,5 @@ from . import subscription_mrr_kpi_dashboard
 from . import subscription_mrr_kpi_dashboard_wizard
 from . import subscription_mrr_waterfall
 from . import subscription_mrr_waterfall_wizard
+from . import subscription_retention_cohort
+from . import subscription_retention_cohort_wizard
