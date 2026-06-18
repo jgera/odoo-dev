@@ -16,7 +16,7 @@ Provides analytics:
     'author': 'Subscription Suite Contributors',
     'website': 'https://github.com/subscription-suite',
     'license': 'LGPL-3',
-    'depends': ['subscription_suite'],
+    'depends': ['subscription_suite', 'subscription_suite_billing', 'subscription_suite_dunning'],
     'data': [
         'security/report_security.xml',
         'security/ir.model.access.csv',
@@ -35,6 +35,7 @@ Provides analytics:
         'views/subscription_ltv_summary_views.xml',
         'views/subscription_churn_reason_summary_views.xml',
         'views/subscription_plan_performance_summary_views.xml',
+        'views/subscription_at_risk_summary_views.xml',
         'views/menu_views.xml',
     ],
     'installable': True,

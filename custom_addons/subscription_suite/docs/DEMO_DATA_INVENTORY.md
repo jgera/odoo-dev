@@ -131,6 +131,7 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | LTV summaries | Generated | Generate from **Subscriptions -> Reporting -> Generate LTV Summary** after ARPU summaries and retention cohorts; static XML is intentionally avoided |
 | Churn reason summaries | Generated | Generate from **Subscriptions -> Reporting -> Generate Churn Reasons** for cancelled/expired subscriptions in a selected period; static XML is intentionally avoided; review MRR source quality and feedback coverage buckets |
 | Top plan summaries | Generated | Generate from **Subscriptions -> Reporting -> Generate Top Plans** after snapshots, KPI summaries, ARPU, LTV, forecasts, and churn reasons; static XML is intentionally avoided |
+| At-risk subscription summaries | Generated | Generate from **Subscriptions -> Reporting -> Generate At-Risk Subscriptions** after creating operational signals such as past-due subscriptions, open invoices, payment attempts, dunning attempts, pending cancellations, upcoming invoices, and renewal dates; static XML is intentionally avoided |
 | Revenue recognition | No | Phase 7 |
 
 ## Demo Expansion Rules
@@ -151,6 +152,6 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | Phase 3 | Portal users and subscriptions with allowed/blocked actions |
 | Phase 4 | Past-due subscriptions, dunning stages, payment attempts, recovery path |
 | Phase 5 | Seat, add-on, tiered, volume, usage, and time-limited discount examples |
-| Phase 6 | MRR snapshots, reconciliation rows, movement anomalies, KPI summaries, KPI dashboards, waterfalls, retention cohorts, revenue forecasts, ARPU summaries, LTV summaries, churn reason summaries, top plan summaries, analytics smoke coverage, and generated-record lifecycle checks are generated from current or controlled records; churn reason summaries expose MRR source quality and feedback coverage buckets; later add multi-month MRR movement history and richer churn feedback classification |
+| Phase 6 | MRR snapshots, reconciliation rows, movement anomalies, KPI summaries, KPI dashboards, waterfalls, retention cohorts, revenue forecasts, ARPU summaries, LTV summaries, churn reason summaries, top plan summaries, at-risk subscription summaries, analytics smoke coverage, and generated-record lifecycle checks are generated from current or controlled records; churn reason summaries expose MRR source quality and feedback coverage buckets; at-risk summaries use current operational payment, dunning, renewal, and cancellation signals; later add multi-month MRR movement history and richer churn feedback classification |
 | Phase 7 | Deferred revenue schedule and recognition examples |
 | Phase 8 | Complete end-to-end demo story and optional large-data generator |

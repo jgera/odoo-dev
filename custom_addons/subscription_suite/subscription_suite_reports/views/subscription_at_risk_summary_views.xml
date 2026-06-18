@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_at_risk_summary_list" model="ir.ui.view">
+        <field name="name">subscription.at.risk.summary.list</field>
+        <field name="model">subscription.at.risk.summary</field>
+        <field name="arch" type="xml">
+            <list string="At-Risk Subscriptions" create="0" edit="0"
+                  decoration-danger="risk_bucket == 'critical'"
+                  decoration-warning="risk_bucket == 'high'"
+                  decoration-info="risk_bucket == 'medium'">
+                <field name="as_of_date"/>
+                <field name="lookahead_days"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="risk_bucket"/>
+                <field name="risk_score" sum="Risk Score"/>
+                <field name="mrr_at_risk" widget="monetary" sum="MRR at Risk"/>
+                <field name="is_past_due"/>
+                <field name="has_open_recovery_invoice"/>
+                <field name="failed_payment_attempt_count" sum="Failed Payment Attempts"/>
+                <field name="retry_exhausted_dunning_attempt_count" sum="Retry Exhausted"/>
+                <field name="final_dunning_action_count" sum="Final Dunning Actions"/>
+                <field name="has_pending_cancellation"/>
+                <field name="missing_primary_payment_method"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_at_risk_summary_form" model="ir.ui.view">
+        <field name="name">subscription.at.risk.summary.form</field>
+        <field name="model">subscription.at.risk.summary</field>
+        <field name="arch" type="xml">
+            <form string="At-Risk Subscription" create="0" edit="0">
+                <header>
+                    <button name="action_view_subscription" type="object" string="Subscription" class="btn-primary"/>
+                    <button name="action_view_open_invoices" type="object" string="Open Invoices"/>
+                    <button name="action_view_payment_attempts" type="object" string="Payment Attempts"/>
+                    <button name="action_view_dunning_attempts" type="object" string="Dunning Attempts"/>
+                    <button name="action_view_cancellation_requests" type="object" string="Cancellation Requests"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="subscription_id"/></h1>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="as_of_date"/>
+                            <field name="lookahead_days"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="subscription_plan_id"/>
+                            <field name="partner_id"/>
+                            <field name="generated_at"/>
+                        </group>
+                        <group string="Risk">
+                            <field name="risk_bucket" widget="badge"
+                                   decoration-danger="risk_bucket == 'critical'"
+                                   decoration-warning="risk_bucket == 'high'"
+                                   decoration-info="risk_bucket == 'medium'"
+                                   decoration-success="risk_bucket == 'low'"/>
+                            <field name="risk_score"/>
+                            <field name="mrr_at_risk" widget="monetary"/>
+                            <field name="bucket_key"/>
+                        </group>
+                    </group>
+                    <group string="Signals">
+                        <field name="is_past_due"/>
+                        <field name="has_open_recovery_invoice"/>
+                        <field name="missing_primary_payment_method"/>
+                        <field name="has_pending_cancellation"/>
+                        <field name="scheduled_churn_within_period"/>
+                        <field name="upcoming_invoice_within_period"/>
+                        <field name="renewal_due_within_period"/>
+                    </group>
+                    <group string="Recovery Evidence">
+                        <field name="open_recovery_invoice_count"/>
+                        <field name="failed_payment_attempt_count"/>
+                        <field name="pending_payment_attempt_count"/>
+                        <field name="active_dunning_attempt_count"/>
+                        <field name="failed_dunning_attempt_count"/>
+                        <field name="retry_exhausted_dunning_attempt_count"/>
+                        <field name="final_dunning_action_count"/>
+                        <field name="latest_payment_attempt_id"/>
+                        <field name="latest_dunning_attempt_id"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_at_risk_summary_pivot" model="ir.ui.view">
+        <field name="name">subscription.at.risk.summary.pivot</field>
+        <field name="model">subscription.at.risk.summary</field>
+        <field name="arch" type="xml">
+            <pivot string="At-Risk Subscriptions" sample="1">
+                <field name="risk_bucket" type="row"/>
+                <field name="subscription_plan_id" type="row"/>
+                <field name="currency_id" type="col"/>
+                <field name="risk_score" type="measure"/>
+                <field name="mrr_at_risk" type="measure"/>
+                <field name="failed_payment_attempt_count" type="measure"/>
+                <field name="retry_exhausted_dunning_attempt_count" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_subscription_at_risk_summary_graph" model="ir.ui.view">
+        <field name="name">subscription.at.risk.summary.graph</field>
+        <field name="model">subscription.at.risk.summary</field>
+        <field name="arch" type="xml">
+            <graph string="At-Risk MRR" type="bar" sample="1">
+                <field name="risk_bucket"/>
+                <field name="mrr_at_risk" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_at_risk_summary_search" model="ir.ui.view">
+        <field name="name">subscription.at.risk.summary.search</field>
+        <field name="model">subscription.at.risk.summary</field>
+        <field name="arch" type="xml">
+            <search string="At-Risk Subscriptions">
+                <field name="as_of_date"/>
+                <field name="company_id"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="risk_bucket"/>
+                <filter string="Critical" name="critical" domain="[('risk_bucket', '=', 'critical')]"/>
+                <filter string="High Risk" name="high" domain="[('risk_bucket', '=', 'high')]"/>
+                <filter string="Critical or High" name="critical_high" domain="[('risk_bucket', 'in', ['critical', 'high'])]"/>
+                <filter string="Past Due" name="past_due" domain="[('is_past_due', '=', True)]"/>
+                <filter string="Payment Recovery" name="payment_recovery" domain="[('has_open_recovery_invoice', '=', True)]"/>
+                <filter string="Failed Payments" name="failed_payments" domain="[('failed_payment_attempt_count', '&gt;', 0)]"/>
+                <filter string="Dunning Escalation" name="dunning_escalation" domain="['|', ('retry_exhausted_dunning_attempt_count', '&gt;', 0), ('final_dunning_action_count', '&gt;', 0)]"/>
+                <filter string="Scheduled Churn" name="scheduled_churn" domain="[('scheduled_churn_within_period', '=', True)]"/>
+                <filter string="Missing Payment Method" name="missing_payment_method" domain="[('missing_primary_payment_method', '=', True)]"/>
+                <filter string="Renewal Due" name="renewal_due" domain="[('renewal_due_within_period', '=', True)]"/>
+                <group>
+                    <filter string="As Of Date" name="group_as_of_date" context="{'group_by': 'as_of_date'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'currency_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                    <filter string="Risk Bucket" name="group_risk_bucket" context="{'group_by': 'risk_bucket'}"/>
+                    <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_at_risk_summary_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.at.risk.summary.generate.wizard.form</field>
+        <field name="model">subscription.at.risk.summary.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate At-Risk Subscriptions">
+                <group>
+                    <field name="as_of_date"/>
+                    <field name="lookahead_days"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="subscription_plan_id"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_at_risk_summary_report" model="ir.actions.act_window">
+        <field name="name">At-Risk Subscriptions</field>
+        <field name="res_model">subscription.at.risk.summary</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="search_view_id" ref="view_subscription_at_risk_summary_search"/>
+        <field name="context">{'search_default_critical_high': 1, 'search_default_group_risk_bucket': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate at-risk subscription summaries from subscription, payment recovery, and dunning signals.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_at_risk_summary" model="ir.actions.act_window">
+        <field name="name">Generate At-Risk Subscriptions</field>
+        <field name="res_model">subscription.at.risk.summary.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

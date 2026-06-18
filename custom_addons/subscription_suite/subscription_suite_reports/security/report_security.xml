@@ -78,5 +78,11 @@
             <field name="model_id" ref="model_subscription_plan_performance_summary"/>
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
+
+        <record id="subscription_at_risk_summary_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription At-Risk Summary Multi-Company</field>
+            <field name="model_id" ref="model_subscription_at_risk_summary"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
     </data>
 </odoo>

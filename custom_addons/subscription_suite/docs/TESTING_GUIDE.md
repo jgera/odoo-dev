@@ -1046,3 +1046,37 @@ Automated coverage:
 Implementation note:
 
 - Top plan summaries are generated from existing analytics rows. They remain source-currency operational analytics and do not provide AI insights, pricing recommendations, predictive scoring, normalized multi-currency values, or accounting revenue recognition.
+
+## 41. At-Risk Subscription Analytics Demo
+
+Purpose: verify manager-facing at-risk subscription analytics from current operational signals.
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports` with billing and dunning installed.
+2. Create or select subscriptions with past-due status, open posted subscription invoices, failed payment attempts, retry-exhausted dunning attempts, pending cancellations, upcoming invoice dates, and renewal due dates.
+3. Open **Subscriptions -> Reporting -> Generate At-Risk Subscriptions**.
+4. Choose an as-of date, keep lookahead days at `30`, choose company, and optionally choose a plan.
+5. Click **Generate**.
+6. Confirm **Subscriptions -> Reporting -> At-Risk Subscriptions** shows only actionable rows with non-zero risk scores.
+7. Verify scoring:
+   - past due adds `40`
+   - open unpaid or partial subscription invoice adds `25`
+   - failed portal or cron payment attempt adds `20`
+   - retry-exhausted or final dunning action adds `30`
+   - pending cancellation or scheduled churn adds `35`
+   - missing primary payment method when billing/recovery is relevant adds `15`
+   - renewal due inside lookahead adds `10`
+   - upcoming invoice inside lookahead adds `5`
+8. Verify buckets: `critical >= 70`, `high >= 45`, `medium >= 20`, `low >= 1`.
+9. Open a generated row and use **Subscription**, **Open Invoices**, **Payment Attempts**, **Dunning Attempts**, and **Cancellation Requests** to verify source drilldowns.
+10. Re-run the same scope and confirm duplicate rows are not created.
+11. Re-run for one plan and confirm adjacent plan rows remain intact.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover risk scoring, bucket thresholds, no-risk exclusions, cancelled/expired/quote exclusions, plan and currency separation, drilldowns, idempotent reruns, scoped reruns, wizard action output, and manager-only generation.
+
+Implementation note:
+
+- At-risk summaries are generated operational analytics. They do not create manager tasks, trigger retention offers, predict churn probability, normalize currencies, or change subscription lifecycle state.

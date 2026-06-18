@@ -180,6 +180,19 @@
               sequence="50"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_at_risk_summary"
+              name="At-Risk Subscriptions"
+              parent="menu_subscription_reporting"
+              action="action_subscription_at_risk_summary_report"
+              sequence="51"/>
+
+    <menuitem id="menu_generate_at_risk_summary"
+              name="Generate At-Risk Subscriptions"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_at_risk_summary"
+              sequence="52"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"
