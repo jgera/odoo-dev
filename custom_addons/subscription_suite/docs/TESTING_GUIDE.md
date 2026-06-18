@@ -867,3 +867,23 @@ Automated coverage:
 Implementation note:
 
 - Revenue forecasts are generated from current subscription records only. They remain source-currency operational analytics and do not apply probability scoring, reconstruct historical state, normalize currencies, or act as accounting revenue recognition.
+
+## 35. Analytics Performance Smoke
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Generate analytics in this order for the same company and period: MRR snapshots, MRR reconciliation, MRR movement anomalies, MRR KPI summary, MRR KPI dashboard, MRR waterfall, retention cohorts, and revenue forecast.
+3. Confirm generated rows remain separated by company, currency, and subscription plan.
+4. Confirm all-plan dashboard, waterfall, retention, and forecast rows do not silently merge currencies.
+5. Confirm all-plan retention and forecast source drilldowns omit a specific plan filter but still exclude subscriptions with no plan.
+6. Generate the same sequence again and confirm duplicate rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` includes a generated analytics smoke test with a modest controlled dataset across multiple plans, currencies, subscription states, upcoming invoice dates, renewal dates, pending cancellations, MRR movements, and a missing-plan anomaly.
+- The smoke test checks the full generated analytics chain, idempotent reruns, currency separation, all-plan drilldown behavior, and no-plan subscription exclusion.
+
+Implementation note:
+
+- This is a development smoke test, not the final Phase 8 10K subscription benchmark. The full large-data generator, performance budget, and recorded benchmark remain deferred.
