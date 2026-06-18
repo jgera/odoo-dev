@@ -773,7 +773,7 @@ For every phase, update or create:
 - MRR movement model exists for new, expansion, contraction, churn.
 - Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** LTV Summary Foundation. ARPU summary, forecasting foundation, analytics performance smoke coverage, and generated analytics lifecycle hardening are complete. This slice adds estimated subscription lifetime value from ARPU summaries and retention cohort churn before adding gross margin, CAC, customer-account economics, probability scoring, custom Owl widgets, or executive board packs.
+**Current slice:** Churn Reason Analytics Foundation. ARPU summary, LTV summary, forecasting foundation, analytics performance smoke coverage, and generated analytics lifecycle hardening are complete. This slice explains churn by cancellation reason, plan, company, and currency before adding AI feedback classification, retention offers, predictive churn scoring, custom Owl widgets, or executive board packs.
 
 **Build items:**
 
@@ -791,7 +791,8 @@ For every phase, update or create:
    - Revenue churn.
    - Trial conversion.
    - ARPU - foundation done as average revenue per subscription.
-   - LTV - current slice as ARPU divided by churn rate.
+   - LTV - foundation done as ARPU divided by churn rate.
+   - Churn reason summary - current slice using existing cancellation reasons and feedback coverage.
 
 2. Snapshot models
    - `subscription.mrr.snapshot` - foundation done with daily company/currency/plan buckets.
@@ -806,7 +807,8 @@ For every phase, update or create:
    - Analytics performance smoke test - foundation done for repeatable generated-report chain coverage.
    - Generated analytics lifecycle hardening - foundation done for access and scoped-regeneration coverage.
    - `subscription.arpu.summary` - foundation done for generated ARPU by company, currency, optional plan, and snapshot period.
-   - `subscription.ltv.summary` - current slice for generated LTV by company, currency, optional plan, ARPU period, and cohort range.
+    - `subscription.ltv.summary` - foundation done for generated LTV by company, currency, optional plan, ARPU period, and cohort range.
+    - `subscription.churn.reason.summary` - current slice for generated churn reason analytics by company, currency, optional plan, and optional cancellation reason.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
@@ -816,7 +818,7 @@ For every phase, update or create:
    - Source drilldowns to KPI summaries, snapshots, reconciliations, anomalies, and movements - foundation done.
    - MRR waterfall - foundation done.
    - Retention cohort - foundation done.
-   - Churn reasons.
+    - Churn reasons - current slice.
    - Top plans.
    - At-risk subscriptions.
    - Failed-payment recovery.
@@ -841,6 +843,7 @@ For every phase, update or create:
 - Validate generated analytics lifecycle behavior: manager-only generation and scoped reruns that preserve adjacent company, currency, plan, date, and all-plan rows.
 - Generate ARPU summaries from opening and closing MRR snapshots; static ARPU XML is intentionally avoided so rows reflect the selected snapshot period.
 - Generate LTV summaries from ARPU summaries and retention cohorts; static LTV XML is intentionally avoided so rows reflect the selected ARPU period and cohort range.
+- Generate churn reason summaries from cancelled and expired subscriptions with cancellation dates; static churn reason summary XML is intentionally avoided so rows reflect selected periods, plans, reasons, and feedback coverage.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -880,6 +883,8 @@ For every phase, update or create:
 - ARPU summary rows show opening count, closing count, average count, opening MRR, closing MRR, average MRR, zero-safe ARPU, missing-snapshot statuses, and source drilldowns.
 - Managers can generate LTV summary rows from ARPU summaries and retention cohorts without duplicates.
 - LTV summary rows show ARPU, churn rate, estimated lifetime months, LTV, missing-source statuses, zero-churn status, and source drilldowns.
+- Managers can generate churn reason summary rows from cancelled and expired subscriptions without duplicates.
+- Churn reason summary rows show churned subscription count, churned MRR, average churned MRR, feedback count, feedback coverage, missing-reason status, all-reason aggregates, and source drilldowns.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
 - Filters by company, plan, salesperson, country, and period work.
@@ -899,6 +904,7 @@ For every phase, update or create:
 - Generated analytics lifecycle tests for manager-only generation and adjacent-scope preservation.
 - ARPU summary generation from snapshots, missing opening/closing statuses, zero-safe ARPU, plan/currency separation, all-plan aggregation, source drilldowns, scoped reruns, and manager-only generation.
 - LTV summary generation from ARPU and retention cohorts, zero-churn handling, missing-source statuses, plan/currency separation, all-plan aggregation, source drilldowns, scoped reruns, and manager-only generation.
+- Churn reason summary generation from cancelled/expired subscriptions, period filtering, state exclusion, missing-reason status, plan/reason/currency separation, all-plan/all-reason aggregation, source drilldowns, scoped reruns, and manager-only generation.
 
 **Continuous validation:**
 

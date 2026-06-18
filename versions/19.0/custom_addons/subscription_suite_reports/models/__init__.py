@@ -19,3 +19,5 @@ from . import subscription_arpu_summary
 from . import subscription_arpu_summary_wizard
 from . import subscription_ltv_summary
 from . import subscription_ltv_summary_wizard
+from . import subscription_churn_reason_summary
+from . import subscription_churn_reason_summary_wizard

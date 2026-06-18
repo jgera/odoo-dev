@@ -154,6 +154,19 @@
               sequence="46"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_churn_reason_summary"
+              name="Churn Reasons"
+              parent="menu_subscription_reporting"
+              action="action_subscription_churn_reason_summary_report"
+              sequence="47"/>
+
+    <menuitem id="menu_generate_churn_reason_summary"
+              name="Generate Churn Reasons"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_churn_reason_summary"
+              sequence="48"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"

@@ -973,3 +973,36 @@ Automated coverage:
 Implementation note:
 
 - LTV summaries are generated from `subscription.arpu.summary` and `subscription.retention.cohort` records. They remain source-currency operational analytics and do not include gross margin, CAC, customer/account economics, normalized multi-currency values, or accounting revenue recognition.
+
+## 39. Churn Reason Analytics Demo
+
+Metric definition:
+
+- Churn reason summaries explain cancelled and expired subscriptions by cancellation reason, company, currency, and optional subscription plan.
+- Source subscriptions must be `cancelled` or `expired`, have `is_subscription=True`, and have `cancellation_date` inside the selected period.
+- **Churned MRR** uses churn MRR movement data when available, otherwise the subscription's current MRR.
+- **Feedback Coverage (%)** is `feedback_count / churned_subscription_count * 100`.
+- Rows with churn but no cancellation reason use the **Missing Reason** status.
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Make sure at least one cancelled or expired subscription has a cancellation date inside the period.
+3. Open **Subscriptions -> Reporting -> Generate Churn Reasons**.
+4. Choose the opening date, closing date, company, and optionally a subscription plan or cancellation reason.
+5. Click **Generate**.
+6. Confirm **Subscriptions -> Reporting -> Churn Reasons** shows rows by period, company, currency, optional plan, and reason bucket.
+7. Verify churned subscription count, churned MRR, average churned MRR, feedback count, and feedback coverage.
+8. Generate without a plan and confirm all-plan rows stay separated by currency.
+9. Generate without a reason and confirm all-reason aggregate rows are created without merging currencies.
+10. Generate with a plan or reason and confirm rows and drilldowns are limited to the selected scope.
+11. Use **Subscriptions** and **Cancellation Requests** from the churn reason summary form to verify source records.
+12. Re-run the same scope and confirm duplicate churn reason summary rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover period filtering, exclusion of active/trial/paused/past-due subscriptions, reason separation, missing-reason status, all-reason aggregation without currency merging, all-plan aggregation, plan/reason-filtered drilldowns, scoped reruns, wizard action output, and manager-only generation.
+
+Implementation note:
+
+- Churn reason summaries are generated from existing subscription cancellation fields and cancellation requests. They remain source-currency operational analytics and do not classify free-text feedback with AI, create retention offers, score churn risk, normalize currencies, or act as accounting revenue recognition.
