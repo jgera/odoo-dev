@@ -32,6 +32,7 @@ Provides analytics:
         'views/subscription_retention_cohort_views.xml',
         'views/subscription_revenue_forecast_views.xml',
         'views/subscription_arpu_summary_views.xml',
+        'views/subscription_ltv_summary_views.xml',
         'views/menu_views.xml',
     ],
     'installable': True,

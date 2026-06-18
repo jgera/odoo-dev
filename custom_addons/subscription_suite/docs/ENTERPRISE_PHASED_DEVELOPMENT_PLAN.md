@@ -773,7 +773,7 @@ For every phase, update or create:
 - MRR movement model exists for new, expansion, contraction, churn.
 - Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** ARPU Summary Foundation. Forecasting foundation, analytics performance smoke coverage, and generated analytics lifecycle hardening are complete. This slice adds average revenue per subscription from generated MRR snapshots before adding LTV, customer-account economics, probability scoring, custom Owl widgets, or executive board packs.
+**Current slice:** LTV Summary Foundation. ARPU summary, forecasting foundation, analytics performance smoke coverage, and generated analytics lifecycle hardening are complete. This slice adds estimated subscription lifetime value from ARPU summaries and retention cohort churn before adding gross margin, CAC, customer-account economics, probability scoring, custom Owl widgets, or executive board packs.
 
 **Build items:**
 
@@ -790,8 +790,8 @@ For every phase, update or create:
    - Customer churn.
    - Revenue churn.
    - Trial conversion.
-   - ARPU - current slice as average revenue per subscription.
-   - LTV.
+   - ARPU - foundation done as average revenue per subscription.
+   - LTV - current slice as ARPU divided by churn rate.
 
 2. Snapshot models
    - `subscription.mrr.snapshot` - foundation done with daily company/currency/plan buckets.
@@ -805,7 +805,8 @@ For every phase, update or create:
    - `subscription.revenue.forecast` - foundation done for generated monthly operational revenue forecasts.
    - Analytics performance smoke test - foundation done for repeatable generated-report chain coverage.
    - Generated analytics lifecycle hardening - foundation done for access and scoped-regeneration coverage.
-   - `subscription.arpu.summary` - current slice for generated ARPU by company, currency, optional plan, and snapshot period.
+   - `subscription.arpu.summary` - foundation done for generated ARPU by company, currency, optional plan, and snapshot period.
+   - `subscription.ltv.summary` - current slice for generated LTV by company, currency, optional plan, ARPU period, and cohort range.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
@@ -839,6 +840,7 @@ For every phase, update or create:
 - Validate the full generated analytics chain with a modest controlled dataset before adding more Phase 6 KPI models.
 - Validate generated analytics lifecycle behavior: manager-only generation and scoped reruns that preserve adjacent company, currency, plan, date, and all-plan rows.
 - Generate ARPU summaries from opening and closing MRR snapshots; static ARPU XML is intentionally avoided so rows reflect the selected snapshot period.
+- Generate LTV summaries from ARPU summaries and retention cohorts; static LTV XML is intentionally avoided so rows reflect the selected ARPU period and cohort range.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -876,6 +878,8 @@ For every phase, update or create:
 - Scoped regeneration does not delete adjacent generated rows outside the selected company, currency, plan, date range, or all-plan bucket.
 - Managers can generate ARPU summary rows from opening and closing snapshots without duplicates.
 - ARPU summary rows show opening count, closing count, average count, opening MRR, closing MRR, average MRR, zero-safe ARPU, missing-snapshot statuses, and source drilldowns.
+- Managers can generate LTV summary rows from ARPU summaries and retention cohorts without duplicates.
+- LTV summary rows show ARPU, churn rate, estimated lifetime months, LTV, missing-source statuses, zero-churn status, and source drilldowns.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
 - Filters by company, plan, salesperson, country, and period work.
@@ -894,6 +898,7 @@ For every phase, update or create:
 - Analytics performance smoke test with generated records, multi-plan/currency scoping, all-plan drilldowns, and idempotent reruns.
 - Generated analytics lifecycle tests for manager-only generation and adjacent-scope preservation.
 - ARPU summary generation from snapshots, missing opening/closing statuses, zero-safe ARPU, plan/currency separation, all-plan aggregation, source drilldowns, scoped reruns, and manager-only generation.
+- LTV summary generation from ARPU and retention cohorts, zero-churn handling, missing-source statuses, plan/currency separation, all-plan aggregation, source drilldowns, scoped reruns, and manager-only generation.
 
 **Continuous validation:**
 

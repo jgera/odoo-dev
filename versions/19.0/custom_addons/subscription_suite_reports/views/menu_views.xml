@@ -141,6 +141,19 @@
               sequence="44"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_ltv_summary"
+              name="LTV Summary"
+              parent="menu_subscription_reporting"
+              action="action_subscription_ltv_summary_report"
+              sequence="45"/>
+
+    <menuitem id="menu_generate_ltv_summary"
+              name="Generate LTV Summary"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_ltv_summary"
+              sequence="46"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"

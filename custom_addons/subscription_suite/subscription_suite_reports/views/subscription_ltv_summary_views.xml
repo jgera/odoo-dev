@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_ltv_summary_list" model="ir.ui.view">
+        <field name="name">subscription.ltv.summary.list</field>
+        <field name="model">subscription.ltv.summary</field>
+        <field name="arch" type="xml">
+            <list string="LTV Summary" create="0" edit="0"
+                  decoration-success="status == 'ready'"
+                  decoration-warning="status != 'ready'">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="cohort_start_month"/>
+                <field name="cohort_end_month"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="status"/>
+                <field name="arpu" widget="monetary" avg="Average ARPU"/>
+                <field name="starting_subscription_count" sum="Starting Subscriptions"/>
+                <field name="churned_subscription_count" sum="Churned Subscriptions"/>
+                <field name="churn_rate" avg="Average Churn Rate"/>
+                <field name="estimated_lifetime_months" avg="Average Lifetime Months"/>
+                <field name="ltv" widget="monetary" avg="Average LTV"/>
+                <field name="generated_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_ltv_summary_form" model="ir.ui.view">
+        <field name="name">subscription.ltv.summary.form</field>
+        <field name="model">subscription.ltv.summary</field>
+        <field name="arch" type="xml">
+            <form string="LTV Summary" create="0" edit="0">
+                <header>
+                    <button name="action_view_arpu_summaries" type="object" string="ARPU Summaries" class="btn-primary"/>
+                    <button name="action_view_retention_cohorts" type="object" string="Retention Cohorts"/>
+                    <button name="action_view_source_subscriptions" type="object" string="Subscriptions"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="ltv" widget="monetary"/></h1>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="opening_date"/>
+                            <field name="closing_date"/>
+                            <field name="cohort_start_month"/>
+                            <field name="cohort_end_month"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="subscription_plan_id"/>
+                        </group>
+                        <group string="Status">
+                            <field name="status" widget="badge"
+                                   decoration-success="status == 'ready'"
+                                   decoration-warning="status != 'ready'"/>
+                            <field name="generated_at"/>
+                        </group>
+                    </group>
+                    <group string="Inputs">
+                        <field name="arpu" widget="monetary"/>
+                        <field name="starting_subscription_count"/>
+                        <field name="churned_subscription_count"/>
+                    </group>
+                    <group string="LTV">
+                        <field name="churn_rate"/>
+                        <field name="churn_rate_decimal"/>
+                        <field name="estimated_lifetime_months"/>
+                        <field name="ltv" widget="monetary"/>
+                    </group>
+                    <group string="Technical">
+                        <field name="bucket_key"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_ltv_summary_pivot" model="ir.ui.view">
+        <field name="name">subscription.ltv.summary.pivot</field>
+        <field name="model">subscription.ltv.summary</field>
+        <field name="arch" type="xml">
+            <pivot string="LTV Summary" sample="1">
+                <field name="closing_date" type="row"/>
+                <field name="subscription_plan_id" type="col"/>
+                <field name="ltv" type="measure"/>
+                <field name="arpu" type="measure"/>
+                <field name="churn_rate" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_subscription_ltv_summary_graph" model="ir.ui.view">
+        <field name="name">subscription.ltv.summary.graph</field>
+        <field name="model">subscription.ltv.summary</field>
+        <field name="arch" type="xml">
+            <graph string="LTV Summary" type="line" sample="1">
+                <field name="closing_date"/>
+                <field name="ltv" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_ltv_summary_search" model="ir.ui.view">
+        <field name="name">subscription.ltv.summary.search</field>
+        <field name="model">subscription.ltv.summary</field>
+        <field name="arch" type="xml">
+            <search string="LTV Summary">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="cohort_start_month"/>
+                <field name="cohort_end_month"/>
+                <field name="company_id"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="status"/>
+                <filter string="Ready" name="ready" domain="[('status', '=', 'ready')]"/>
+                <filter string="Missing ARPU" name="missing_arpu" domain="[('status', '=', 'missing_arpu_summary')]"/>
+                <filter string="Missing Retention" name="missing_retention" domain="[('status', '=', 'missing_retention_cohort')]"/>
+                <filter string="Zero Churn" name="zero_churn" domain="[('status', '=', 'zero_churn_rate')]"/>
+                <group>
+                    <filter string="Closing Date" name="group_closing_date" context="{'group_by': 'closing_date'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'currency_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_ltv_summary_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.ltv.summary.generate.wizard.form</field>
+        <field name="model">subscription.ltv.summary.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate LTV Summary">
+                <group>
+                    <field name="opening_date"/>
+                    <field name="closing_date"/>
+                    <field name="cohort_start_month"/>
+                    <field name="cohort_end_month"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="subscription_plan_id"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_ltv_summary_report" model="ir.actions.act_window">
+        <field name="name">LTV Summary</field>
+        <field name="res_model">subscription.ltv.summary</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="search_view_id" ref="view_subscription_ltv_summary_search"/>
+        <field name="context">{'search_default_group_closing_date': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate LTV summaries from ARPU summaries and retention cohorts.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_ltv_summary" model="ir.actions.act_window">
+        <field name="name">Generate LTV Summary</field>
+        <field name="res_model">subscription.ltv.summary.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

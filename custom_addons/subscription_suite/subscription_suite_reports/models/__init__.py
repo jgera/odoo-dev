@@ -17,3 +17,5 @@ from . import subscription_revenue_forecast
 from . import subscription_revenue_forecast_wizard
 from . import subscription_arpu_summary
 from . import subscription_arpu_summary_wizard
+from . import subscription_ltv_summary
+from . import subscription_ltv_summary_wizard

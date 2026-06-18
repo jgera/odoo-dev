@@ -939,3 +939,37 @@ Automated coverage:
 Implementation note:
 
 - ARPU summaries are generated from `subscription.mrr.snapshot` records. They remain source-currency operational analytics and do not calculate customer/account ARPU, LTV, normalized multi-currency values, or accounting revenue recognition.
+
+## 38. LTV Summary Demo
+
+Metric definition:
+
+- LTV means **Estimated Subscription Lifetime Value** in this foundation slice.
+- Formula: `ARPU / churn_rate_decimal`.
+- `churn_rate_decimal` is `churned_subscription_count / starting_subscription_count` from generated retention cohorts.
+- `estimated_lifetime_months` is `1 / churn_rate_decimal`.
+- If churn is zero, the row status is **Zero Churn Rate** and LTV stays `0.00`.
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Generate opening and closing MRR snapshots.
+3. Generate ARPU summaries for the selected opening and closing dates.
+4. Generate retention cohorts for the selected cohort range through the closing month.
+5. Open **Subscriptions -> Reporting -> Generate LTV Summary**.
+6. Choose the opening date, closing date, cohort start month, cohort end month, company, and optionally a subscription plan.
+7. Click **Generate**.
+8. Confirm **Subscriptions -> Reporting -> LTV Summary** shows rows by period, cohort range, company, currency, and optional plan.
+9. Verify ARPU, starting subscription count, churned subscription count, churn rate, estimated lifetime months, and LTV.
+10. Generate without a plan and confirm all-plan rows stay separated by currency.
+11. Generate with a plan and confirm rows and drilldowns are limited to that plan.
+12. Use **ARPU Summaries**, **Retention Cohorts**, and **Subscriptions** from the LTV summary form to verify source records.
+13. Re-run the same scope and confirm duplicate LTV rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover LTV formula, churn-rate calculation, estimated lifetime months, zero-churn status, missing ARPU and retention statuses, plan/currency separation, all-plan aggregation, scoped reruns, source drilldowns, wizard action output, and manager-only generation.
+
+Implementation note:
+
+- LTV summaries are generated from `subscription.arpu.summary` and `subscription.retention.cohort` records. They remain source-currency operational analytics and do not include gross margin, CAC, customer/account economics, normalized multi-currency values, or accounting revenue recognition.
