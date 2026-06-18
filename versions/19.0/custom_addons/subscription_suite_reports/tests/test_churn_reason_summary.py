@@ -122,6 +122,9 @@ class TestSubscriptionChurnReasonSummary(TransactionCase):
         self.assertEqual(row.churned_subscription_count, 2)
         self.assertAlmostEqual(row.churned_mrr, 150.0, places=2)
         self.assertAlmostEqual(row.average_churned_mrr, 75.0, places=2)
+        self.assertEqual(row.mrr_source, 'movement')
+        self.assertEqual(row.movement_mrr_subscription_count, 2)
+        self.assertEqual(row.fallback_mrr_subscription_count, 0)
 
     def test_subscriptions_outside_period_are_excluded(self):
         self._create_subscription(reason=self.reason_price, cancellation_date=self.outside_date)
@@ -158,6 +161,41 @@ class TestSubscriptionChurnReasonSummary(TransactionCase):
         self.assertFalse(row.cancellation_reason_id)
         self.assertEqual(row.feedback_count, 1)
         self.assertAlmostEqual(row.feedback_coverage, 100.0, places=2)
+        self.assertEqual(row.feedback_bucket, 'full')
+
+    def test_churn_mrr_source_tracks_fallback_and_mixed_rows(self):
+        movement_source = self._create_subscription(reason=self.reason_price, price=100.0)
+        self._create_subscription(reason=self.reason_price, price=250.0)
+        self._create_churn_movement(movement_source, amount=-90.0)
+
+        row = self._specific_row(self._generate(plan=self.plan), self.reason_price)
+
+        self.assertEqual(row.mrr_source, 'mixed')
+        self.assertEqual(row.movement_mrr_subscription_count, 1)
+        self.assertEqual(row.fallback_mrr_subscription_count, 1)
+        self.assertAlmostEqual(row.churned_mrr, 340.0, places=2)
+
+    def test_churn_mrr_source_tracks_fallback_only_rows(self):
+        self._create_subscription(reason=self.reason_price, price=120.0)
+
+        row = self._specific_row(self._generate(plan=self.plan), self.reason_price)
+
+        self.assertEqual(row.mrr_source, 'fallback')
+        self.assertEqual(row.movement_mrr_subscription_count, 0)
+        self.assertEqual(row.fallback_mrr_subscription_count, 1)
+
+    def test_feedback_bucket_tracks_none_partial_and_full_coverage(self):
+        self._create_subscription(reason=self.reason_price, feedback=False, price=100.0)
+        none_row = self._specific_row(self._generate(plan=self.plan), self.reason_price)
+        self.assertEqual(none_row.feedback_bucket, 'none')
+
+        self._create_subscription(reason=self.reason_price, feedback='Churn note', price=80.0)
+        partial_row = self._specific_row(self._generate(plan=self.plan), self.reason_price)
+        self.assertEqual(partial_row.feedback_bucket, 'partial')
+
+        self._create_subscription(reason=self.reason_product, feedback='Feature note', price=70.0)
+        full_row = self._specific_row(self._generate(plan=self.plan), self.reason_product)
+        self.assertEqual(full_row.feedback_bucket, 'full')
 
     def test_all_reason_rows_aggregate_without_merging_currencies(self):
         self._create_subscription(reason=self.reason_price, price=100.0)

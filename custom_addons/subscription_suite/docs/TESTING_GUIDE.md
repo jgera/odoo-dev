@@ -983,6 +983,8 @@ Metric definition:
 - **Churned MRR** uses churn MRR movement data when available, otherwise the subscription's current MRR.
 - **Feedback Coverage (%)** is `feedback_count / churned_subscription_count * 100`.
 - Rows with churn but no cancellation reason use the **Missing Reason** status.
+- **MRR Source** identifies whether churned MRR came from recorded churn movements, fallback subscription MRR, or mixed sources.
+- **Feedback Coverage Bucket** groups rows as no feedback, partial feedback, or full feedback.
 
 Walkthrough:
 
@@ -993,15 +995,18 @@ Walkthrough:
 5. Click **Generate**.
 6. Confirm **Subscriptions -> Reporting -> Churn Reasons** shows rows by period, company, currency, optional plan, and reason bucket.
 7. Verify churned subscription count, churned MRR, average churned MRR, feedback count, and feedback coverage.
-8. Generate without a plan and confirm all-plan rows stay separated by currency.
-9. Generate without a reason and confirm all-reason aggregate rows are created without merging currencies.
-10. Generate with a plan or reason and confirm rows and drilldowns are limited to the selected scope.
-11. Use **Subscriptions** and **Cancellation Requests** from the churn reason summary form to verify source records.
-12. Re-run the same scope and confirm duplicate churn reason summary rows are not created.
+8. Verify MRR source quality: rows should show **Movement MRR**, **Fallback MRR**, or **Mixed MRR Sources** depending on whether churn movement records exist.
+9. Verify feedback quality: rows should show **No Feedback**, **Partial Feedback**, or **Full Feedback**.
+10. Generate without a plan and confirm all-plan rows stay separated by currency.
+11. Generate without a reason and confirm all-reason aggregate rows are created without merging currencies.
+12. Generate with a plan or reason and confirm rows and drilldowns are limited to the selected scope.
+13. Use **Subscriptions** and **Cancellation Requests** from the churn reason summary form to verify source records.
+14. Re-run the same scope and confirm duplicate churn reason summary rows are not created.
 
 Automated coverage:
 
-- `subscription_suite_reports` tests cover period filtering, exclusion of active/trial/paused/past-due subscriptions, reason separation, missing-reason status, all-reason aggregation without currency merging, all-plan aggregation, plan/reason-filtered drilldowns, scoped reruns, wizard action output, and manager-only generation.
+- `subscription_suite_reports` tests cover period filtering, exclusion of active/trial/paused/past-due subscriptions, reason separation, missing-reason status, movement/fallback/mixed MRR source quality, no/partial/full feedback coverage buckets, all-reason aggregation without currency merging, all-plan aggregation, plan/reason-filtered drilldowns, scoped reruns, wizard action output, and manager-only generation.
+- The analytics smoke test includes churn reason generation and verifies all-plan churn reason drilldowns exclude no-plan subscriptions without filtering on a false plan.
 
 Implementation note:
 

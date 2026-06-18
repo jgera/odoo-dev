@@ -773,7 +773,7 @@ For every phase, update or create:
 - MRR movement model exists for new, expansion, contraction, churn.
 - Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** Churn Reason Analytics Foundation. ARPU summary, LTV summary, forecasting foundation, analytics performance smoke coverage, and generated analytics lifecycle hardening are complete. This slice explains churn by cancellation reason, plan, company, and currency before adding AI feedback classification, retention offers, predictive churn scoring, custom Owl widgets, or executive board packs.
+**Current slice:** Churn Reason Analytics Hardening. ARPU summary, LTV summary, forecasting foundation, analytics performance smoke coverage, generated analytics lifecycle hardening, and churn reason analytics foundation are complete. This hardening pass makes churn reason rows expose MRR-source quality and feedback coverage quality before adding AI feedback classification, retention offers, predictive churn scoring, custom Owl widgets, or executive board packs.
 
 **Build items:**
 
@@ -808,7 +808,7 @@ For every phase, update or create:
    - Generated analytics lifecycle hardening - foundation done for access and scoped-regeneration coverage.
    - `subscription.arpu.summary` - foundation done for generated ARPU by company, currency, optional plan, and snapshot period.
     - `subscription.ltv.summary` - foundation done for generated LTV by company, currency, optional plan, ARPU period, and cohort range.
-    - `subscription.churn.reason.summary` - current slice for generated churn reason analytics by company, currency, optional plan, and optional cancellation reason.
+    - `subscription.churn.reason.summary` - current hardening slice for generated churn reason analytics by company, currency, optional plan, optional cancellation reason, MRR source quality, and feedback coverage quality.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
@@ -844,6 +844,7 @@ For every phase, update or create:
 - Generate ARPU summaries from opening and closing MRR snapshots; static ARPU XML is intentionally avoided so rows reflect the selected snapshot period.
 - Generate LTV summaries from ARPU summaries and retention cohorts; static LTV XML is intentionally avoided so rows reflect the selected ARPU period and cohort range.
 - Generate churn reason summaries from cancelled and expired subscriptions with cancellation dates; static churn reason summary XML is intentionally avoided so rows reflect selected periods, plans, reasons, and feedback coverage.
+- Validate churn reason summary quality fields: movement MRR vs fallback MRR source, missing reason, and no/partial/full feedback coverage.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -885,6 +886,8 @@ For every phase, update or create:
 - LTV summary rows show ARPU, churn rate, estimated lifetime months, LTV, missing-source statuses, zero-churn status, and source drilldowns.
 - Managers can generate churn reason summary rows from cancelled and expired subscriptions without duplicates.
 - Churn reason summary rows show churned subscription count, churned MRR, average churned MRR, feedback count, feedback coverage, missing-reason status, all-reason aggregates, and source drilldowns.
+- Churn reason summary rows expose whether churned MRR came from recorded churn movements, fallback subscription MRR, or mixed sources.
+- Churn reason summary rows expose no/partial/full feedback coverage buckets so managers can spot weak cancellation data capture.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
 - Filters by company, plan, salesperson, country, and period work.
@@ -900,11 +903,11 @@ For every phase, update or create:
 - MRR waterfall generation, ordered bucket math, variance status, multi-plan aggregation, all-plan drilldowns, currency separation, missing summary/input status, source drilldowns, and idempotent reruns.
 - Retention cohort generation, churn timing, trial-start fallback, plan/currency separation, all-plan drilldowns, and idempotent reruns.
 - Revenue forecast generation, upcoming invoice buckets, renewal due buckets, scheduled churn buckets, plan/currency separation, all-plan drilldowns, and idempotent reruns.
-- Analytics performance smoke test with generated records, multi-plan/currency scoping, all-plan drilldowns, and idempotent reruns.
+- Analytics performance smoke test with generated records, multi-plan/currency scoping, all-plan drilldowns, churn reason generation, and idempotent reruns.
 - Generated analytics lifecycle tests for manager-only generation and adjacent-scope preservation.
 - ARPU summary generation from snapshots, missing opening/closing statuses, zero-safe ARPU, plan/currency separation, all-plan aggregation, source drilldowns, scoped reruns, and manager-only generation.
 - LTV summary generation from ARPU and retention cohorts, zero-churn handling, missing-source statuses, plan/currency separation, all-plan aggregation, source drilldowns, scoped reruns, and manager-only generation.
-- Churn reason summary generation from cancelled/expired subscriptions, period filtering, state exclusion, missing-reason status, plan/reason/currency separation, all-plan/all-reason aggregation, source drilldowns, scoped reruns, and manager-only generation.
+- Churn reason summary generation from cancelled/expired subscriptions, period filtering, state exclusion, missing-reason status, MRR source quality, feedback coverage buckets, plan/reason/currency separation, all-plan/all-reason aggregation, source drilldowns, scoped reruns, and manager-only generation.
 
 **Continuous validation:**
 

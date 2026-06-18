@@ -43,8 +43,30 @@ class SubscriptionChurnReasonSummary(models.Model):
     churned_subscription_count = fields.Integer(string='Churned Subscriptions', readonly=True)
     churned_mrr = fields.Monetary(string='Churned MRR', currency_field='currency_id', readonly=True)
     average_churned_mrr = fields.Monetary(string='Average Churned MRR', currency_field='currency_id', readonly=True)
+    movement_mrr_subscription_count = fields.Integer(string='Movement MRR Subscriptions', readonly=True)
+    fallback_mrr_subscription_count = fields.Integer(string='Fallback MRR Subscriptions', readonly=True)
+    mrr_source = fields.Selection(
+        [
+            ('movement', 'Movement MRR'),
+            ('fallback', 'Fallback MRR'),
+            ('mixed', 'Mixed MRR Sources'),
+        ],
+        string='MRR Source',
+        readonly=True,
+        index=True,
+    )
     feedback_count = fields.Integer(string='Feedback Count', readonly=True)
     feedback_coverage = fields.Float(string='Feedback Coverage (%)', readonly=True)
+    feedback_bucket = fields.Selection(
+        [
+            ('none', 'No Feedback'),
+            ('partial', 'Partial Feedback'),
+            ('full', 'Full Feedback'),
+        ],
+        string='Feedback Coverage Bucket',
+        readonly=True,
+        index=True,
+    )
 
     _churn_reason_summary_bucket_unique = models.Constraint(
         'UNIQUE(opening_date, closing_date, bucket_key)',
@@ -115,16 +137,38 @@ class SubscriptionChurnReasonSummary(models.Model):
         return {
             'subscription_ids': set(),
             'churned_mrr': 0.0,
+            'movement_mrr_subscription_ids': set(),
+            'fallback_mrr_subscription_ids': set(),
             'feedback_count': 0,
         }
 
     @api.model
-    def _add_subscription_to_bucket(self, buckets, key, subscription, churn_mrr):
+    def _add_subscription_to_bucket(self, buckets, key, subscription, churn_mrr, has_churn_movement):
         bucket = buckets[key]
         bucket['subscription_ids'].add(subscription.id)
         bucket['churned_mrr'] += churn_mrr
+        if has_churn_movement:
+            bucket['movement_mrr_subscription_ids'].add(subscription.id)
+        else:
+            bucket['fallback_mrr_subscription_ids'].add(subscription.id)
         if subscription.cancellation_feedback:
             bucket['feedback_count'] += 1
+
+    @api.model
+    def _mrr_source_for_bucket(self, movement_count, fallback_count):
+        if movement_count and fallback_count:
+            return 'mixed'
+        if movement_count:
+            return 'movement'
+        return 'fallback'
+
+    @api.model
+    def _feedback_bucket_for_summary(self, feedback_count, churn_count):
+        if not feedback_count:
+            return 'none'
+        if feedback_count == churn_count:
+            return 'full'
+        return 'partial'
 
     @api.model
     def _summary_values(self, opening_date, closing_date, company=None, plan=None, reason=None):
@@ -138,6 +182,7 @@ class SubscriptionChurnReasonSummary(models.Model):
         for subscription in subscriptions:
             reason_id = subscription.cancellation_reason_id.id or False
             reason_bucket = 'specific' if reason_id else 'missing'
+            has_churn_movement = subscription.id in churn_mrr_by_subscription
             churn_mrr = churn_mrr_by_subscription.get(subscription.id, subscription.mrr or 0.0)
             plan_key = (
                 subscription.company_id.id,
@@ -146,7 +191,7 @@ class SubscriptionChurnReasonSummary(models.Model):
                 reason_bucket,
                 reason_id,
             )
-            self._add_subscription_to_bucket(buckets, plan_key, subscription, churn_mrr)
+            self._add_subscription_to_bucket(buckets, plan_key, subscription, churn_mrr, has_churn_movement)
 
             if not reason:
                 all_reason_key = (
@@ -156,7 +201,7 @@ class SubscriptionChurnReasonSummary(models.Model):
                     'all_reasons',
                     False,
                 )
-                self._add_subscription_to_bucket(buckets, all_reason_key, subscription, churn_mrr)
+                self._add_subscription_to_bucket(buckets, all_reason_key, subscription, churn_mrr, has_churn_movement)
 
             if not plan:
                 all_plan_key = (
@@ -166,7 +211,7 @@ class SubscriptionChurnReasonSummary(models.Model):
                     reason_bucket,
                     reason_id,
                 )
-                self._add_subscription_to_bucket(buckets, all_plan_key, subscription, churn_mrr)
+                self._add_subscription_to_bucket(buckets, all_plan_key, subscription, churn_mrr, has_churn_movement)
                 if not reason:
                     all_plan_all_reason_key = (
                         subscription.company_id.id,
@@ -175,13 +220,17 @@ class SubscriptionChurnReasonSummary(models.Model):
                         'all_reasons',
                         False,
                     )
-                    self._add_subscription_to_bucket(buckets, all_plan_all_reason_key, subscription, churn_mrr)
+                    self._add_subscription_to_bucket(
+                        buckets, all_plan_all_reason_key, subscription, churn_mrr, has_churn_movement
+                    )
 
         values = []
         generated_at = fields.Datetime.now()
         for (company_id, currency_id, plan_id, reason_bucket, reason_id), bucket in sorted(buckets.items()):
             churn_count = len(bucket['subscription_ids'])
             churned_mrr = bucket['churned_mrr']
+            movement_count = len(bucket['movement_mrr_subscription_ids'])
+            fallback_count = len(bucket['fallback_mrr_subscription_ids'])
             values.append({
                 'opening_date': opening_date,
                 'closing_date': closing_date,
@@ -196,8 +245,12 @@ class SubscriptionChurnReasonSummary(models.Model):
                 'churned_subscription_count': churn_count,
                 'churned_mrr': churned_mrr,
                 'average_churned_mrr': churned_mrr / churn_count if churn_count else 0.0,
+                'movement_mrr_subscription_count': movement_count,
+                'fallback_mrr_subscription_count': fallback_count,
+                'mrr_source': self._mrr_source_for_bucket(movement_count, fallback_count),
                 'feedback_count': bucket['feedback_count'],
                 'feedback_coverage': (bucket['feedback_count'] / churn_count) * 100.0 if churn_count else 0.0,
+                'feedback_bucket': self._feedback_bucket_for_summary(bucket['feedback_count'], churn_count),
             })
         return values
 

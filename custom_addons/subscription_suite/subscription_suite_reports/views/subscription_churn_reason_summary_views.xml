@@ -18,8 +18,12 @@
                 <field name="churned_subscription_count" sum="Churned Subscriptions"/>
                 <field name="churned_mrr" widget="monetary" sum="Churned MRR"/>
                 <field name="average_churned_mrr" widget="monetary" avg="Average Churned MRR"/>
+                <field name="mrr_source"/>
+                <field name="movement_mrr_subscription_count" sum="Movement MRR Subscriptions"/>
+                <field name="fallback_mrr_subscription_count" sum="Fallback MRR Subscriptions"/>
                 <field name="feedback_count" sum="Feedback Count"/>
                 <field name="feedback_coverage" avg="Feedback Coverage"/>
+                <field name="feedback_bucket"/>
                 <field name="generated_at"/>
             </list>
         </field>
@@ -59,8 +63,18 @@
                         <field name="churned_subscription_count"/>
                         <field name="churned_mrr" widget="monetary"/>
                         <field name="average_churned_mrr" widget="monetary"/>
+                        <field name="mrr_source" widget="badge"
+                               decoration-success="mrr_source == 'movement'"
+                               decoration-warning="mrr_source == 'mixed'"
+                               decoration-danger="mrr_source == 'fallback'"/>
+                        <field name="movement_mrr_subscription_count"/>
+                        <field name="fallback_mrr_subscription_count"/>
                         <field name="feedback_count"/>
                         <field name="feedback_coverage"/>
+                        <field name="feedback_bucket" widget="badge"
+                               decoration-success="feedback_bucket == 'full'"
+                               decoration-warning="feedback_bucket == 'partial'"
+                               decoration-danger="feedback_bucket == 'none'"/>
                     </group>
                     <group string="Technical">
                         <field name="bucket_key"/>
@@ -79,6 +93,7 @@
                 <field name="subscription_plan_id" type="col"/>
                 <field name="churned_subscription_count" type="measure"/>
                 <field name="churned_mrr" type="measure"/>
+                <field name="fallback_mrr_subscription_count" type="measure"/>
                 <field name="feedback_coverage" type="measure"/>
             </pivot>
         </field>
@@ -108,9 +123,16 @@
                 <field name="cancellation_reason_id"/>
                 <field name="reason_bucket"/>
                 <field name="status"/>
+                <field name="mrr_source"/>
+                <field name="feedback_bucket"/>
                 <filter string="Ready" name="ready" domain="[('status', '=', 'ready')]"/>
                 <filter string="Missing Reason" name="missing_reason" domain="[('status', '=', 'missing_reason')]"/>
                 <filter string="All Reasons" name="all_reasons" domain="[('reason_bucket', '=', 'all_reasons')]"/>
+                <filter string="Uses Fallback MRR" name="uses_fallback_mrr" domain="[('fallback_mrr_subscription_count', '&gt;', 0)]"/>
+                <filter string="Movement MRR Only" name="movement_mrr_only" domain="[('mrr_source', '=', 'movement')]"/>
+                <filter string="No Feedback" name="no_feedback" domain="[('feedback_bucket', '=', 'none')]"/>
+                <filter string="Partial Feedback" name="partial_feedback" domain="[('feedback_bucket', '=', 'partial')]"/>
+                <filter string="Full Feedback" name="full_feedback" domain="[('feedback_bucket', '=', 'full')]"/>
                 <group>
                     <filter string="Closing Date" name="group_closing_date" context="{'group_by': 'closing_date'}"/>
                     <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
@@ -119,6 +141,8 @@
                     <filter string="Reason" name="group_reason" context="{'group_by': 'cancellation_reason_id'}"/>
                     <filter string="Reason Bucket" name="group_reason_bucket" context="{'group_by': 'reason_bucket'}"/>
                     <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
+                    <filter string="MRR Source" name="group_mrr_source" context="{'group_by': 'mrr_source'}"/>
+                    <filter string="Feedback Coverage" name="group_feedback_bucket" context="{'group_by': 'feedback_bucket'}"/>
                 </group>
             </search>
         </field>

@@ -44,6 +44,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
             'billing_interval_count': 1,
             'billing_interval_unit': 'month',
         })
+        self.churn_reason = self.env['subscription.cancel.reason'].create({'name': 'Analytics Smoke Churn'})
         self.opening_date = fields.Date.today() - relativedelta(days=30)
         self.closing_date = fields.Date.today()
         self.cohort_start_month = self.opening_date.replace(day=1)
@@ -64,6 +65,9 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         subscription_end_date=False,
         pending_cancellation=False,
         cancellation_effective_date=False,
+        cancellation_date=False,
+        cancellation_reason=False,
+        cancellation_feedback=False,
     ):
         currency = currency or self.currency
         return self.env['sale.order'].create({
@@ -79,6 +83,9 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
             'subscription_end_date': subscription_end_date,
             'pending_cancellation': pending_cancellation,
             'cancellation_effective_date': cancellation_effective_date,
+            'cancellation_date': cancellation_date,
+            'cancellation_reason_id': cancellation_reason.id if cancellation_reason else False,
+            'cancellation_feedback': cancellation_feedback,
             'order_line': [(0, 0, {
                 'product_id': self.product.id,
                 'is_recurring': True,
@@ -112,6 +119,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         Waterfall = self.env['subscription.mrr.waterfall'].sudo()
         Cohort = self.env['subscription.retention.cohort'].sudo()
         Forecast = self.env['subscription.revenue.forecast'].sudo()
+        ChurnReason = self.env['subscription.churn.reason.summary'].sudo()
 
         Snapshot.generate_for_date(self.opening_date, company=self.company)
         Snapshot.generate_for_date(self.closing_date, company=self.company)
@@ -123,6 +131,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
             Waterfall.generate_for_period(self.opening_date, self.closing_date, self.company, currency)
         Cohort.generate_for_period(self.cohort_start_month, self.forecast_end_month, company=self.company)
         Forecast.generate_for_period(self.forecast_start_month, self.forecast_end_month, company=self.company)
+        ChurnReason.generate_for_period(self.opening_date, self.closing_date, company=self.company)
 
     def _count_rows(self, model_name, domain):
         return self.env[model_name].search_count(domain)
@@ -153,6 +162,14 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
             next_invoice_date=self._date_in_month(self.forecast_start_month),
         )
         self._create_subscription(plan=self.plan, state='cancelled', price=60.0)
+        churned_with_reason = self._create_subscription(
+            plan=self.plan,
+            state='cancelled',
+            price=70.0,
+            cancellation_date=self.opening_date + relativedelta(days=5),
+            cancellation_reason=self.churn_reason,
+            cancellation_feedback='Smoke feedback',
+        )
         no_plan = self._create_no_plan_subscription()
 
         self._create_movement(monthly, 'new', 100.0)
@@ -161,6 +178,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         self._create_movement(pro_churn, 'churn', -150.0)
         self._create_movement(alternate_currency, 'expansion', 50.0)
         self._create_movement(no_plan, 'expansion', 10.0)
+        self._create_movement(churned_with_reason, 'churn', -70.0)
 
         self._generate_chain()
         counts_after_first_run = {
@@ -174,6 +192,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
                 'subscription.mrr.waterfall': [('company_id', '=', self.company.id)],
                 'subscription.retention.cohort': [('company_id', '=', self.company.id)],
                 'subscription.revenue.forecast': [('company_id', '=', self.company.id)],
+                'subscription.churn.reason.summary': [('company_id', '=', self.company.id)],
             }.items()
         }
         self._generate_chain()
@@ -188,6 +207,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
                 'subscription.mrr.waterfall': [('company_id', '=', self.company.id)],
                 'subscription.retention.cohort': [('company_id', '=', self.company.id)],
                 'subscription.revenue.forecast': [('company_id', '=', self.company.id)],
+                'subscription.churn.reason.summary': [('company_id', '=', self.company.id)],
             }.items()
         }
 
@@ -229,3 +249,16 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         self.assertNotIn(('subscription_plan_id', '=', False), cohort_action['domain'])
         self.assertIn(('subscription_plan_id', '!=', False), cohort_action['domain'])
         self.assertNotIn(no_plan, cohort_sources)
+
+        all_reason_churn = self.env['subscription.churn.reason.summary'].search([
+            ('company_id', '=', self.company.id),
+            ('currency_id', '=', self.currency.id),
+            ('subscription_plan_id', '=', False),
+            ('reason_bucket', '=', 'all_reasons'),
+        ], limit=1)
+        churn_action = all_reason_churn.action_view_source_subscriptions()
+        churn_sources = self.env['sale.order'].search(churn_action['domain'])
+        self.assertNotIn(('subscription_plan_id', '=', False), churn_action['domain'])
+        self.assertIn(('subscription_plan_id', '!=', False), churn_action['domain'])
+        self.assertNotIn(no_plan, churn_sources)
+        self.assertIn(churned_with_reason, churn_sources)
