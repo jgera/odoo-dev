@@ -25,3 +25,5 @@ from . import subscription_plan_performance_summary
 from . import subscription_plan_performance_summary_wizard
 from . import subscription_at_risk_summary
 from . import subscription_at_risk_summary_wizard
+from . import subscription_payment_recovery_summary
+from . import subscription_payment_recovery_summary_wizard

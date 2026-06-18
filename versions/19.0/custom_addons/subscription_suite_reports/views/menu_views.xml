@@ -193,6 +193,19 @@
               sequence="52"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_payment_recovery_summary"
+              name="Payment Recovery"
+              parent="menu_subscription_reporting"
+              action="action_subscription_payment_recovery_summary_report"
+              sequence="53"/>
+
+    <menuitem id="menu_generate_payment_recovery_summary"
+              name="Generate Payment Recovery"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_payment_recovery_summary"
+              sequence="54"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"

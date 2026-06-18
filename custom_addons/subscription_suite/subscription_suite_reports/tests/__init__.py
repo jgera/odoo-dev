@@ -13,3 +13,4 @@ from . import test_ltv_summary
 from . import test_churn_reason_summary
 from . import test_plan_performance_summary
 from . import test_at_risk_summary
+from . import test_payment_recovery_summary

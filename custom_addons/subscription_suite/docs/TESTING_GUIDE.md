@@ -1080,3 +1080,37 @@ Automated coverage:
 Implementation note:
 
 - At-risk summaries are generated operational analytics. They do not create manager tasks, trigger retention offers, predict churn probability, normalize currencies, or change subscription lifecycle state.
+
+## 42. Payment Recovery Analytics Demo
+
+Purpose: verify manager-facing failed-payment recovery analytics by period, source, company, currency, and plan.
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports` with billing and dunning installed.
+2. Create or select subscriptions with payment attempts in the target period:
+   - `portal` failed or cancelled/error attempts
+   - `cron` pending attempts
+   - `manual` successful recovery attempts
+3. Create or select posted unpaid or partial subscription invoices for open recovery work.
+4. If dunning is installed, create retry-exhausted or final-action dunning attempts in the same period.
+5. Optionally generate **At-Risk Subscriptions** first for the same period so recovery rows can link related at-risk subscriptions.
+6. Open **Subscriptions -> Reporting -> Generate Payment Recovery**.
+7. Choose opening date, closing date, company, and optionally a subscription plan or recovery source.
+8. Click **Generate**.
+9. Confirm **Subscriptions -> Reporting -> Payment Recovery** shows portal, cron, manual, and all-source rows when no source is selected.
+10. Verify source rows summarize payment attempt outcomes: failed, pending, recovered, cancelled/error, manual action required, and related amounts.
+11. Verify the all-source row also includes open recovery invoices, retry-exhausted/final-dunning counts, linked at-risk subscriptions, and MRR at risk.
+12. Open a generated row and use **Payment Attempts**, **Open Invoices**, **Subscriptions**, **Dunning Attempts**, and **At-Risk Rows** to verify source drilldowns.
+13. Re-run the same scope and confirm duplicate rows are not created.
+14. Re-run one plan or one source and confirm adjacent plan/source rows remain intact.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover recovery generation from failed, pending, recovered, cancelled/error, and manual-action-required attempts; portal/cron/manual/all-source buckets; open recovery invoices; retry-exhausted/final dunning counts; linked at-risk rows; multi-currency separation; plan/source filtered drilldowns; idempotent reruns; scoped reruns; wizard action output; and manager-only generation.
+- The analytics smoke test includes payment recovery generation so the full generated analytics chain covers recovery rows, source buckets, currency separation, and idempotent reruns.
+
+Implementation note:
+
+- Payment recovery summaries are generated operational analytics. Source-specific rows are based on payment attempts for that source. Source-independent backlog signals such as open invoices, dunning escalation, and at-risk rows are shown on the `All Sources` bucket to avoid multiplying the same recovery workload across portal, cron, and manual rows.
+- `Recovery Amount` is operational workload, not recognized revenue. It includes pending/failed/cancelled/error attempt amounts plus unpaid or partial posted subscription invoice residuals that have no payment attempt in the selected period, so the same invoice is not counted once through an attempt and again as open backlog.

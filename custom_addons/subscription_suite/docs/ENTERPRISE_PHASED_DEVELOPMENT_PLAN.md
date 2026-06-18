@@ -773,7 +773,7 @@ For every phase, update or create:
 - MRR movement model exists for new, expansion, contraction, churn.
 - Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** At-Risk Subscription Analytics Foundation. ARPU summary, LTV summary, forecasting foundation, churn reason analytics, top plan analytics, analytics performance smoke coverage, and generated analytics lifecycle hardening are complete. This slice identifies manager-actionable at-risk subscriptions from subscription, payment recovery, dunning, renewal, and cancellation signals before adding pricing recommendations, predictive scoring, custom Owl widgets, or executive board packs.
+**Current slice:** Failed-Payment Recovery Analytics Foundation. ARPU summary, LTV summary, forecasting foundation, churn reason analytics, top plan analytics, at-risk analytics, analytics performance smoke coverage, and generated analytics lifecycle hardening are complete. This slice summarizes recovery performance from payment attempts, open recovery invoices, dunning escalation, and at-risk rows before adding provider integrations, predictive recovery scoring, custom Owl widgets, or executive board packs.
 
 **Build items:**
 
@@ -794,7 +794,8 @@ For every phase, update or create:
    - LTV - foundation done as ARPU divided by churn rate.
    - Churn reason summary - foundation done using existing cancellation reasons and feedback coverage.
    - Top plan performance summary - foundation done using existing generated plan-level analytics.
-   - At-risk subscription summary - current slice using explainable rules over subscription, payment recovery, dunning, renewal, and cancellation signals.
+   - At-risk subscription summary - foundation done using explainable rules over subscription, payment recovery, dunning, renewal, and cancellation signals.
+   - Failed-payment recovery summary - current slice using payment attempts, open recovery invoices, dunning escalation, and at-risk rows.
 
 2. Snapshot models
    - `subscription.mrr.snapshot` - foundation done with daily company/currency/plan buckets.
@@ -812,7 +813,8 @@ For every phase, update or create:
     - `subscription.ltv.summary` - foundation done for generated LTV by company, currency, optional plan, ARPU period, and cohort range.
     - `subscription.churn.reason.summary` - foundation done for generated churn reason analytics by company, currency, optional plan, optional cancellation reason, MRR source quality, and feedback coverage quality.
     - `subscription.plan.performance.summary` - foundation done for generated top-plan performance rows by company, currency, and plan.
-    - `subscription.at.risk.summary` - current slice for generated at-risk subscription rows by company, currency, plan, and subscription.
+    - `subscription.at.risk.summary` - foundation done for generated at-risk subscription rows by company, currency, plan, and subscription.
+    - `subscription.payment.recovery.summary` - current slice for generated recovery rows by company, currency, optional plan, and recovery source.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
@@ -824,8 +826,8 @@ For every phase, update or create:
    - Retention cohort - foundation done.
     - Churn reasons - foundation done.
    - Top plans - foundation done.
-   - At-risk subscriptions - current slice.
-   - Failed-payment recovery.
+   - At-risk subscriptions - foundation done.
+   - Failed-payment recovery - current slice.
 
 4. Forecasting
    - Upcoming renewals - current slice.
@@ -851,6 +853,7 @@ For every phase, update or create:
 - Validate churn reason summary quality fields: movement MRR vs fallback MRR source, missing reason, and no/partial/full feedback coverage.
 - Generate top plan summaries from snapshots, KPI summaries, ARPU summaries, LTV summaries, churn reason summaries, and revenue forecasts; static top-plan summary XML is intentionally avoided so rows reflect the selected period and generated analytics inputs.
 - Generate at-risk subscription summaries from current subscription, invoice, payment attempt, dunning attempt, renewal, and cancellation state; static at-risk summary XML is intentionally avoided so rows reflect current manager work.
+- Generate payment recovery summaries from payment attempts, open recovery invoices, dunning attempts, and at-risk rows; static recovery summary XML is intentionally avoided so rows reflect current payment recovery workload.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -898,6 +901,10 @@ For every phase, update or create:
 - Top plan rows show opening MRR, closing MRR, ARR, net new MRR, subscription state counts, ARPU, LTV, churned MRR, feedback coverage, upcoming invoice MRR, scheduled churn MRR, net forecast MRR, missing-input statuses, and source drilldowns.
 - Managers can generate at-risk subscription summary rows from current operational signals without duplicates.
 - At-risk rows show risk score, low/medium/high/critical buckets, MRR at risk, payment recovery signals, failed payment attempts, dunning escalation, scheduled churn, upcoming invoices, renewal due dates, missing primary payment methods, and source drilldowns.
+- Managers can generate payment recovery summary rows for a selected period without duplicates.
+- Payment recovery rows separate portal, cron, manual, and all-source buckets while keeping company, currency, and plan scopes distinct.
+- Payment recovery rows show failed, pending, recovered, cancelled/error, manual-action-required, retry-exhausted/final-dunning counts, recovery amounts, recovered amounts, pending amounts, failed amounts, open recovery invoices, linked at-risk subscriptions, MRR at risk, and source drilldowns.
+- Payment recovery recovery amount is workload-oriented and avoids double-counting an invoice that already has a payment attempt in the selected period.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
 - Filters by company, plan, salesperson, country, and period work.
@@ -913,13 +920,14 @@ For every phase, update or create:
 - MRR waterfall generation, ordered bucket math, variance status, multi-plan aggregation, all-plan drilldowns, currency separation, missing summary/input status, source drilldowns, and idempotent reruns.
 - Retention cohort generation, churn timing, trial-start fallback, plan/currency separation, all-plan drilldowns, and idempotent reruns.
 - Revenue forecast generation, upcoming invoice buckets, renewal due buckets, scheduled churn buckets, plan/currency separation, all-plan drilldowns, and idempotent reruns.
-- Analytics performance smoke test with generated records, multi-plan/currency scoping, all-plan drilldowns, churn reason generation, top-plan generation, and idempotent reruns.
+- Analytics performance smoke test with generated records, multi-plan/currency scoping, all-plan drilldowns, churn reason generation, top-plan generation, payment recovery generation, and idempotent reruns.
 - Generated analytics lifecycle tests for manager-only generation and adjacent-scope preservation.
 - ARPU summary generation from snapshots, missing opening/closing statuses, zero-safe ARPU, plan/currency separation, all-plan aggregation, source drilldowns, scoped reruns, and manager-only generation.
 - LTV summary generation from ARPU and retention cohorts, zero-churn handling, missing-source statuses, plan/currency separation, all-plan aggregation, source drilldowns, scoped reruns, and manager-only generation.
 - Churn reason summary generation from cancelled/expired subscriptions, period filtering, state exclusion, missing-reason status, MRR source quality, feedback coverage buckets, plan/reason/currency separation, all-plan/all-reason aggregation, source drilldowns, scoped reruns, and manager-only generation.
 - Top plan summary generation from snapshots, KPI summaries, ARPU summaries, LTV summaries, churn reason summaries, and revenue forecasts; plan/currency separation, source drilldowns, missing-input statuses, scoped reruns, and manager-only generation.
 - At-risk subscription summary generation from subscription, invoice, payment attempt, dunning attempt, renewal, and cancellation signals; score buckets, plan/currency separation, source drilldowns, scoped reruns, and manager-only generation.
+- Payment recovery summary generation from payment attempts, open invoices, dunning escalation, and at-risk rows; source buckets, plan/currency separation, source drilldowns, scoped reruns, and manager-only generation.
 
 **Continuous validation:**
 

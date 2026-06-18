@@ -12,6 +12,12 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
             'name': 'Analytics Smoke Company',
             'currency_id': self.env.company.currency_id.id,
         })
+        self.env['account.journal'].create({
+            'name': 'Analytics Smoke Sales',
+            'code': 'ASS',
+            'type': 'sale',
+            'company_id': self.company.id,
+        })
         self.currency = self.company.currency_id
         self.other_currency = self.env['res.currency'].search([('id', '!=', self.currency.id)], limit=1)
         if not self.other_currency:
@@ -110,6 +116,26 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
             'amount': amount,
         })
 
+    def _create_payment_attempt(self, subscription, state, source, amount):
+        invoice = self.env['account.move'].create({
+            'move_type': 'out_invoice',
+            'partner_id': subscription.partner_id.id,
+            'company_id': subscription.company_id.id,
+            'currency_id': subscription.currency_id.id,
+            'subscription_id': subscription.id,
+            'invoice_date': self.opening_date,
+        })
+        return self.env['subscription.payment.attempt'].create({
+            'name': 'Analytics smoke %s recovery attempt' % source,
+            'subscription_id': subscription.id,
+            'invoice_id': invoice.id,
+            'source': source,
+            'state': state,
+            'amount': amount,
+            'attempt_date': fields.Datetime.to_datetime(self.opening_date + relativedelta(days=3)),
+            'recovery_required': state in ('failed', 'cancelled', 'error'),
+        })
+
     def _generate_chain(self):
         Snapshot = self.env['subscription.mrr.snapshot'].sudo()
         Reconciliation = self.env['subscription.mrr.reconciliation'].sudo()
@@ -121,6 +147,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         Forecast = self.env['subscription.revenue.forecast'].sudo()
         ChurnReason = self.env['subscription.churn.reason.summary'].sudo()
         TopPlan = self.env['subscription.plan.performance.summary'].sudo()
+        PaymentRecovery = self.env['subscription.payment.recovery.summary'].sudo()
 
         Snapshot.generate_for_date(self.opening_date, company=self.company)
         Snapshot.generate_for_date(self.closing_date, company=self.company)
@@ -134,6 +161,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         Forecast.generate_for_period(self.forecast_start_month, self.forecast_end_month, company=self.company)
         ChurnReason.generate_for_period(self.opening_date, self.closing_date, company=self.company)
         TopPlan.generate_for_period(self.opening_date, self.closing_date, company=self.company)
+        PaymentRecovery.generate_for_period(self.opening_date, self.closing_date, company=self.company)
 
     def _count_rows(self, model_name, domain):
         return self.env[model_name].search_count(domain)
@@ -181,6 +209,9 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         self._create_movement(alternate_currency, 'expansion', 50.0)
         self._create_movement(no_plan, 'expansion', 10.0)
         self._create_movement(churned_with_reason, 'churn', -70.0)
+        self._create_payment_attempt(monthly, 'failed', 'portal', 100.0)
+        self._create_payment_attempt(pro, 'pending', 'cron', 200.0)
+        self._create_payment_attempt(alternate_currency, 'success', 'manual', 500.0)
 
         self._generate_chain()
         counts_after_first_run = {
@@ -196,6 +227,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
                 'subscription.revenue.forecast': [('company_id', '=', self.company.id)],
                 'subscription.churn.reason.summary': [('company_id', '=', self.company.id)],
                 'subscription.plan.performance.summary': [('company_id', '=', self.company.id)],
+                'subscription.payment.recovery.summary': [('company_id', '=', self.company.id)],
             }.items()
         }
         self._generate_chain()
@@ -212,6 +244,7 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
                 'subscription.revenue.forecast': [('company_id', '=', self.company.id)],
                 'subscription.churn.reason.summary': [('company_id', '=', self.company.id)],
                 'subscription.plan.performance.summary': [('company_id', '=', self.company.id)],
+                'subscription.payment.recovery.summary': [('company_id', '=', self.company.id)],
             }.items()
         }
 
@@ -274,3 +307,11 @@ class TestAnalyticsPerformanceSmoke(TransactionCase):
         ], limit=1)
         self.assertTrue(top_plan)
         self.assertEqual(top_plan.subscription_plan_id, self.plan)
+
+        recovery_sources = self.env['subscription.payment.recovery.summary'].search([
+            ('company_id', '=', self.company.id),
+        ]).mapped('recovery_source')
+        self.assertIn('portal', recovery_sources)
+        self.assertIn('cron', recovery_sources)
+        self.assertIn('manual', recovery_sources)
+        self.assertIn('all', recovery_sources)

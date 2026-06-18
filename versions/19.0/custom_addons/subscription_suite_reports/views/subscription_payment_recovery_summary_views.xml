@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_payment_recovery_summary_list" model="ir.ui.view">
+        <field name="name">subscription.payment.recovery.summary.list</field>
+        <field name="model">subscription.payment.recovery.summary</field>
+        <field name="arch" type="xml">
+            <list string="Payment Recovery" create="0" edit="0"
+                  decoration-success="recovered_attempt_count &gt; 0"
+                  decoration-warning="pending_attempt_count &gt; 0"
+                  decoration-danger="failed_attempt_count + cancelled_error_attempt_count + manual_action_required_count &gt; 0">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="recovery_source"/>
+                <field name="failed_attempt_count" sum="Failed"/>
+                <field name="pending_attempt_count" sum="Pending"/>
+                <field name="recovered_attempt_count" sum="Recovered"/>
+                <field name="cancelled_error_attempt_count" sum="Cancelled/Error"/>
+                <field name="manual_action_required_count" sum="Manual Action"/>
+                <field name="retry_exhausted_dunning_count" sum="Retry Exhausted"/>
+                <field name="final_dunning_action_count" sum="Final Dunning"/>
+                <field name="open_recovery_invoice_count" sum="Open Invoices"/>
+                <field name="at_risk_subscription_count" sum="At-Risk"/>
+                <field name="recovery_amount" widget="monetary" sum="Recovery Amount"/>
+                <field name="recovered_amount" widget="monetary" sum="Recovered Amount"/>
+                <field name="pending_amount" widget="monetary" sum="Pending Amount"/>
+                <field name="failed_amount" widget="monetary" sum="Failed Amount"/>
+                <field name="mrr_at_risk" widget="monetary" sum="MRR at Risk"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_payment_recovery_summary_form" model="ir.ui.view">
+        <field name="name">subscription.payment.recovery.summary.form</field>
+        <field name="model">subscription.payment.recovery.summary</field>
+        <field name="arch" type="xml">
+            <form string="Payment Recovery Summary" create="0" edit="0">
+                <header>
+                    <button name="action_view_payment_attempts" type="object" string="Payment Attempts" class="btn-primary"/>
+                    <button name="action_view_open_invoices" type="object" string="Open Invoices"/>
+                    <button name="action_view_subscriptions" type="object" string="Subscriptions"/>
+                    <button name="action_view_dunning_attempts" type="object" string="Dunning Attempts"/>
+                    <button name="action_view_at_risk_summaries" type="object" string="At-Risk Rows"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="recovery_source"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="opening_date"/>
+                            <field name="closing_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="subscription_plan_id"/>
+                            <field name="recovery_source"/>
+                            <field name="status" widget="badge"/>
+                            <field name="generated_at"/>
+                            <field name="bucket_key"/>
+                        </group>
+                        <group string="Amounts">
+                            <field name="recovery_amount" widget="monetary"/>
+                            <field name="recovered_amount" widget="monetary"/>
+                            <field name="pending_amount" widget="monetary"/>
+                            <field name="failed_amount" widget="monetary"/>
+                            <field name="mrr_at_risk" widget="monetary"/>
+                        </group>
+                    </group>
+                    <group string="Attempt Outcomes">
+                        <field name="failed_attempt_count"/>
+                        <field name="pending_attempt_count"/>
+                        <field name="recovered_attempt_count"/>
+                        <field name="cancelled_error_attempt_count"/>
+                        <field name="manual_action_required_count"/>
+                    </group>
+                    <group string="Recovery Backlog">
+                        <field name="retry_exhausted_dunning_count"/>
+                        <field name="final_dunning_action_count"/>
+                        <field name="open_recovery_invoice_count"/>
+                        <field name="at_risk_subscription_count"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_payment_recovery_summary_pivot" model="ir.ui.view">
+        <field name="name">subscription.payment.recovery.summary.pivot</field>
+        <field name="model">subscription.payment.recovery.summary</field>
+        <field name="arch" type="xml">
+            <pivot string="Payment Recovery" sample="1">
+                <field name="recovery_source" type="row"/>
+                <field name="subscription_plan_id" type="row"/>
+                <field name="currency_id" type="col"/>
+                <field name="recovery_amount" type="measure"/>
+                <field name="recovered_amount" type="measure"/>
+                <field name="failed_amount" type="measure"/>
+                <field name="pending_amount" type="measure"/>
+                <field name="mrr_at_risk" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_subscription_payment_recovery_summary_graph" model="ir.ui.view">
+        <field name="name">subscription.payment.recovery.summary.graph</field>
+        <field name="model">subscription.payment.recovery.summary</field>
+        <field name="arch" type="xml">
+            <graph string="Payment Recovery" type="bar" sample="1">
+                <field name="recovery_source"/>
+                <field name="recovery_amount" type="measure"/>
+                <field name="recovered_amount" type="measure"/>
+                <field name="failed_amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_payment_recovery_summary_search" model="ir.ui.view">
+        <field name="name">subscription.payment.recovery.summary.search</field>
+        <field name="model">subscription.payment.recovery.summary</field>
+        <field name="arch" type="xml">
+            <search string="Payment Recovery">
+                <field name="opening_date"/>
+                <field name="closing_date"/>
+                <field name="company_id"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="recovery_source"/>
+                <filter string="Recovered" name="recovered" domain="[('recovered_attempt_count', '&gt;', 0)]"/>
+                <filter string="Pending" name="pending" domain="[('pending_attempt_count', '&gt;', 0)]"/>
+                <filter string="Failed" name="failed" domain="[('failed_attempt_count', '&gt;', 0)]"/>
+                <filter string="Cancelled/Error" name="cancelled_error" domain="[('cancelled_error_attempt_count', '&gt;', 0)]"/>
+                <filter string="Manual Action Required" name="manual_action" domain="[('manual_action_required_count', '&gt;', 0)]"/>
+                <filter string="Retry Exhausted" name="retry_exhausted" domain="[('retry_exhausted_dunning_count', '&gt;', 0)]"/>
+                <filter string="Final Dunning" name="final_dunning" domain="[('final_dunning_action_count', '&gt;', 0)]"/>
+                <filter string="Open Recovery Invoices" name="open_recovery" domain="[('open_recovery_invoice_count', '&gt;', 0)]"/>
+                <filter string="At-Risk Linked" name="at_risk_linked" domain="[('at_risk_subscription_count', '&gt;', 0)]"/>
+                <group>
+                    <filter string="Opening Date" name="group_opening_date" context="{'group_by': 'opening_date'}"/>
+                    <filter string="Closing Date" name="group_closing_date" context="{'group_by': 'closing_date'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'currency_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                    <filter string="Source" name="group_source" context="{'group_by': 'recovery_source'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_payment_recovery_summary_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.payment.recovery.summary.generate.wizard.form</field>
+        <field name="model">subscription.payment.recovery.summary.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Payment Recovery">
+                <group>
+                    <field name="opening_date"/>
+                    <field name="closing_date"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="subscription_plan_id"/>
+                    <field name="recovery_source"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_payment_recovery_summary_report" model="ir.actions.act_window">
+        <field name="name">Payment Recovery</field>
+        <field name="res_model">subscription.payment.recovery.summary</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="search_view_id" ref="view_subscription_payment_recovery_summary_search"/>
+        <field name="context">{'search_default_group_source': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate payment recovery summaries from payment attempts, open recovery invoices, dunning escalation, and at-risk rows.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_payment_recovery_summary" model="ir.actions.act_window">
+        <field name="name">Generate Payment Recovery</field>
+        <field name="res_model">subscription.payment.recovery.summary.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>
