@@ -7,3 +7,4 @@ from . import test_mrr_waterfall
 from . import test_retention_cohort
 from . import test_revenue_forecast
 from . import test_analytics_performance_smoke
+from . import test_generated_analytics_lifecycle

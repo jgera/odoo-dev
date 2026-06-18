@@ -887,3 +887,23 @@ Automated coverage:
 Implementation note:
 
 - This is a development smoke test, not the final Phase 8 10K subscription benchmark. The full large-data generator, performance budget, and recorded benchmark remain deferred.
+
+## 36. Generated Analytics Lifecycle
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Generate analytics records as a subscription manager and confirm records are created for the requested scope.
+3. Re-run generation for one company, currency, plan, or date range and confirm adjacent generated rows remain intact.
+4. Confirm non-manager subscription users can read generated analytics records but cannot run generation actions or wizards.
+5. For all-plan dashboard, waterfall, retention, and forecast records, confirm plan-specific reruns do not delete the all-plan buckets.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests verify that non-manager users cannot generate snapshots, reconciliation rows, movement anomalies, KPI summaries, KPI dashboards, waterfalls, retention cohorts, or revenue forecasts.
+- The lifecycle tests verify company-scoped snapshot reruns preserve other-company snapshots.
+- The lifecycle tests verify plan-scoped reruns preserve adjacent generated rows, including other-plan and all-plan records.
+
+Implementation note:
+
+- Generated analytics models intentionally use delete-and-recreate semantics for idempotent reruns. The required invariant is that deletion must be limited to the selected generation scope.
