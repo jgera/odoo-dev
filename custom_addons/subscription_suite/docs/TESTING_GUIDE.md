@@ -907,3 +907,35 @@ Automated coverage:
 Implementation note:
 
 - Generated analytics models intentionally use delete-and-recreate semantics for idempotent reruns. The required invariant is that deletion must be limited to the selected generation scope.
+
+## 37. ARPU Summary Demo
+
+Metric definition:
+
+- ARPU means **Average Revenue Per Subscription** in this foundation slice.
+- Formula: `average_mrr / average_subscription_count`.
+- `average_mrr` is `(opening_mrr + closing_mrr) / 2`.
+- `average_subscription_count` is `(opening_subscription_count + closing_subscription_count) / 2`.
+- If the average subscription count is zero, ARPU is zero.
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Generate opening and closing MRR snapshots for the selected dates.
+3. Open **Subscriptions -> Reporting -> Generate ARPU Summary**.
+4. Choose the opening date, closing date, company, and optionally a subscription plan.
+5. Click **Generate**.
+6. Confirm **Subscriptions -> Reporting -> ARPU Summary** shows rows by period, company, currency, and optional plan.
+7. Verify opening/closing subscription counts, average subscription count, opening/closing MRR, average MRR, and ARPU.
+8. Generate without a plan and confirm all-plan rows aggregate plan snapshots for the selected company/currency without merging currencies.
+9. Generate with a plan and confirm rows and drilldowns are limited to that plan.
+10. Use **Snapshots** and **Subscriptions** from the ARPU summary form to verify source records.
+11. Re-run the same scope and confirm duplicate ARPU rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover ARPU formulas, zero-safe counts, missing opening and closing snapshot statuses, plan/currency separation, all-plan aggregation, scoped reruns, source drilldowns, wizard action output, and manager-only generation.
+
+Implementation note:
+
+- ARPU summaries are generated from `subscription.mrr.snapshot` records. They remain source-currency operational analytics and do not calculate customer/account ARPU, LTV, normalized multi-currency values, or accounting revenue recognition.

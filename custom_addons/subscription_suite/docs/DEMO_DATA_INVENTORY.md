@@ -127,6 +127,7 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | Revenue forecasts | Generated | Generate from **Subscriptions -> Reporting -> Generate Revenue Forecast** for a forecast month range; static XML is intentionally avoided |
 | Analytics performance smoke | Generated/Test-only | Covered by `subscription_suite_reports` automated smoke data; full large demo-data generator remains Phase 8 |
 | Generated analytics lifecycle | Test-only | Covered by `subscription_suite_reports` lifecycle tests for manager-only generation and scoped reruns |
+| ARPU summaries | Generated | Generate from **Subscriptions -> Reporting -> Generate ARPU Summary** after opening and closing MRR snapshots; static XML is intentionally avoided |
 | Revenue recognition | No | Phase 7 |
 
 ## Demo Expansion Rules
@@ -147,6 +148,6 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | Phase 3 | Portal users and subscriptions with allowed/blocked actions |
 | Phase 4 | Past-due subscriptions, dunning stages, payment attempts, recovery path |
 | Phase 5 | Seat, add-on, tiered, volume, usage, and time-limited discount examples |
-| Phase 6 | MRR snapshots, reconciliation rows, movement anomalies, KPI summaries, KPI dashboards, waterfalls, retention cohorts, revenue forecasts, analytics smoke coverage, and generated-record lifecycle checks are generated from current or controlled records; later add multi-month MRR movement history and richer churn reasons |
+| Phase 6 | MRR snapshots, reconciliation rows, movement anomalies, KPI summaries, KPI dashboards, waterfalls, retention cohorts, revenue forecasts, ARPU summaries, analytics smoke coverage, and generated-record lifecycle checks are generated from current or controlled records; later add multi-month MRR movement history and richer churn reasons |
 | Phase 7 | Deferred revenue schedule and recognition examples |
 | Phase 8 | Complete end-to-end demo story and optional large-data generator |
