@@ -773,7 +773,7 @@ For every phase, update or create:
 - MRR movement model exists for new, expansion, contraction, churn.
 - Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** Retention Cohort Foundation. This turns subscription start and cancellation dates into generated monthly retention rows by company, currency, plan, cohort month, and cohort age. Normalized company-currency analytics, forecasting, LTV, ARPU, custom Owl widgets, and executive board packs remain deferred.
+**Current slice:** Forecasting Foundation. This turns current subscription invoice, renewal, and scheduled cancellation dates into generated monthly revenue forecast rows by company, currency, and plan. Normalized company-currency analytics, LTV, ARPU, probability scoring, custom Owl widgets, and executive board packs remain deferred.
 
 **Build items:**
 
@@ -801,7 +801,8 @@ For every phase, update or create:
    - `subscription.mrr.kpi.summary` - foundation done for generated period-level MRR KPI metrics.
    - `subscription.mrr.kpi.dashboard` - foundation done for generated dashboard records from KPI summaries.
    - `subscription.mrr.waterfall` - foundation done for generated MRR waterfall buckets.
-   - `subscription.retention.cohort` - current slice for generated monthly retention cohorts.
+   - `subscription.retention.cohort` - foundation done for generated monthly retention cohorts.
+   - `subscription.revenue.forecast` - current slice for generated monthly operational revenue forecasts.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
@@ -810,17 +811,17 @@ For every phase, update or create:
    - KPI cards - foundation done.
    - Source drilldowns to KPI summaries, snapshots, reconciliations, anomalies, and movements - foundation done.
    - MRR waterfall - foundation done.
-   - Retention cohort - current slice.
+   - Retention cohort - foundation done.
    - Churn reasons.
    - Top plans.
    - At-risk subscriptions.
    - Failed-payment recovery.
 
 4. Forecasting
-   - Upcoming renewals.
-   - Forecasted MRR.
-   - Expected churn based on scheduled cancellations.
-   - Upcoming invoices.
+   - Upcoming renewals - current slice.
+   - Forecasted MRR - current slice.
+   - Expected churn based on scheduled cancellations - current slice.
+   - Upcoming invoices - current slice.
 
 **Demo data updates:**
 
@@ -831,6 +832,7 @@ For every phase, update or create:
 - Generate MRR KPI dashboards from KPI summaries; static dashboard demo XML is intentionally avoided so dashboard values reflect the selected period, company, currency, and optional plan.
 - Generate MRR waterfalls from KPI summaries; static waterfall demo XML is intentionally avoided so rows reflect the selected period, company, currency, and optional plan.
 - Generate retention cohorts from existing subscription start and cancellation dates; static cohort XML is intentionally avoided so rows reflect the selected cohort range.
+- Generate revenue forecasts from existing subscription invoice, renewal, and scheduled cancellation dates; static forecast XML is intentionally avoided so rows reflect the selected forecast range.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
@@ -861,6 +863,8 @@ For every phase, update or create:
 - Waterfall rows expose expected closing MRR, actual closing MRR, and variance so managers can spot source KPI math mismatches.
 - Managers can generate retention cohort rows for monthly cohort ranges without duplicates.
 - Retention cohort rows show starting, retained, and churned subscription/MRR buckets by cohort age and source drilldowns.
+- Managers can generate revenue forecast rows for monthly forecast ranges without duplicates.
+- Forecast rows show active base MRR, upcoming invoice MRR, renewal due MRR, scheduled churn MRR, net forecast MRR, and source drilldowns.
 - Dashboard loads in under 3 seconds with 10K subscriptions.
 - MRR movement totals reconcile to snapshot deltas.
 - Filters by company, plan, salesperson, country, and period work.
@@ -875,6 +879,7 @@ For every phase, update or create:
 - MRR KPI dashboard generation, multi-plan aggregation, currency separation, missing summary/input status, source drilldowns, and idempotent reruns.
 - MRR waterfall generation, ordered bucket math, variance status, multi-plan aggregation, all-plan drilldowns, currency separation, missing summary/input status, source drilldowns, and idempotent reruns.
 - Retention cohort generation, churn timing, trial-start fallback, plan/currency separation, all-plan drilldowns, and idempotent reruns.
+- Revenue forecast generation, upcoming invoice buckets, renewal due buckets, scheduled churn buckets, plan/currency separation, all-plan drilldowns, and idempotent reruns.
 - Performance smoke test with generated records.
 
 **Continuous validation:**

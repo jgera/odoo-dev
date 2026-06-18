@@ -13,3 +13,5 @@ from . import subscription_mrr_waterfall
 from . import subscription_mrr_waterfall_wizard
 from . import subscription_retention_cohort
 from . import subscription_retention_cohort_wizard
+from . import subscription_revenue_forecast
+from . import subscription_revenue_forecast_wizard

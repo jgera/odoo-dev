@@ -48,5 +48,11 @@
             <field name="model_id" ref="model_subscription_retention_cohort"/>
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
+
+        <record id="subscription_revenue_forecast_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Revenue Forecast Multi-Company</field>
+            <field name="model_id" ref="model_subscription_revenue_forecast"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
     </data>
 </odoo>

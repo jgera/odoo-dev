@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_revenue_forecast_list" model="ir.ui.view">
+        <field name="name">subscription.revenue.forecast.list</field>
+        <field name="model">subscription.revenue.forecast</field>
+        <field name="arch" type="xml">
+            <list string="Revenue Forecast" create="0" edit="0"
+                  decoration-success="net_forecast_mrr &gt;= 0"
+                  decoration-danger="net_forecast_mrr &lt; 0">
+                <field name="forecast_month"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <field name="source_count"/>
+                <field name="active_base_mrr" widget="monetary" sum="Active Base MRR"/>
+                <field name="upcoming_invoice_count" sum="Upcoming Invoices"/>
+                <field name="upcoming_invoice_mrr" widget="monetary" sum="Upcoming Invoice MRR"/>
+                <field name="renewal_due_count" sum="Renewals Due"/>
+                <field name="renewal_due_mrr" widget="monetary" sum="Renewal Due MRR"/>
+                <field name="scheduled_churn_count" sum="Scheduled Churn"/>
+                <field name="scheduled_churn_mrr" widget="monetary" sum="Scheduled Churn MRR"/>
+                <field name="net_forecast_mrr" widget="monetary" sum="Net Forecast MRR"/>
+                <field name="generated_at"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_revenue_forecast_form" model="ir.ui.view">
+        <field name="name">subscription.revenue.forecast.form</field>
+        <field name="model">subscription.revenue.forecast</field>
+        <field name="arch" type="xml">
+            <form string="Revenue Forecast" create="0" edit="0">
+                <header>
+                    <button name="action_view_source_subscriptions" type="object" string="Sources" class="btn-primary"/>
+                    <button name="action_view_upcoming_invoices" type="object" string="Upcoming Invoices"/>
+                    <button name="action_view_renewals_due" type="object" string="Renewals Due"/>
+                    <button name="action_view_scheduled_churn" type="object" string="Scheduled Churn"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="forecast_month"/></h1>
+                    </div>
+                    <group>
+                        <group string="Scope">
+                            <field name="forecast_month"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id"/>
+                            <field name="subscription_plan_id"/>
+                        </group>
+                        <group string="Status">
+                            <field name="status" widget="badge" decoration-success="status == 'ready'"/>
+                            <field name="source_count"/>
+                            <field name="generated_at"/>
+                        </group>
+                    </group>
+                    <group string="Forecast">
+                        <field name="active_base_mrr" widget="monetary"/>
+                        <field name="upcoming_invoice_count"/>
+                        <field name="upcoming_invoice_mrr" widget="monetary"/>
+                        <field name="renewal_due_count"/>
+                        <field name="renewal_due_mrr" widget="monetary"/>
+                        <field name="scheduled_churn_count"/>
+                        <field name="scheduled_churn_mrr" widget="monetary"/>
+                        <field name="net_forecast_mrr" widget="monetary"/>
+                    </group>
+                    <group string="Technical">
+                        <field name="bucket_key"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_revenue_forecast_pivot" model="ir.ui.view">
+        <field name="name">subscription.revenue.forecast.pivot</field>
+        <field name="model">subscription.revenue.forecast</field>
+        <field name="arch" type="xml">
+            <pivot string="Revenue Forecast" sample="1">
+                <field name="forecast_month" type="row"/>
+                <field name="subscription_plan_id" type="col"/>
+                <field name="net_forecast_mrr" type="measure"/>
+                <field name="upcoming_invoice_mrr" type="measure"/>
+                <field name="scheduled_churn_mrr" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_subscription_revenue_forecast_graph" model="ir.ui.view">
+        <field name="name">subscription.revenue.forecast.graph</field>
+        <field name="model">subscription.revenue.forecast</field>
+        <field name="arch" type="xml">
+            <graph string="Revenue Forecast" type="line" sample="1">
+                <field name="forecast_month"/>
+                <field name="net_forecast_mrr" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_revenue_forecast_search" model="ir.ui.view">
+        <field name="name">subscription.revenue.forecast.search</field>
+        <field name="model">subscription.revenue.forecast</field>
+        <field name="arch" type="xml">
+            <search string="Revenue Forecast">
+                <field name="forecast_month"/>
+                <field name="company_id"/>
+                <field name="currency_id"/>
+                <field name="subscription_plan_id"/>
+                <filter string="Has Upcoming Invoices" name="has_upcoming_invoices" domain="[('upcoming_invoice_count', '&gt;', 0)]"/>
+                <filter string="Has Renewals Due" name="has_renewals_due" domain="[('renewal_due_count', '&gt;', 0)]"/>
+                <filter string="Has Scheduled Churn" name="has_scheduled_churn" domain="[('scheduled_churn_count', '&gt;', 0)]"/>
+                <filter string="Negative Net Forecast" name="negative_net_forecast" domain="[('net_forecast_mrr', '&lt;', 0)]"/>
+                <group>
+                    <filter string="Forecast Month" name="group_forecast_month" context="{'group_by': 'forecast_month'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}"/>
+                    <filter string="Currency" name="group_currency" context="{'group_by': 'currency_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_subscription_revenue_forecast_generate_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.revenue.forecast.generate.wizard.form</field>
+        <field name="model">subscription.revenue.forecast.generate.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Revenue Forecast">
+                <group>
+                    <field name="forecast_start_month"/>
+                    <field name="forecast_end_month"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="subscription_plan_id"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_subscription_revenue_forecast_report" model="ir.actions.act_window">
+        <field name="name">Revenue Forecast</field>
+        <field name="res_model">subscription.revenue.forecast</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="search_view_id" ref="view_subscription_revenue_forecast_search"/>
+        <field name="context">{'search_default_group_forecast_month': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Generate revenue forecasts from current subscription dates and scheduled cancellations.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_revenue_forecast" model="ir.actions.act_window">
+        <field name="name">Generate Revenue Forecast</field>
+        <field name="res_model">subscription.revenue.forecast.generate.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

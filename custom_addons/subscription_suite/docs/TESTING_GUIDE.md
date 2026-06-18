@@ -843,3 +843,26 @@ Automated coverage:
 Implementation note:
 
 - Retention cohorts are generated from current subscription records plus start and cancellation dates. They remain source-currency operational analytics, do not reconstruct full historical plan/customer state, and do not calculate LTV or forecasting.
+
+## 34. Revenue Forecast Demo
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_reports`.
+2. Open **Subscriptions -> Reporting -> Generate Revenue Forecast**.
+3. Choose the forecast start month, forecast end month, company, and optionally a subscription plan.
+4. Click **Generate**.
+5. Confirm **Subscriptions -> Reporting -> Revenue Forecast** shows rows by forecast month, company, currency, and plan.
+6. Confirm active base MRR, upcoming invoice MRR, renewal due MRR, scheduled churn MRR, and net forecast MRR are visible.
+7. Generate without a plan and confirm all-plan rows aggregate plan-level rows for the selected company/currency.
+8. Generate with a plan and confirm rows and drilldowns are limited to that plan.
+9. Use **Upcoming Invoices**, **Renewals Due**, **Scheduled Churn**, and **Sources** to verify source subscription records.
+10. Generate the same forecast range again and confirm duplicate forecast rows are not created.
+
+Automated coverage:
+
+- `subscription_suite_reports` tests cover monthly forecast generation, upcoming invoice date buckets, renewal due buckets, scheduled cancellation buckets, cancelled/expired exclusions, plan/currency separation, plan-filtered and all-plan drilldowns, idempotent reruns, invalid month ranges, and wizard action output.
+
+Implementation note:
+
+- Revenue forecasts are generated from current subscription records only. They remain source-currency operational analytics and do not apply probability scoring, reconstruct historical state, normalize currencies, or act as accounting revenue recognition.

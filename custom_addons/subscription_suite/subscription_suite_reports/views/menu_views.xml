@@ -115,6 +115,19 @@
               sequence="40"
               groups="subscription_suite.group_subscription_manager"/>
 
+    <menuitem id="menu_revenue_forecast"
+              name="Revenue Forecast"
+              parent="menu_subscription_reporting"
+              action="action_subscription_revenue_forecast_report"
+              sequence="41"/>
+
+    <menuitem id="menu_generate_revenue_forecast"
+              name="Generate Revenue Forecast"
+              parent="menu_subscription_reporting"
+              action="action_generate_subscription_revenue_forecast"
+              sequence="42"
+              groups="subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_churn_analysis"
               name="Churn Analysis"
               parent="menu_subscription_reporting"
