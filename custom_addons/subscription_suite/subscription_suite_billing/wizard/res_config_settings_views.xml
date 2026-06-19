@@ -26,6 +26,28 @@
                             </div>
                         </setting>
                     </block>
+                    <block title="Revenue Recognition" name="subscription_revenue_recognition_settings">
+                        <setting id="subscription_revenue_recognition" string="Deferred Revenue Schedules" help="Configure schedule defaults. This foundation creates generated schedules only; it does not post journal entries yet.">
+                            <div class="content-group">
+                                <div class="row mt8">
+                                    <label for="subscription_deferred_revenue_account_id" class="col-lg-5 o_light_label"/>
+                                    <field name="subscription_deferred_revenue_account_id" class="oe_inline"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="subscription_revenue_account_id" class="col-lg-5 o_light_label"/>
+                                    <field name="subscription_revenue_account_id" class="oe_inline"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="subscription_recognition_journal_id" class="col-lg-5 o_light_label"/>
+                                    <field name="subscription_recognition_journal_id" class="oe_inline"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="subscription_default_recognition_method" class="col-lg-5 o_light_label"/>
+                                    <field name="subscription_default_recognition_method" class="oe_inline"/>
+                                </div>
+                            </div>
+                        </setting>
+                    </block>
                 </app>
             </xpath>
         </field>

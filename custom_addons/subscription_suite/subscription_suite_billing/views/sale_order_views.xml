@@ -58,6 +58,9 @@
                 <button class="oe_stat_button" icon="fa-tachometer" name="action_view_usage_summaries" type="object" invisible="not is_subscription">
                     <field name="usage_summary_count" widget="statinfo" string="Usage"/>
                 </button>
+                <button class="oe_stat_button" icon="fa-calendar" name="action_view_deferred_revenue_schedules" type="object" invisible="not is_subscription">
+                    <field name="deferred_revenue_schedule_count" widget="statinfo" string="Deferred Revenue"/>
+                </button>
                 <button class="oe_stat_button" icon="fa-check-square-o" name="action_view_subscription_plan_change_requests" type="object" invisible="not is_subscription">
                     <field name="plan_change_request_count" widget="statinfo" string="Plan Requests"/>
                 </button>

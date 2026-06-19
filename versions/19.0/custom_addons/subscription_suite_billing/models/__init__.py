@@ -9,6 +9,7 @@ from . import subscription_usage_meter
 from . import subscription_plan_usage_line
 from . import subscription_usage_event
 from . import subscription_usage_summary
+from . import subscription_deferred_revenue
 from . import subscription_plan_change_request
 from . import sale_order
 from . import account_move

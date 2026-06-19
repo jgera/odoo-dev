@@ -20,6 +20,30 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='subscription_suite.billing_retry_delay_hours',
         default=1,
     )
+    subscription_deferred_revenue_account_id = fields.Many2one(
+        'account.account',
+        string='Deferred Revenue Account',
+        config_parameter='subscription_suite.deferred_revenue_account_id',
+    )
+    subscription_revenue_account_id = fields.Many2one(
+        'account.account',
+        string='Revenue Account',
+        config_parameter='subscription_suite.revenue_account_id',
+    )
+    subscription_recognition_journal_id = fields.Many2one(
+        'account.journal',
+        string='Recognition Journal',
+        config_parameter='subscription_suite.recognition_journal_id',
+    )
+    subscription_default_recognition_method = fields.Selection(
+        [
+            ('straight_line_daily', 'Straight-line Daily'),
+            ('equal_monthly', 'Equal Monthly'),
+        ],
+        string='Default Recognition Method',
+        config_parameter='subscription_suite.default_recognition_method',
+        default='straight_line_daily',
+    )
 
     @api.constrains(
         'subscription_billing_retry_max_attempts',

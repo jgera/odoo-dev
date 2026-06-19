@@ -24,6 +24,7 @@ Handles advanced billing scenarios:
         'data/cron_data.xml',
         'views/subscription_billing_views.xml',
         'views/subscription_usage_views.xml',
+        'views/subscription_deferred_revenue_views.xml',
         'views/subscription_proration_views.xml',
         'views/subscription_plan_views.xml',
         'views/subscription_plan_change_request_views.xml',
@@ -34,6 +35,7 @@ Handles advanced billing scenarios:
         'wizard/subscription_change_seats_wizard_views.xml',
         'wizard/subscription_change_addons_wizard_views.xml',
         'wizard/subscription_change_discounts_wizard_views.xml',
+        'wizard/subscription_deferred_revenue_wizard_views.xml',
     ],
     'demo': [
         'demo/plan_change_approval_demo.xml',

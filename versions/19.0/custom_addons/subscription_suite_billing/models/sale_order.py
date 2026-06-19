@@ -40,6 +40,16 @@ class SaleOrder(models.Model):
     pending_addon_change_date = fields.Date(string='Pending Add-on Change Date', copy=False, index=True)
     usage_summary_ids = fields.One2many('subscription.usage.summary', 'subscription_id', string='Usage Summaries')
     usage_summary_count = fields.Integer(string='Usage Summary Count', compute='_compute_usage_summary_count')
+    deferred_revenue_schedule_ids = fields.One2many(
+        'subscription.deferred.revenue',
+        'subscription_id',
+        string='Deferred Revenue Schedules',
+        readonly=True,
+    )
+    deferred_revenue_schedule_count = fields.Integer(
+        string='Deferred Revenue Schedule Count',
+        compute='_compute_deferred_revenue_schedule_count',
+    )
     plan_change_request_count = fields.Integer(
         string='Plan Change Requests',
         compute='_compute_plan_change_request_count',
@@ -60,6 +70,10 @@ class SaleOrder(models.Model):
     def _compute_usage_summary_count(self):
         for record in self:
             record.usage_summary_count = len(record.usage_summary_ids)
+
+    def _compute_deferred_revenue_schedule_count(self):
+        for record in self:
+            record.deferred_revenue_schedule_count = len(record.deferred_revenue_schedule_ids)
 
     def _compute_plan_change_request_count(self):
         grouped = self.env['subscription.plan.change.request']._read_group(
@@ -212,6 +226,17 @@ class SaleOrder(models.Model):
             'name': _('Usage Summaries'),
             'type': 'ir.actions.act_window',
             'res_model': 'subscription.usage.summary',
+            'view_mode': 'list,form',
+            'domain': [('subscription_id', '=', self.id)],
+            'context': {'default_subscription_id': self.id},
+        }
+
+    def action_view_deferred_revenue_schedules(self):
+        self.ensure_one()
+        return {
+            'name': _('Deferred Revenue Schedules'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.deferred.revenue',
             'view_mode': 'list,form',
             'domain': [('subscription_id', '=', self.id)],
             'context': {'default_subscription_id': self.id},

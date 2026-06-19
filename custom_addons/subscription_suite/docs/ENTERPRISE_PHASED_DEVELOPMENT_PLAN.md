@@ -952,24 +952,26 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
+**Current slice:** Revenue Recognition Schedule Foundation. This slice adds configuration defaults and generated deferred revenue schedules from posted subscription invoices with valid service periods. It creates audit-ready schedule lines only; journal posting, reversals, credit-note adjustments, revenue reports, and accounting reconciliation remain deferred.
+
 **Build items:**
 
 1. Deferred revenue configuration
-   - Deferred revenue account.
-   - Revenue account.
-   - Recognition journal.
-   - Recognition method.
-   - Company-level defaults.
+   - Deferred revenue account - foundation done as settings default copied onto schedules.
+   - Revenue account - foundation done as settings default copied onto schedules.
+   - Recognition journal - foundation done as settings default copied onto schedules.
+   - Recognition method - foundation done for straight-line daily and equal monthly.
+   - Company-level defaults - deferred; current defaults use module settings/config parameters.
 
 2. Deferred revenue schedule
-   - `subscription.deferred.revenue`.
-   - `subscription.deferred.revenue.line`.
-   - Link schedule to subscription and invoice.
-   - Service period from invoice/subscription period.
+   - `subscription.deferred.revenue` - foundation done.
+   - `subscription.deferred.revenue.line` - foundation done.
+   - Link schedule to subscription and invoice - done.
+   - Service period from invoice/subscription period - done with blocked status for missing/invalid periods.
 
 3. Recognition methods
-   - Straight-line daily.
-   - Equal monthly.
+   - Straight-line daily - schedule foundation done.
+   - Equal monthly - schedule foundation done.
    - Manual.
 
 4. Recognition posting
@@ -987,7 +989,7 @@ For every phase, update or create:
 
 **Demo data updates:**
 
-- Add annual prepaid subscription invoices suitable for deferred revenue schedules.
+- Generate annual prepaid subscription invoices suitable for deferred revenue schedules.
 - Add monthly and annual recognition examples.
 - Add cancellation/credit-note examples that adjust deferred revenue.
 
@@ -1000,7 +1002,9 @@ For every phase, update or create:
 
 **Acceptance gates:**
 
-- Annual prepaid invoice creates a 12-month recognition schedule.
+- Posted annual prepaid invoice creates a deferred revenue schedule.
+- Schedule line totals equal the invoice untaxed amount.
+- Missing service period invoices are blocked with a clear reason.
 - Monthly recognition entries post correctly.
 - Total recognized plus remaining deferred equals invoice amount.
 - Credit note/cancellation adjusts schedules correctly.
@@ -1008,9 +1012,10 @@ For every phase, update or create:
 
 **Tests:**
 
-- Schedule creation.
-- Straight-line daily calculation.
-- Monthly equal calculation.
+- Schedule creation - foundation covered.
+- Straight-line daily calculation - foundation covered.
+- Monthly equal calculation - foundation covered.
+- Idempotent schedule regeneration - foundation covered.
 - Posting journal entries.
 - Cancellation and credit note.
 - Multi-company and multi-currency.

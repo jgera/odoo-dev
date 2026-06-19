@@ -1167,3 +1167,31 @@ Automated coverage:
 Implementation note:
 
 - Generated analytics remain source-currency operational reports. They are not static demo XML, predictive scoring, normalized multi-currency reporting, custom dashboard widgets, or accounting revenue recognition.
+
+## 45. Revenue Recognition Schedule Foundation
+
+Purpose: verify Phase 7 deferred revenue schedule generation from posted subscription invoices without posting journal entries.
+
+Walkthrough:
+
+1. Install or upgrade `subscription_suite_billing`.
+2. Open **Subscriptions -> Configuration -> Settings**.
+3. In **Revenue Recognition**, optionally configure deferred revenue account, revenue account, recognition journal, and default recognition method.
+4. Generate or open a posted customer invoice linked to a subscription.
+5. Confirm the invoice has `subscription_period_start` and `subscription_period_end`.
+6. Open **Subscriptions -> Billing -> Generate Deferred Revenue**.
+7. Choose invoice date filters and a recognition method.
+8. Click **Generate**.
+9. Open **Subscriptions -> Billing -> Deferred Revenue**.
+10. Confirm one schedule exists for the invoice and no duplicate is created on rerun.
+11. Confirm schedule lines cover the service period and total to the invoice untaxed amount.
+12. Generate against an invoice missing service period dates and confirm the schedule is blocked with a clear reason.
+13. Use the subscription and invoice smart buttons to verify scoped schedule navigation.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover posted subscription invoice schedule creation, idempotent reruns, straight-line daily allocation, equal-monthly allocation, rounding reconciliation, blocked missing-period invoices, blocked draft/non-subscription/refund sources, smart-button domains, and manager-only generation.
+
+Implementation note:
+
+- Deferred revenue schedules are generated accounting-prep records. This foundation does not post journal entries, recognize revenue, reverse schedules, process credit-note adjustments, normalize currencies, or change invoice/payment behavior.

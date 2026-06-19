@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_deferred_revenue_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.deferred.revenue.wizard.form</field>
+        <field name="model">subscription.deferred.revenue.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Deferred Revenue Schedules">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        Generates draft deferred revenue schedules from posted subscription invoices with service period dates. No journal entries are posted.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="subscription_id"/>
+                        </group>
+                        <group>
+                            <field name="recognition_method"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                        <button string="Cancel" special="cancel"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_generate_subscription_deferred_revenue" model="ir.actions.act_window">
+        <field name="name">Generate Deferred Revenue</field>
+        <field name="res_model">subscription.deferred.revenue.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_generate_subscription_deferred_revenue"
+              name="Generate Deferred Revenue"
+              parent="menu_subscription_billing"
+              action="action_generate_subscription_deferred_revenue"
+              groups="subscription_suite.group_subscription_manager"
+              sequence="55"/>
+</odoo>
