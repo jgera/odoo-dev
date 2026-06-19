@@ -952,7 +952,7 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
-**Current slice:** Revenue Recognition Schedule Hardening. The foundation now creates generated deferred revenue schedules from posted subscription invoices with valid service periods, and the hardening pass adds required configuration blocking, safer Odoo 19 invoice product-line handling, recurring-line-only recognition for mixed invoices, locked ready/recognized schedule lines, chatter audit messages, and blocked-state search filters. It still creates audit-ready schedule lines only; journal posting, reversals, credit-note adjustments, revenue reports, and accounting reconciliation remain deferred.
+**Current slice:** Revenue Recognition Posting Preview Foundation. Deferred revenue schedule generation and hardening are complete. This slice adds a manager-only preview of due recognition lines and the debit/credit journal impact without creating accounting moves or marking revenue recognized. Real journal posting, reversals, credit-note adjustments, revenue reports, and accounting reconciliation remain deferred.
 
 **Build items:**
 
@@ -978,7 +978,7 @@ For every phase, update or create:
    - Manual.
 
 4. Recognition posting
-   - Preview wizard.
+   - Preview wizard - foundation done for due draft recognition lines.
    - Monthly cron.
    - Journal entry links.
    - Reversal/cancellation handling.
@@ -995,6 +995,7 @@ For every phase, update or create:
 - Generate annual prepaid subscription invoices suitable for deferred revenue schedules.
 - Add monthly and annual recognition examples.
 - Use mixed invoice examples carefully: only recurring subscription service lines should feed deferred revenue; one-time services should be excluded.
+- Preview recognition from generated schedules before adding real journal posting.
 - Add cancellation/credit-note examples that adjust deferred revenue.
 
 **Documentation updates:**
@@ -1012,6 +1013,7 @@ For every phase, update or create:
 - Missing service period invoices are blocked with a clear reason.
 - Missing recognition configuration is blocked with a clear reason.
 - Ready schedules and recognized schedule lines cannot be edited or removed through normal operations.
+- Recognition preview shows due draft lines and debit deferred revenue / credit revenue impact without posting accounting entries.
 - Monthly recognition entries post correctly.
 - Total recognized plus remaining deferred equals invoice amount.
 - Credit note/cancellation adjusts schedules correctly.
@@ -1026,6 +1028,7 @@ For every phase, update or create:
 - Missing configuration blocking - covered.
 - Mixed invoice recurring-line eligibility - covered.
 - Ready/recognized schedule locking - covered.
+- Recognition preview due-line selection, scoping, totals, manager access, and no-posting/no-state-change behavior - foundation covered.
 - Posting journal entries.
 - Cancellation and credit note.
 - Multi-company and multi-currency.

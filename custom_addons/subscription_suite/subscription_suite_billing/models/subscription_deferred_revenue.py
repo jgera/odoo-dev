@@ -359,6 +359,25 @@ class SubscriptionDeferredRevenue(models.Model):
             'res_id': self.subscription_id.id,
         }
 
+    def action_preview_recognition(self):
+        self._check_generate_access()
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Preview Revenue Recognition'),
+            'res_model': 'subscription.deferred.revenue.preview.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_schedule_id': self.id,
+                'default_company_id': self.company_id.id,
+                'default_subscription_id': self.subscription_id.id,
+                'default_recognition_journal_id': self.recognition_journal_id.id,
+                'default_deferred_revenue_account_id': self.deferred_revenue_account_id.id,
+                'default_revenue_account_id': self.revenue_account_id.id,
+            },
+        }
+
 
 class SubscriptionDeferredRevenueLine(models.Model):
     _name = 'subscription.deferred.revenue.line'
@@ -414,3 +433,27 @@ class SubscriptionDeferredRevenueLine(models.Model):
     def unlink(self):
         self._check_locked_schedule()
         return super().unlink()
+
+    @api.model
+    def _recognition_preview_domain(self, cutoff_date, company=False, subscription=False, schedule=False):
+        domain = [
+            ('state', '=', 'draft'),
+            ('period_end', '<=', cutoff_date),
+            ('schedule_id.state', '=', 'ready'),
+        ]
+        if company:
+            domain.append(('company_id', '=', company.id))
+        if subscription:
+            domain.append(('subscription_id', '=', subscription.id))
+        if schedule:
+            domain.append(('schedule_id', '=', schedule.id))
+        return domain
+
+    @api.model
+    def _get_lines_for_recognition_preview(self, cutoff_date, company=False, subscription=False, schedule=False):
+        return self.search(self._recognition_preview_domain(
+            cutoff_date,
+            company=company,
+            subscription=subscription,
+            schedule=schedule,
+        ), order='company_id, currency_id, period_end, id')

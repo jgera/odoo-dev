@@ -28,6 +28,7 @@
         <field name="arch" type="xml">
             <form string="Deferred Revenue Schedule" create="0" edit="0">
                 <header>
+                    <button name="action_preview_recognition" type="object" string="Preview Recognition" class="btn-secondary" invisible="state != 'ready'"/>
                     <button name="action_regenerate_lines" type="object" string="Regenerate Draft Lines" class="btn-primary" invisible="state == 'cancelled'"/>
                     <button name="action_cancel" type="object" string="Cancel Schedule" invisible="state == 'cancelled'"/>
                     <field name="state" widget="statusbar"/>

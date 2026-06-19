@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_deferred_revenue_preview_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.deferred.revenue.preview.wizard.form</field>
+        <field name="model">subscription.deferred.revenue.preview.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Preview Revenue Recognition">
+                <sheet>
+                    <div class="alert alert-info" role="alert">
+                        Preview only. No journal entries are posted and no recognition lines are marked recognized.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="cutoff_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="subscription_id"/>
+                            <field name="schedule_id"/>
+                        </group>
+                        <group>
+                            <field name="recognition_journal_id"/>
+                            <field name="deferred_revenue_account_id"/>
+                            <field name="revenue_account_id"/>
+                        </group>
+                    </group>
+                    <group string="Preview Totals">
+                        <field name="preview_summary" nolabel="1" colspan="2"/>
+                    </group>
+                    <field name="line_ids" readonly="1" nolabel="1">
+                        <list string="Recognition Preview Lines" create="0" delete="0">
+                            <field name="period_end"/>
+                            <field name="schedule_id"/>
+                            <field name="invoice_id"/>
+                            <field name="subscription_id"/>
+                            <field name="partner_id"/>
+                            <field name="amount" widget="monetary"/>
+                            <field name="debit_account_id"/>
+                            <field name="credit_account_id"/>
+                            <field name="recognition_journal_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" column_invisible="1"/>
+                        </list>
+                    </field>
+                    <footer>
+                        <button name="action_preview" type="object" string="Preview" class="btn-primary"/>
+                        <button string="Close" special="cancel"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_preview_subscription_revenue_recognition" model="ir.actions.act_window">
+        <field name="name">Preview Recognition</field>
+        <field name="res_model">subscription.deferred.revenue.preview.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_preview_subscription_revenue_recognition"
+              name="Preview Recognition"
+              parent="menu_subscription_billing"
+              action="action_preview_subscription_revenue_recognition"
+              groups="subscription_suite.group_subscription_manager"
+              sequence="56"/>
+</odoo>

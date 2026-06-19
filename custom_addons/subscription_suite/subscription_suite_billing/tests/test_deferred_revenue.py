@@ -1,6 +1,6 @@
 from datetime import date
 
-from odoo.exceptions import AccessError, UserError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tests.common import TransactionCase
 
 
@@ -323,3 +323,108 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
             schedule.action_cancel()
         with self.assertRaises(UserError):
             schedule.action_regenerate_lines()
+
+    def test_recognition_preview_includes_due_draft_lines_only(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        due_line = schedule.line_ids.sorted('period_end')[0]
+        future_lines = schedule.line_ids - due_line
+
+        wizard = self.env['subscription.deferred.revenue.preview.wizard'].create({
+            'cutoff_date': due_line.period_end,
+            'company_id': schedule.company_id.id,
+            'recognition_journal_id': self.recognition_journal.id,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+        before_moves = self.env['account.move'].search_count([])
+        before_states = {line.id: line.state for line in schedule.line_ids}
+
+        action = wizard.action_preview()
+
+        self.assertEqual(action['res_id'], wizard.id)
+        self.assertEqual(wizard.line_ids.mapped('schedule_line_id'), due_line)
+        self.assertEqual(wizard.line_ids.amount, due_line.amount)
+        self.assertEqual(wizard.line_ids.debit_account_id, self.deferred_account)
+        self.assertEqual(wizard.line_ids.credit_account_id, self.revenue_account)
+        self.assertFalse(future_lines & wizard.line_ids.mapped('schedule_line_id'))
+        self.assertEqual(self.env['account.move'].search_count([]), before_moves)
+        self.assertEqual({line.id: line.state for line in schedule.line_ids}, before_states)
+
+    def test_recognition_preview_excludes_cancelled_blocked_and_recognized_lines(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        ready_schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        recognized_line = ready_schedule.line_ids.sorted('period_end')[0]
+        recognized_line.with_context(deferred_revenue_internal_write=True).write({'state': 'recognized'})
+
+        _blocked_subscription, blocked_invoice = self._create_posted_subscription_invoice()
+        blocked_invoice.write({
+            'subscription_period_start': False,
+            'subscription_period_end': False,
+        })
+        blocked_schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(blocked_invoice)
+
+        _cancelled_subscription, cancelled_invoice = self._create_posted_subscription_invoice()
+        cancelled_schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(cancelled_invoice)
+        cancelled_schedule.action_cancel()
+
+        wizard = self.env['subscription.deferred.revenue.preview.wizard'].create({
+            'cutoff_date': self.period_end,
+            'recognition_journal_id': self.recognition_journal.id,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+
+        wizard.action_preview()
+
+        previewed_lines = wizard.line_ids.mapped('schedule_line_id')
+        self.assertNotIn(recognized_line, previewed_lines)
+        self.assertFalse(blocked_schedule.line_ids & previewed_lines)
+        self.assertFalse(cancelled_schedule.line_ids & previewed_lines)
+        self.assertTrue((ready_schedule.line_ids - recognized_line) <= previewed_lines)
+
+    def test_recognition_preview_validates_configuration(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        wizard = self.env['subscription.deferred.revenue.preview.wizard'].create({
+            'cutoff_date': self.period_end,
+            'schedule_id': schedule.id,
+            'recognition_journal_id': False,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+
+        with self.assertRaises(ValidationError):
+            wizard.action_preview()
+
+    def test_recognition_preview_filters_by_subscription_and_schedule(self):
+        subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        _other_subscription, other_invoice = self._create_posted_subscription_invoice(amount=600.0)
+        other_schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(other_invoice)
+
+        wizard = self.env['subscription.deferred.revenue.preview.wizard'].create({
+            'cutoff_date': self.period_end,
+            'company_id': schedule.company_id.id,
+            'subscription_id': subscription.id,
+            'schedule_id': schedule.id,
+            'recognition_journal_id': self.recognition_journal.id,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+
+        wizard.action_preview()
+
+        self.assertTrue(wizard.line_ids)
+        self.assertEqual(wizard.line_ids.mapped('schedule_id'), schedule)
+        self.assertEqual(wizard.line_ids.mapped('subscription_id'), subscription)
+        self.assertFalse(other_schedule.line_ids & wizard.line_ids.mapped('schedule_line_id'))
+
+    def test_non_manager_cannot_create_recognition_preview(self):
+        public_env = self.env(user=self.env.ref('base.public_user'))
+
+        with self.assertRaises(AccessError):
+            public_env['subscription.deferred.revenue.preview.wizard'].create({
+                'cutoff_date': self.period_end,
+            })

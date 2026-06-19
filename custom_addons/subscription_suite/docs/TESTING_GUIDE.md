@@ -1201,3 +1201,30 @@ Implementation note:
 
 - Deferred revenue schedules are generated accounting-prep records. This foundation does not post journal entries, recognize revenue, reverse schedules, process credit-note adjustments, normalize currencies, or change invoice/payment behavior.
 - Odoo 19 product invoice lines may use `display_type='product'`; deferred revenue eligibility should exclude only section/note lines and then narrow to recurring subscription lines where sale-line metadata exists.
+
+## 46. Revenue Recognition Posting Preview Foundation
+
+Purpose: verify Phase 7 recognition preview before real journal posting is introduced.
+
+Walkthrough:
+
+1. Generate at least one ready deferred revenue schedule from a posted subscription invoice.
+2. Open **Subscriptions -> Billing -> Preview Recognition**.
+3. Set **Cutoff Date** to the end date of one or more draft recognition lines.
+4. Confirm recognition journal, deferred revenue account, and revenue account are populated.
+5. Click **Preview**.
+6. Confirm preview lines show schedule, invoice, subscription, customer, period, amount, debit account, credit account, and journal.
+7. Confirm preview totals remain separated by company and currency.
+8. Set a cutoff date before all recognition lines and confirm the preview is empty.
+9. Mark one line recognized in a test context and confirm it is excluded from preview.
+10. Cancel a schedule and confirm its lines are excluded.
+11. Clear a recognition account or journal in a test database and confirm preview raises a clear configuration validation error.
+12. Confirm no `account.move` journal entry is created and no recognition line state changes after preview.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover due draft line selection, future/blocked/cancelled/recognized exclusions, configuration validation, subscription/schedule scoping, manager-only access, preview totals, and no-posting/no-state-change behavior.
+
+Implementation note:
+
+- Recognition preview uses existing schedule configuration snapshots. It previews debit deferred revenue and credit revenue only; journal posting, recognized state changes, scheduled recognition cron, reversals, and credit-note handling remain later Phase 7 slices.
