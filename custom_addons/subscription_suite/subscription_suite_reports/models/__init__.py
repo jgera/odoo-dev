@@ -29,3 +29,5 @@ from . import subscription_payment_recovery_summary
 from . import subscription_payment_recovery_summary_wizard
 from . import subscription_trial_conversion_summary
 from . import subscription_trial_conversion_summary_wizard
+from . import subscription_analytics_sequence_guide
+from . import subscription_analytics_sequence_guide

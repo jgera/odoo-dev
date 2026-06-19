@@ -35,6 +35,8 @@ class TestGeneratedAnalyticsLifecycle(TransactionCase):
         self.forecast_month = self.closing_date.replace(day=1)
         self.next_month = self.forecast_month + relativedelta(months=1)
         self.generated_user = self.env.ref('base.public_user')
+        self.subscription_user = self.env.user
+        self.subscription_manager = self.env.user
 
     def _snapshot_values(self, company=None, plan=None, snapshot_date=None, amount=100.0):
         return {
@@ -214,6 +216,19 @@ class TestGeneratedAnalyticsLifecycle(TransactionCase):
             user_env['subscription.revenue.forecast'].generate_for_period(
                 self.forecast_month, self.next_month, company=self.company
             )
+
+    def test_subscription_users_can_open_analytics_sequence_guide(self):
+        guide = self.env(user=self.subscription_user)['subscription.analytics.sequence.guide'].create({})
+
+        self.assertIn('01. Generate MRR Snapshot', guide.guide_text)
+        self.assertIn('15. Generate Trial Conversion', guide.guide_text)
+        self.assertIn('generated reports do not normalize currencies', guide.guide_text)
+
+    def test_subscription_managers_can_open_analytics_sequence_guide(self):
+        guide = self.env(user=self.subscription_manager)['subscription.analytics.sequence.guide'].create({})
+
+        self.assertIn('12. Generate Top Plans', guide.guide_text)
+        self.assertIn('14. Generate Payment Recovery', guide.guide_text)
 
     def test_company_scoped_snapshot_regeneration_preserves_adjacent_company(self):
         other_company_snapshot = self._create_snapshot(company=self.other_company)

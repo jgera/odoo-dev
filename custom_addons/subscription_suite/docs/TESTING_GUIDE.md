@@ -1141,3 +1141,29 @@ Automated coverage:
 Implementation note:
 
 - Trial conversion summaries are generated operational analytics. This slice does not add a conversion-date field; conversion is inferred from `subscription_start_date` for subscriptions that started as trials.
+
+## 44. Generated Analytics Sequence Runbook
+
+Purpose: verify the Phase 6 generated analytics stack in the intended order and make missing-input statuses easier to diagnose.
+
+Walkthrough:
+
+1. Open **Subscriptions -> Reporting -> Analytics Generation Guide** and review the sequence.
+2. Generate opening and closing **MRR Snapshots** for the reporting period.
+3. Generate **MRR Reconciliation** for the same period, then **MRR Movement Anomalies** if movement-only audit rows are needed.
+4. Generate **MRR KPI Summary**, **MRR KPI Dashboard**, and **MRR Waterfall** for the same company, currency, period, and optional plan.
+5. Generate **Retention Cohorts** and **Revenue Forecast** for the matching month ranges.
+6. Generate **ARPU Summary** from opening/closing snapshots, then **LTV Summary** from ARPU and retention cohorts.
+7. Generate **Churn Reasons**, then **Top Plans** after snapshots, KPI, ARPU, LTV, forecast, and churn reason records exist.
+8. Generate **At-Risk Subscriptions**, then **Payment Recovery** when payment attempts, open invoices, dunning attempts, and optional at-risk rows exist.
+9. Generate **Trial Conversion** for periods with trial-started subscriptions.
+10. Re-run selected scopes and confirm adjacent company, currency, plan, date, source, and all-plan rows are preserved.
+
+Automated coverage:
+
+- `subscription_suite_reports` lifecycle tests cover guide access for subscription users and managers.
+- The analytics smoke test remains the end-to-end idempotency and scoping check for the generated analytics stack.
+
+Implementation note:
+
+- Generated analytics remain source-currency operational reports. They are not static demo XML, predictive scoring, normalized multi-currency reporting, custom dashboard widgets, or accounting revenue recognition.

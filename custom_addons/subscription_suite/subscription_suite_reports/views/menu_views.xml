@@ -12,6 +12,13 @@
               action="action_subscription_report"
               sequence="10"/>
 
+    <menuitem id="menu_subscription_analytics_sequence_guide"
+              name="Analytics Generation Guide"
+              parent="menu_subscription_reporting"
+              action="action_subscription_analytics_sequence_guide"
+              sequence="12"
+              groups="subscription_suite.group_subscription_user,subscription_suite.group_subscription_manager"/>
+
     <menuitem id="menu_mrr_analysis"
               name="MRR Analysis"
               parent="menu_subscription_reporting"

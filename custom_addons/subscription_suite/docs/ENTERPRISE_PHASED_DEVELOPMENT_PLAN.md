@@ -72,7 +72,7 @@ These are not criticisms; they are the exact next enterprise work.
 | Cancellation | Immediate and end-of-period cancellation now exist, including scheduled cancellation reversal and cron finalization | Remaining work is mostly renewal/upsell lifecycle parity and optional approvals |
 | Renewals/upsells | Linked renewal and upsell quotations, sales history, upsell effective date, proration ledger, draft adjustment invoices/credit notes, immediate and scheduled next-period plan changes, approval-gated plan change requests, upgrade/downgrade path checks, minimum commitment enforcement, and plan-level renewal/upsell quote guards now exist | Sales workflow parity is improving; remaining work is optional approval routing and deeper quote lifecycle automation |
 | Usage/seats | Seat-line classification, read-only seat totals, tiered/volume pricing, and a backend usage-metering foundation now exist; no customer seat self-service, external usage API, or entitlement sync yet | Core Phase 5 monetization mechanics are in place; customer-facing and integration-heavy workflows remain later work |
-| Analytics | Basic MRR/ARR exists; operational recovery dashboard now separates portal-originated recovery attempts by pending, failed, recovered, and manual-action buckets; no NRR, GRR, retention cohorts, forecast, LTV, or trial conversion yet | Management reporting is improving operationally, but executive revenue analytics remain incomplete |
+| Analytics | Generated MRR snapshots, reconciliation, anomalies, KPI summaries, dashboards, waterfalls, retention cohorts, forecasts, ARPU, LTV, churn reasons, top plans, at-risk rows, payment recovery, and trial conversion now exist with source drilldowns and scoped reruns | Management reporting is broad and operationally useful; remaining gaps are executive packaging, normalized multi-currency reporting, and finance-grade revenue recognition |
 | Revenue recognition | Not implemented | Finance/compliance gap for annual/prepaid contracts |
 | Multi-currency | Amounts remain in order currency; no normalized company-currency MRR ledger | Cross-currency analytics can mislead |
 | Security | Groups and multi-company rules exist; deterministic portal helper tests cover ownership-sensitive flows, but live portal route tests still need a stable local harness | Route-level access regressions may go unnoticed |
@@ -773,7 +773,7 @@ For every phase, update or create:
 - MRR movement model exists for new, expansion, contraction, churn.
 - Daily MRR snapshots exist by company, currency, and plan, with manual generation and daily cron.
 
-**Current slice:** Trial Conversion Analytics Foundation. ARPU summary, LTV summary, forecasting foundation, churn reason analytics, top plan analytics, at-risk analytics, payment recovery analytics, analytics performance smoke coverage, and generated analytics lifecycle hardening are complete. This slice summarizes trial starts, inferred conversions, expirations, active trials, conversion rates, expiry rates, converted MRR, and active trial MRR before adding marketing attribution, nurture automation, predictive scoring, custom Owl widgets, or executive board packs.
+**Current slice:** Generated Analytics Sequence Hardening. ARPU summary, LTV summary, forecasting foundation, churn reason analytics, top plan analytics, at-risk analytics, payment recovery analytics, trial conversion analytics, analytics performance smoke coverage, and generated analytics lifecycle hardening are complete. This slice adds an Odoo-native analytics generation guide, clarifies prerequisites, and cleans up stale roadmap language before adding marketing attribution, nurture automation, predictive scoring, custom Owl widgets, executive board packs, or Phase 7 revenue recognition.
 
 **Build items:**
 
@@ -796,7 +796,8 @@ For every phase, update or create:
    - Top plan performance summary - foundation done using existing generated plan-level analytics.
    - At-risk subscription summary - foundation done using explainable rules over subscription, payment recovery, dunning, renewal, and cancellation signals.
    - Failed-payment recovery summary - foundation done using payment attempts, open recovery invoices, dunning escalation, and at-risk rows.
-   - Trial conversion summary - current slice using existing trial dates and inferred conversion from `subscription_start_date`.
+   - Trial conversion summary - foundation done using existing trial dates and inferred conversion from `subscription_start_date`.
+   - Analytics generation guide - current slice for manager/user sequence guidance and prerequisite wording.
 
 2. Snapshot models
    - `subscription.mrr.snapshot` - foundation done with daily company/currency/plan buckets.
@@ -816,7 +817,8 @@ For every phase, update or create:
     - `subscription.plan.performance.summary` - foundation done for generated top-plan performance rows by company, currency, and plan.
     - `subscription.at.risk.summary` - foundation done for generated at-risk subscription rows by company, currency, plan, and subscription.
     - `subscription.payment.recovery.summary` - foundation done for generated recovery rows by company, currency, optional plan, and recovery source.
-    - `subscription.trial.conversion.summary` - current slice for generated trial conversion rows by company, currency, and optional plan.
+    - `subscription.trial.conversion.summary` - foundation done for generated trial conversion rows by company, currency, and optional plan.
+    - `subscription.analytics.sequence.guide` - current slice for Odoo-native generation-order guidance.
    - Monthly snapshots by company/currency/plan.
    - Normalized company-currency values.
 
@@ -830,7 +832,8 @@ For every phase, update or create:
    - Top plans - foundation done.
    - At-risk subscriptions - foundation done.
    - Failed-payment recovery - foundation done.
-   - Trial conversion - current slice.
+   - Trial conversion - foundation done.
+   - Analytics generation guide - current slice.
 
 4. Forecasting
    - Upcoming renewals - current slice.
@@ -858,6 +861,7 @@ For every phase, update or create:
 - Generate at-risk subscription summaries from current subscription, invoice, payment attempt, dunning attempt, renewal, and cancellation state; static at-risk summary XML is intentionally avoided so rows reflect current manager work.
 - Generate payment recovery summaries from payment attempts, open recovery invoices, dunning attempts, and at-risk rows; static recovery summary XML is intentionally avoided so rows reflect current payment recovery workload.
 - Generate trial conversion summaries from trial subscriptions; static trial conversion summary XML is intentionally avoided so rows reflect selected trial periods and current subscription state.
+- Open **Analytics Generation Guide** before running the generated analytics stack so users follow the same sequence used by automated tests.
 - Add historical MRR movement records across multiple months.
 - Add subscriptions in multiple cohorts, plans, countries, salespeople, and states.
 - Add churn reasons and scheduled cancellations to make retention and forecast reports meaningful.
