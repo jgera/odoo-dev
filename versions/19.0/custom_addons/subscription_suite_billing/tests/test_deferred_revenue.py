@@ -29,7 +29,10 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         })
         self.period_start = date(2026, 1, 1)
         self.period_end = date(2026, 4, 1)
-        self.deferred_account = self.env['account.account'].search([], limit=1)
+        self.deferred_account = self.env['account.account'].search(
+            [('account_type', 'in', ('liability_current', 'liability_non_current'))],
+            limit=1,
+        ) or self.env['account.account'].search([('account_type', '!=', 'off_balance')], limit=1)
         self.revenue_account = self.env['account.account'].search(
             [('account_type', '=', 'income')],
             limit=1,
@@ -426,5 +429,128 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
 
         with self.assertRaises(AccessError):
             public_env['subscription.deferred.revenue.preview.wizard'].create({
+                'cutoff_date': self.period_end,
+            })
+
+    def test_post_recognition_creates_posted_move_and_marks_due_lines(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        due_line = schedule.line_ids.sorted('period_end')[0]
+        future_lines = schedule.line_ids - due_line
+
+        wizard = self.env['subscription.deferred.revenue.post.wizard'].create({
+            'cutoff_date': due_line.period_end,
+            'posting_date': due_line.period_end,
+            'company_id': schedule.company_id.id,
+            'schedule_id': schedule.id,
+            'recognition_journal_id': self.recognition_journal.id,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+
+        action = wizard.action_post_recognition()
+        move = due_line.recognition_move_id
+
+        self.assertEqual(action['res_model'], 'account.move')
+        self.assertTrue(move)
+        self.assertEqual(move.state, 'posted')
+        self.assertEqual(move.move_type, 'entry')
+        self.assertEqual(move.journal_id, self.recognition_journal)
+        self.assertAlmostEqual(sum(move.line_ids.mapped('debit')), due_line.amount, places=2)
+        self.assertAlmostEqual(sum(move.line_ids.mapped('credit')), due_line.amount, places=2)
+        self.assertEqual(move.line_ids.filtered(lambda line: line.debit).account_id, self.deferred_account)
+        self.assertEqual(move.line_ids.filtered(lambda line: line.credit).account_id, self.revenue_account)
+        self.assertEqual(due_line.state, 'recognized')
+        self.assertEqual(due_line.recognized_date, due_line.period_end)
+        self.assertFalse(future_lines.filtered('recognition_move_id'))
+        self.assertTrue(all(line.state == 'draft' for line in future_lines))
+        self.assertAlmostEqual(schedule.recognized_amount, due_line.amount, places=2)
+        self.assertAlmostEqual(schedule.remaining_amount, schedule.amount_total - due_line.amount, places=2)
+
+    def test_post_recognition_rerun_excludes_already_recognized_lines(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        due_line = schedule.line_ids.sorted('period_end')[0]
+
+        wizard = self.env['subscription.deferred.revenue.post.wizard'].create({
+            'cutoff_date': due_line.period_end,
+            'posting_date': due_line.period_end,
+            'schedule_id': schedule.id,
+            'recognition_journal_id': self.recognition_journal.id,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+        wizard.action_post_recognition()
+        move = due_line.recognition_move_id
+
+        with self.assertRaises(ValidationError):
+            wizard.action_post_recognition()
+
+        self.assertEqual(due_line.recognition_move_id, move)
+        self.assertEqual(schedule.line_ids.mapped('recognition_move_id'), move)
+
+    def test_post_recognition_validates_configuration(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        wizard = self.env['subscription.deferred.revenue.post.wizard'].create({
+            'cutoff_date': self.period_end,
+            'schedule_id': schedule.id,
+            'recognition_journal_id': False,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+
+        with self.assertRaises(ValidationError):
+            wizard.action_post_recognition()
+
+    def test_post_recognition_filters_by_subscription_and_schedule(self):
+        subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        _other_subscription, other_invoice = self._create_posted_subscription_invoice(amount=600.0)
+        other_schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(other_invoice)
+
+        wizard = self.env['subscription.deferred.revenue.post.wizard'].create({
+            'cutoff_date': self.period_end,
+            'posting_date': self.period_end,
+            'company_id': schedule.company_id.id,
+            'subscription_id': subscription.id,
+            'schedule_id': schedule.id,
+            'recognition_journal_id': self.recognition_journal.id,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+
+        wizard.action_post_recognition()
+
+        self.assertTrue(schedule.line_ids.filtered(lambda line: line.state == 'recognized'))
+        self.assertFalse(other_schedule.line_ids.filtered(lambda line: line.state == 'recognized'))
+        self.assertFalse(other_schedule.line_ids.mapped('recognition_move_id'))
+
+    def test_preview_remains_non_mutating_after_posting_slice(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        due_line = schedule.line_ids.sorted('period_end')[0]
+        before_moves = self.env['account.move'].search_count([])
+
+        wizard = self.env['subscription.deferred.revenue.preview.wizard'].create({
+            'cutoff_date': due_line.period_end,
+            'schedule_id': schedule.id,
+            'recognition_journal_id': self.recognition_journal.id,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+
+        wizard.action_preview()
+
+        self.assertEqual(self.env['account.move'].search_count([]), before_moves)
+        self.assertFalse(schedule.line_ids.mapped('recognition_move_id'))
+        self.assertTrue(all(line.state == 'draft' for line in schedule.line_ids))
+
+    def test_non_manager_cannot_create_recognition_posting(self):
+        public_env = self.env(user=self.env.ref('base.public_user'))
+
+        with self.assertRaises(AccessError):
+            public_env['subscription.deferred.revenue.post.wizard'].create({
                 'cutoff_date': self.period_end,
             })

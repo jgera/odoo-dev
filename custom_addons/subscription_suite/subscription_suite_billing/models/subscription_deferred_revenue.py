@@ -70,6 +70,7 @@ class SubscriptionDeferredRevenue(models.Model):
         copy=False,
     )
     line_count = fields.Integer(compute='_compute_line_count')
+    recognition_move_count = fields.Integer(compute='_compute_recognition_move_count')
     state = fields.Selection(
         [
             ('draft', 'Draft'),
@@ -100,6 +101,10 @@ class SubscriptionDeferredRevenue(models.Model):
     def _compute_line_count(self):
         for schedule in self:
             schedule.line_count = len(schedule.line_ids)
+
+    def _compute_recognition_move_count(self):
+        for schedule in self:
+            schedule.recognition_move_count = len(schedule.line_ids.mapped('recognition_move_id'))
 
     @api.constrains('service_period_start', 'service_period_end')
     def _check_service_period(self):
@@ -378,6 +383,36 @@ class SubscriptionDeferredRevenue(models.Model):
             },
         }
 
+    def action_post_recognition(self):
+        self._check_generate_access()
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Post Revenue Recognition'),
+            'res_model': 'subscription.deferred.revenue.post.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_schedule_id': self.id,
+                'default_company_id': self.company_id.id,
+                'default_subscription_id': self.subscription_id.id,
+                'default_recognition_journal_id': self.recognition_journal_id.id,
+                'default_deferred_revenue_account_id': self.deferred_revenue_account_id.id,
+                'default_revenue_account_id': self.revenue_account_id.id,
+            },
+        }
+
+    def action_view_recognition_moves(self):
+        self.ensure_one()
+        moves = self.line_ids.mapped('recognition_move_id')
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Recognition Journal Entries'),
+            'res_model': 'account.move',
+            'view_mode': 'list,form',
+            'domain': [('id', 'in', moves.ids)],
+        }
+
 
 class SubscriptionDeferredRevenueLine(models.Model):
     _name = 'subscription.deferred.revenue.line'
@@ -408,6 +443,7 @@ class SubscriptionDeferredRevenueLine(models.Model):
         required=True,
     )
     recognized_date = fields.Date(readonly=True)
+    recognition_move_id = fields.Many2one('account.move', string='Recognition Journal Entry', readonly=True, copy=False)
     company_id = fields.Many2one(related='schedule_id.company_id', store=True, readonly=True)
     currency_id = fields.Many2one(related='schedule_id.currency_id', store=True, readonly=True)
 
@@ -425,7 +461,7 @@ class SubscriptionDeferredRevenueLine(models.Model):
             raise UserError(_('Recognition lines on ready, cancelled, or recognized schedules are locked.'))
 
     def write(self, vals):
-        protected = {'period_start', 'period_end', 'amount', 'state', 'recognized_date', 'schedule_id'}
+        protected = {'period_start', 'period_end', 'amount', 'state', 'recognized_date', 'recognition_move_id', 'schedule_id'}
         if protected.intersection(vals):
             self._check_locked_schedule()
         return super().write(vals)

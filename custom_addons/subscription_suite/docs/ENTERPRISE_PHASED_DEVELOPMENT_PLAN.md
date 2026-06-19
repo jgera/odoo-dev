@@ -952,7 +952,7 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
-**Current slice:** Revenue Recognition Posting Preview Foundation. Deferred revenue schedule generation and hardening are complete. This slice adds a manager-only preview of due recognition lines and the debit/credit journal impact without creating accounting moves or marking revenue recognized. Real journal posting, reversals, credit-note adjustments, revenue reports, and accounting reconciliation remain deferred.
+**Current slice:** Revenue Recognition Journal Posting Foundation. Deferred revenue schedule generation, hardening, and posting preview are complete. This slice posts due draft recognition lines from ready schedules into Odoo accounting as one journal entry per schedule/invoice, then marks included lines recognized. Scheduled cron posting, reversals, credit-note adjustments, revenue reports, and accounting reconciliation remain deferred.
 
 **Build items:**
 
@@ -970,7 +970,7 @@ For every phase, update or create:
    - Service period from invoice/subscription period - done with blocked status for missing/invalid periods.
    - Missing revenue recognition configuration - done with blocked status instead of silently generating incomplete schedules.
    - Mixed invoices - done for recurring subscription lines; one-time lines can be explicitly excluded from subscription deferred revenue.
-   - Schedule locking - done for ready/cancelled schedules and recognized lines to protect audit records before posting support is added.
+   - Schedule locking - done for ready/cancelled schedules and recognized lines, with internal posting context allowed to set recognition state and journal entry links.
 
 3. Recognition methods
    - Straight-line daily - schedule foundation done.
@@ -979,8 +979,9 @@ For every phase, update or create:
 
 4. Recognition posting
    - Preview wizard - foundation done for due draft recognition lines.
+   - Manual posting wizard - foundation done for ready schedules, due draft lines, and one posted journal entry per schedule.
    - Monthly cron.
-   - Journal entry links.
+   - Journal entry links - foundation done from recognition lines and schedule smart button.
    - Reversal/cancellation handling.
    - Credit note handling.
 
@@ -995,7 +996,8 @@ For every phase, update or create:
 - Generate annual prepaid subscription invoices suitable for deferred revenue schedules.
 - Add monthly and annual recognition examples.
 - Use mixed invoice examples carefully: only recurring subscription service lines should feed deferred revenue; one-time services should be excluded.
-- Preview recognition from generated schedules before adding real journal posting.
+- Preview recognition from generated schedules before posting.
+- Post due recognition lines from ready schedules to create accounting journal entries.
 - Add cancellation/credit-note examples that adjust deferred revenue.
 
 **Documentation updates:**
@@ -1014,7 +1016,7 @@ For every phase, update or create:
 - Missing recognition configuration is blocked with a clear reason.
 - Ready schedules and recognized schedule lines cannot be edited or removed through normal operations.
 - Recognition preview shows due draft lines and debit deferred revenue / credit revenue impact without posting accounting entries.
-- Monthly recognition entries post correctly.
+- Manual recognition posting creates one posted journal entry per schedule and marks only included due lines recognized.
 - Total recognized plus remaining deferred equals invoice amount.
 - Credit note/cancellation adjusts schedules correctly.
 - Finance user can reconcile reports to accounting moves.
@@ -1029,7 +1031,7 @@ For every phase, update or create:
 - Mixed invoice recurring-line eligibility - covered.
 - Ready/recognized schedule locking - covered.
 - Recognition preview due-line selection, scoping, totals, manager access, and no-posting/no-state-change behavior - foundation covered.
-- Posting journal entries.
+- Posting journal entries - foundation covered for due-line selection, one posted move per schedule, line recognition links, idempotent rerun exclusion, configuration validation, filtering, preview immutability, and manager-only access.
 - Cancellation and credit note.
 - Multi-company and multi-currency.
 

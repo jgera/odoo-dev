@@ -29,6 +29,7 @@
             <form string="Deferred Revenue Schedule" create="0" edit="0">
                 <header>
                     <button name="action_preview_recognition" type="object" string="Preview Recognition" class="btn-secondary" invisible="state != 'ready'"/>
+                    <button name="action_post_recognition" type="object" string="Post Recognition" class="btn-primary" invisible="state != 'ready' or remaining_amount &lt;= 0"/>
                     <button name="action_regenerate_lines" type="object" string="Regenerate Draft Lines" class="btn-primary" invisible="state == 'cancelled'"/>
                     <button name="action_cancel" type="object" string="Cancel Schedule" invisible="state == 'cancelled'"/>
                     <field name="state" widget="statusbar"/>
@@ -41,9 +42,12 @@
                         <button name="action_view_subscription" type="object" class="oe_stat_button" icon="fa-repeat">
                             <field name="amount_total" widget="statinfo" string="Amount"/>
                         </button>
+                        <button name="action_view_recognition_moves" type="object" class="oe_stat_button" icon="fa-book">
+                            <field name="recognition_move_count" widget="statinfo" string="Journal Entries"/>
+                        </button>
                     </div>
                     <div class="alert alert-info" role="alert">
-                        Deferred revenue schedules are generated audit records. This foundation does not post journal entries or alter invoice accounting.
+                        Deferred revenue schedules are generated audit records. Recognition posting creates journal entries from due draft lines only; reversals and credit-note adjustments remain deferred.
                     </div>
                     <group>
                         <group>
@@ -85,6 +89,7 @@
                                     <field name="amount" widget="monetary"/>
                                     <field name="state" widget="badge"/>
                                     <field name="recognized_date"/>
+                                    <field name="recognition_move_id"/>
                                     <field name="currency_id" column_invisible="1"/>
                                 </list>
                             </field>

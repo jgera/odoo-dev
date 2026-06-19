@@ -1227,4 +1227,31 @@ Automated coverage:
 
 Implementation note:
 
-- Recognition preview uses existing schedule configuration snapshots. It previews debit deferred revenue and credit revenue only; journal posting, recognized state changes, scheduled recognition cron, reversals, and credit-note handling remain later Phase 7 slices.
+- Recognition preview uses existing schedule configuration snapshots. It previews debit deferred revenue and credit revenue only, and must remain non-mutating now that posting exists.
+
+## 47. Revenue Recognition Journal Posting Foundation
+
+Purpose: verify Phase 7 manual recognition posting from ready deferred revenue schedules into Odoo accounting.
+
+Walkthrough:
+
+1. Generate at least one ready deferred revenue schedule from a posted subscription invoice.
+2. Open **Subscriptions -> Billing -> Post Recognition**, or open the schedule and click **Post Recognition**.
+3. Set **Cutoff Date** to the end date of one or more draft recognition lines.
+4. Set **Posting Date** and confirm company, journal, deferred revenue account, revenue account, optional subscription, and optional schedule filters.
+5. Click **Post Recognition**.
+6. Confirm one posted `account.move` is created per selected deferred revenue schedule.
+7. Confirm each journal entry debits deferred revenue and credits revenue for the selected due line total.
+8. Confirm included recognition lines are marked **Recognized**, have `recognized_date`, and link to the posted journal entry.
+9. Rerun the same posting filters and confirm already recognized lines are excluded and no duplicate journal entry is created.
+10. Confirm future, blocked, cancelled, and already recognized lines are excluded.
+11. Clear a recognition account or journal in a test database and confirm posting raises a clear configuration validation error.
+12. Re-open **Preview Recognition** and confirm preview still creates no journal entries and changes no line states.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover posted journal entry creation, due-line amount totals, recognized line state/date/move links, idempotent rerun exclusion, future-line exclusion, configuration validation, subscription/schedule scoping, preview immutability, and manager-only posting access.
+
+Implementation note:
+
+- Manual posting is one journal entry per deferred revenue schedule/invoice. Scheduled cron posting, reversals, credit-note adjustments, revenue recognition reports, and finance reconciliation dashboards remain later Phase 7 slices.

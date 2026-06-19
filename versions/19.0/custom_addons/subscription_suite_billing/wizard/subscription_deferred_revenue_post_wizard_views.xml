@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_deferred_revenue_post_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.deferred.revenue.post.wizard.form</field>
+        <field name="model">subscription.deferred.revenue.post.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Post Revenue Recognition">
+                <sheet>
+                    <div class="alert alert-warning" role="alert">
+                        Posting creates accounting journal entries and marks selected recognition lines as recognized.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="cutoff_date"/>
+                            <field name="posting_date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="subscription_id"/>
+                            <field name="schedule_id"/>
+                        </group>
+                        <group>
+                            <field name="recognition_journal_id"/>
+                            <field name="deferred_revenue_account_id"/>
+                            <field name="revenue_account_id"/>
+                        </group>
+                    </group>
+                    <footer>
+                        <button name="action_post_recognition" type="object" string="Post Recognition" class="btn-primary"/>
+                        <button string="Cancel" special="cancel"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_post_subscription_revenue_recognition" model="ir.actions.act_window">
+        <field name="name">Post Recognition</field>
+        <field name="res_model">subscription.deferred.revenue.post.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_post_subscription_revenue_recognition"
+              name="Post Recognition"
+              parent="menu_subscription_billing"
+              action="action_post_subscription_revenue_recognition"
+              groups="subscription_suite.group_subscription_manager"
+              sequence="57"/>
+</odoo>

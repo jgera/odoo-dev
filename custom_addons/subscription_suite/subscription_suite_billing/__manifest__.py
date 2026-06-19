@@ -37,6 +37,7 @@ Handles advanced billing scenarios:
         'wizard/subscription_change_discounts_wizard_views.xml',
         'wizard/subscription_deferred_revenue_wizard_views.xml',
         'wizard/subscription_deferred_revenue_preview_wizard_views.xml',
+        'wizard/subscription_deferred_revenue_post_wizard_views.xml',
     ],
     'demo': [
         'demo/plan_change_approval_demo.xml',
