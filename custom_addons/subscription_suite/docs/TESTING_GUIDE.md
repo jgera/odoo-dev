@@ -1168,15 +1168,15 @@ Implementation note:
 
 - Generated analytics remain source-currency operational reports. They are not static demo XML, predictive scoring, normalized multi-currency reporting, custom dashboard widgets, or accounting revenue recognition.
 
-## 45. Revenue Recognition Schedule Foundation
+## 45. Revenue Recognition Schedule Foundation And Hardening
 
-Purpose: verify Phase 7 deferred revenue schedule generation from posted subscription invoices without posting journal entries.
+Purpose: verify Phase 7 deferred revenue schedule generation from posted subscription invoices without posting journal entries, and verify the hardening controls that keep generated schedules auditable.
 
 Walkthrough:
 
 1. Install or upgrade `subscription_suite_billing`.
 2. Open **Subscriptions -> Configuration -> Settings**.
-3. In **Revenue Recognition**, optionally configure deferred revenue account, revenue account, recognition journal, and default recognition method.
+3. In **Revenue Recognition**, configure deferred revenue account, revenue account, recognition journal, and default recognition method.
 4. Generate or open a posted customer invoice linked to a subscription.
 5. Confirm the invoice has `subscription_period_start` and `subscription_period_end`.
 6. Open **Subscriptions -> Billing -> Generate Deferred Revenue**.
@@ -1186,12 +1186,18 @@ Walkthrough:
 10. Confirm one schedule exists for the invoice and no duplicate is created on rerun.
 11. Confirm schedule lines cover the service period and total to the invoice untaxed amount.
 12. Generate against an invoice missing service period dates and confirm the schedule is blocked with a clear reason.
-13. Use the subscription and invoice smart buttons to verify scoped schedule navigation.
+13. Clear one recognition setting in a test database and confirm generation creates a blocked schedule with a missing-configuration reason.
+14. Generate against a mixed subscription invoice and confirm only eligible recurring subscription service lines are recognized; one-time invoice lines should be excluded from subscription deferred revenue.
+15. Confirm ready schedule lines cannot be edited or deleted through normal operations.
+16. Mark a schedule line recognized in a test context and confirm the schedule cannot be cancelled or regenerated.
+17. Use the subscription and invoice smart buttons to verify scoped schedule navigation.
+18. Use **Missing Configuration** and **Missing Period** filters in **Subscriptions -> Billing -> Deferred Revenue** to review blocked schedules.
 
 Automated coverage:
 
-- `subscription_suite_billing` tests cover posted subscription invoice schedule creation, idempotent reruns, straight-line daily allocation, equal-monthly allocation, rounding reconciliation, blocked missing-period invoices, blocked draft/non-subscription/refund sources, smart-button domains, and manager-only generation.
+- `subscription_suite_billing` tests cover posted subscription invoice schedule creation, idempotent reruns, straight-line daily allocation, equal-monthly allocation, rounding reconciliation, blocked missing-period invoices, blocked missing-configuration schedules, mixed invoice recurring-line eligibility, ready/recognized schedule locking, blocked draft/non-subscription/refund sources, smart-button domains, and manager-only generation.
 
 Implementation note:
 
 - Deferred revenue schedules are generated accounting-prep records. This foundation does not post journal entries, recognize revenue, reverse schedules, process credit-note adjustments, normalize currencies, or change invoice/payment behavior.
+- Odoo 19 product invoice lines may use `display_type='product'`; deferred revenue eligibility should exclude only section/note lines and then narrow to recurring subscription lines where sale-line metadata exists.

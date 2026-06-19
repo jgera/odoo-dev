@@ -125,11 +125,48 @@ class SubscriptionDeferredRevenue(models.Model):
         return int(value) if value else False
 
     @api.model
+    def _eligible_invoice_lines(self, invoice):
+        lines = invoice.invoice_line_ids.filtered(
+            lambda line: line.display_type not in ('line_section', 'line_note')
+            and not line.exclude_from_subscription_deferred_revenue
+        )
+        linked_lines = lines.filtered(
+            lambda line: line.sale_line_ids
+            and any(sale_line.is_recurring for sale_line in line.sale_line_ids)
+        )
+        lines_with_sale_links = lines.filtered('sale_line_ids')
+        if lines_with_sale_links:
+            return linked_lines
+        recurring_product_ids = set(invoice.subscription_id.order_line.filtered('is_recurring').mapped('product_id').ids)
+        product_lines = lines.filtered(lambda line: line.product_id.id in recurring_product_ids)
+        recurring_names = set(
+            name for name in invoice.subscription_id.order_line.filtered('is_recurring').mapped('name') if name
+        )
+        recurring_names.update(
+            name for name in invoice.subscription_id.order_line.filtered('is_recurring').mapped('product_id.name') if name
+        )
+        name_lines = lines.filtered(lambda line: line.name in recurring_names or line.product_id.name in recurring_names)
+        if recurring_product_ids or recurring_names:
+            return product_lines or name_lines
+        return lines
+
+    @api.model
     def _invoice_amount(self, invoice):
-        if invoice.amount_untaxed > 0:
+        lines = self._eligible_invoice_lines(invoice)
+        line_amounts = []
+        for line in lines:
+            amount = line.price_subtotal
+            if not amount:
+                amount = line.quantity * line.price_unit * (1 - (line.discount or 0.0) / 100.0)
+            if amount > 0:
+                line_amounts.append(amount)
+        amount = sum(line_amounts)
+        invoice_lines = invoice.invoice_line_ids.filtered(
+            lambda line: line.display_type not in ('line_section', 'line_note')
+        )
+        if invoice.currency_id.is_zero(amount) and lines == invoice_lines:
             return invoice.amount_untaxed
-        lines = invoice.invoice_line_ids.filtered(lambda line: not line.display_type)
-        return sum(amount for amount in lines.mapped('price_subtotal') if amount > 0)
+        return amount
 
     @api.model
     def _month_segments(self, period_start, period_end):
@@ -182,7 +219,20 @@ class SubscriptionDeferredRevenue(models.Model):
         }
 
     @api.model
-    def _blocked_reason_for_invoice(self, invoice, amount):
+    def _configuration_block_reason(self, values):
+        missing = []
+        if not values.get('deferred_revenue_account_id'):
+            missing.append(_('deferred revenue account'))
+        if not values.get('revenue_account_id'):
+            missing.append(_('revenue account'))
+        if not values.get('recognition_journal_id'):
+            missing.append(_('recognition journal'))
+        if missing:
+            return _('Missing revenue recognition configuration: %s.') % ', '.join(missing)
+        return False
+
+    @api.model
+    def _blocked_reason_for_invoice(self, invoice, amount, values=False):
         if invoice.move_type != 'out_invoice':
             return _('Only customer invoices are supported in this foundation slice.')
         if invoice.state != 'posted':
@@ -195,12 +245,15 @@ class SubscriptionDeferredRevenue(models.Model):
             return _('Invoice subscription service period is invalid.')
         if invoice.currency_id.is_zero(amount) or amount < 0:
             return _('Invoice has no positive tax-excluded subscription amount to recognize.')
+        config_reason = self._configuration_block_reason(values or {})
+        if config_reason:
+            return config_reason
         return False
 
     @api.model
     def _sync_lines(self, schedule):
         schedule.ensure_one()
-        schedule.line_ids.unlink()
+        schedule.line_ids.with_context(deferred_revenue_internal_write=True).unlink()
         if schedule.state == 'blocked':
             return schedule
         lines = []
@@ -221,7 +274,10 @@ class SubscriptionDeferredRevenue(models.Model):
                 'amount': amount,
                 'state': 'draft',
             }))
-        schedule.write({'line_ids': lines, 'state': 'ready' if lines else 'blocked'})
+        schedule.with_context(deferred_revenue_internal_write=True).write({
+            'line_ids': lines,
+            'state': 'ready' if lines else 'blocked',
+        })
         if not lines:
             schedule.write({'block_reason': _('No recognition periods could be generated.')})
         return schedule
@@ -234,8 +290,11 @@ class SubscriptionDeferredRevenue(models.Model):
             if not invoice.subscription_id:
                 continue
             values = self._prepare_schedule_values(invoice, method=method)
-            block_reason = self._blocked_reason_for_invoice(invoice, values['amount_total'])
+            block_reason = self._blocked_reason_for_invoice(invoice, values['amount_total'], values=values)
             existing = self.search([('invoice_id', '=', invoice.id)], limit=1)
+            if existing and existing.line_ids.filtered(lambda line: line.state == 'recognized'):
+                schedules |= existing
+                continue
             if existing and existing.state not in ('draft', 'ready', 'blocked'):
                 schedules |= existing
                 continue
@@ -245,10 +304,16 @@ class SubscriptionDeferredRevenue(models.Model):
             })
             schedule = existing or self.create(values)
             if existing:
-                existing.line_ids.filtered(lambda line: line.state == 'draft').unlink()
+                existing.line_ids.filtered(lambda line: line.state == 'draft').with_context(
+                    deferred_revenue_internal_write=True,
+                ).unlink()
                 existing.write(values)
             if not block_reason:
                 self._sync_lines(schedule)
+            if schedule.state == 'blocked':
+                schedule.message_post(body=_('Deferred revenue schedule blocked: %s') % schedule.block_reason)
+            elif schedule.state == 'ready':
+                schedule.message_post(body=_('Deferred revenue schedule generated with %s recognition lines.') % len(schedule.line_ids))
             schedules |= schedule
         return schedules
 
@@ -261,6 +326,7 @@ class SubscriptionDeferredRevenue(models.Model):
                 raise UserError(_('Schedules with recognized lines cannot be regenerated in this foundation slice.'))
             schedule.write({'state': 'draft', 'block_reason': False})
             self._sync_lines(schedule)
+            schedule.message_post(body=_('Deferred revenue schedule regenerated.'))
         return True
 
     def action_cancel(self):
@@ -268,8 +334,9 @@ class SubscriptionDeferredRevenue(models.Model):
         for schedule in self:
             if schedule.line_ids.filtered(lambda line: line.state == 'recognized'):
                 raise UserError(_('Schedules with recognized lines cannot be cancelled.'))
-            schedule.line_ids.write({'state': 'cancelled'})
+            schedule.line_ids.with_context(deferred_revenue_internal_write=True).write({'state': 'cancelled'})
             schedule.write({'state': 'cancelled'})
+            schedule.message_post(body=_('Deferred revenue schedule cancelled.'))
         return True
 
     def action_view_invoice(self):
@@ -330,3 +397,20 @@ class SubscriptionDeferredRevenueLine(models.Model):
         for line in self:
             if line.period_start >= line.period_end:
                 raise ValidationError(_('Recognition line period end must be after period start.'))
+
+    def _check_locked_schedule(self):
+        if self.env.context.get('deferred_revenue_internal_write'):
+            return
+        locked = self.filtered(lambda line: line.schedule_id.state in ('ready', 'cancelled') or line.state == 'recognized')
+        if locked:
+            raise UserError(_('Recognition lines on ready, cancelled, or recognized schedules are locked.'))
+
+    def write(self, vals):
+        protected = {'period_start', 'period_end', 'amount', 'state', 'recognized_date', 'schedule_id'}
+        if protected.intersection(vals):
+            self._check_locked_schedule()
+        return super().write(vals)
+
+    def unlink(self):
+        self._check_locked_schedule()
+        return super().unlink()

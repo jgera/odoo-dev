@@ -952,7 +952,7 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
-**Current slice:** Revenue Recognition Schedule Foundation. This slice adds configuration defaults and generated deferred revenue schedules from posted subscription invoices with valid service periods. It creates audit-ready schedule lines only; journal posting, reversals, credit-note adjustments, revenue reports, and accounting reconciliation remain deferred.
+**Current slice:** Revenue Recognition Schedule Hardening. The foundation now creates generated deferred revenue schedules from posted subscription invoices with valid service periods, and the hardening pass adds required configuration blocking, safer Odoo 19 invoice product-line handling, recurring-line-only recognition for mixed invoices, locked ready/recognized schedule lines, chatter audit messages, and blocked-state search filters. It still creates audit-ready schedule lines only; journal posting, reversals, credit-note adjustments, revenue reports, and accounting reconciliation remain deferred.
 
 **Build items:**
 
@@ -968,6 +968,9 @@ For every phase, update or create:
    - `subscription.deferred.revenue.line` - foundation done.
    - Link schedule to subscription and invoice - done.
    - Service period from invoice/subscription period - done with blocked status for missing/invalid periods.
+   - Missing revenue recognition configuration - done with blocked status instead of silently generating incomplete schedules.
+   - Mixed invoices - done for recurring subscription lines; one-time lines can be explicitly excluded from subscription deferred revenue.
+   - Schedule locking - done for ready/cancelled schedules and recognized lines to protect audit records before posting support is added.
 
 3. Recognition methods
    - Straight-line daily - schedule foundation done.
@@ -991,6 +994,7 @@ For every phase, update or create:
 
 - Generate annual prepaid subscription invoices suitable for deferred revenue schedules.
 - Add monthly and annual recognition examples.
+- Use mixed invoice examples carefully: only recurring subscription service lines should feed deferred revenue; one-time services should be excluded.
 - Add cancellation/credit-note examples that adjust deferred revenue.
 
 **Documentation updates:**
@@ -1004,7 +1008,10 @@ For every phase, update or create:
 
 - Posted annual prepaid invoice creates a deferred revenue schedule.
 - Schedule line totals equal the invoice untaxed amount.
+- Mixed posted invoices recognize only eligible recurring subscription service lines.
 - Missing service period invoices are blocked with a clear reason.
+- Missing recognition configuration is blocked with a clear reason.
+- Ready schedules and recognized schedule lines cannot be edited or removed through normal operations.
 - Monthly recognition entries post correctly.
 - Total recognized plus remaining deferred equals invoice amount.
 - Credit note/cancellation adjusts schedules correctly.
@@ -1016,6 +1023,9 @@ For every phase, update or create:
 - Straight-line daily calculation - foundation covered.
 - Monthly equal calculation - foundation covered.
 - Idempotent schedule regeneration - foundation covered.
+- Missing configuration blocking - covered.
+- Mixed invoice recurring-line eligibility - covered.
+- Ready/recognized schedule locking - covered.
 - Posting journal entries.
 - Cancellation and credit note.
 - Multi-company and multi-currency.

@@ -1,6 +1,6 @@
 from datetime import date
 
-from odoo.exceptions import AccessError
+from odoo.exceptions import AccessError, UserError
 from odoo.tests.common import TransactionCase
 
 
@@ -29,6 +29,24 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         })
         self.period_start = date(2026, 1, 1)
         self.period_end = date(2026, 4, 1)
+        self.deferred_account = self.env['account.account'].search([], limit=1)
+        self.revenue_account = self.env['account.account'].search(
+            [('account_type', '=', 'income')],
+            limit=1,
+        ) or self.deferred_account
+        self.recognition_journal = self.env['account.journal'].search([('type', '=', 'general')], limit=1)
+        self.config = self.env['ir.config_parameter'].sudo()
+        self._set_recognition_config()
+
+    def _set_recognition_config(self):
+        self.config.set_param('subscription_suite.deferred_revenue_account_id', self.deferred_account.id)
+        self.config.set_param('subscription_suite.revenue_account_id', self.revenue_account.id)
+        self.config.set_param('subscription_suite.recognition_journal_id', self.recognition_journal.id)
+
+    def _clear_recognition_config(self):
+        self.config.set_param('subscription_suite.deferred_revenue_account_id', '')
+        self.config.set_param('subscription_suite.revenue_account_id', '')
+        self.config.set_param('subscription_suite.recognition_journal_id', '')
 
     def _create_subscription(self, amount=1200.0, period_start=False, period_end=False):
         period_start = period_start or self.period_start
@@ -150,6 +168,76 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         self.assertIn('service period', schedule.block_reason)
         self.assertFalse(schedule.line_ids)
 
+    def test_missing_recognition_config_blocks_schedule(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        self._clear_recognition_config()
+
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        self.assertEqual(schedule.state, 'blocked')
+        self.assertIn('configuration', schedule.block_reason)
+        self.assertFalse(schedule.line_ids)
+
+    def test_mixed_invoice_only_recognizes_subscription_lines(self):
+        subscription = self._create_subscription(amount=1200.0)
+        subscription_line = subscription.order_line[:1]
+        one_time_product = self.env['product.product'].create({
+            'name': 'One-time Implementation',
+            'type': 'service',
+            'list_price': 500.0,
+            'invoice_policy': 'order',
+        })
+        subscription.write({
+            'order_line': [(0, 0, {
+                'product_id': one_time_product.id,
+                'name': 'One-time implementation',
+                'product_uom_qty': 1.0,
+                'price_unit': 500.0,
+                'is_recurring': False,
+            })],
+        })
+        one_time_line = subscription.order_line.filtered(lambda line: line.product_id == one_time_product)[:1]
+        invoice = self.env['account.move'].create({
+            'move_type': 'out_invoice',
+            'partner_id': self.partner.id,
+            'subscription_id': subscription.id,
+            'subscription_period_start': self.period_start,
+            'subscription_period_end': self.period_end,
+            'invoice_line_ids': [
+                (0, 0, {
+                    'product_id': self.product.id,
+                    'name': 'Deferred Revenue Product',
+                    'quantity': 1.0,
+                    'price_unit': 1200.0,
+                    'sale_line_ids': [(6, 0, subscription_line.ids)],
+                }),
+                (0, 0, {
+                    'product_id': one_time_product.id,
+                    'name': 'One-time implementation',
+                    'quantity': 1.0,
+                    'price_unit': 500.0,
+                    'sale_line_ids': [(6, 0, one_time_line.ids)],
+                }),
+            ],
+        })
+        invoice.invoice_line_ids.filtered(lambda line: line.product_id == self.product).write({
+            'sale_line_ids': [(6, 0, subscription_line.ids)],
+        })
+        invoice.invoice_line_ids.filtered(lambda line: line.product_id == one_time_product).write({
+            'sale_line_ids': [(6, 0, one_time_line.ids)],
+            'exclude_from_subscription_deferred_revenue': True,
+        })
+        invoice.action_post()
+
+        eligible_lines = self.env['subscription.deferred.revenue']._eligible_invoice_lines(invoice)
+        self.assertEqual(eligible_lines.mapped('name'), ['Deferred Revenue Product'])
+
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        self.assertEqual(schedule.state, 'ready', schedule.block_reason)
+        self.assertAlmostEqual(schedule.amount_total, 1200.0, places=2)
+        self.assertAlmostEqual(sum(schedule.line_ids.mapped('amount')), 1200.0, places=2)
+
     def test_draft_non_subscription_and_refund_sources_are_blocked_or_excluded(self):
         subscription = self._create_subscription()
         draft_invoice = self.env['account.move'].create({
@@ -216,3 +304,22 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
 
         with self.assertRaises(AccessError):
             public_env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+    def test_ready_schedule_lines_are_locked(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        with self.assertRaises(UserError):
+            schedule.line_ids[:1].write({'amount': 1.0})
+        with self.assertRaises(UserError):
+            schedule.line_ids[:1].unlink()
+
+    def test_schedule_with_recognized_line_cannot_cancel_or_regenerate(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        schedule.line_ids[:1].with_context(deferred_revenue_internal_write=True).write({'state': 'recognized'})
+
+        with self.assertRaises(UserError):
+            schedule.action_cancel()
+        with self.assertRaises(UserError):
+            schedule.action_regenerate_lines()

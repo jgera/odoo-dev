@@ -43,6 +43,11 @@ class AccountMove(models.Model):
 class AccountMoveLine(models.Model):
     _inherit = 'account.move.line'
 
+    exclude_from_subscription_deferred_revenue = fields.Boolean(
+        string='Exclude from Subscription Deferred Revenue',
+        copy=False,
+        help='Exclude this invoice line when generating Subscription Suite deferred revenue schedules.',
+    )
     usage_summary_id = fields.Many2one(
         'subscription.usage.summary',
         string='Usage Summary',

@@ -107,6 +107,8 @@
                 <field name="subscription_plan_id"/>
                 <filter string="Ready" name="ready" domain="[('state', '=', 'ready')]"/>
                 <filter string="Blocked" name="blocked" domain="[('state', '=', 'blocked')]"/>
+                <filter string="Missing Configuration" name="missing_configuration" domain="[('state', '=', 'blocked'), ('block_reason', 'ilike', 'configuration')]"/>
+                <filter string="Missing Period" name="missing_period" domain="[('state', '=', 'blocked'), ('block_reason', 'ilike', 'period')]"/>
                 <filter string="Cancelled" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
                 <filter string="Straight-line Daily" name="straight_line_daily" domain="[('recognition_method', '=', 'straight_line_daily')]"/>
                 <filter string="Equal Monthly" name="equal_monthly" domain="[('recognition_method', '=', 'equal_monthly')]"/>
