@@ -97,6 +97,24 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         invoice.action_post()
         return subscription, invoice
 
+    def _create_posted_credit_note(self, invoice, amount, period_start=False, period_end=False):
+        credit_note = self.env['account.move'].create({
+            'move_type': 'out_refund',
+            'partner_id': invoice.partner_id.id,
+            'subscription_id': invoice.subscription_id.id,
+            'reversed_entry_id': invoice.id,
+            'subscription_period_start': period_start or invoice.subscription_period_start,
+            'subscription_period_end': period_end or invoice.subscription_period_end,
+            'invoice_line_ids': [(0, 0, {
+                'product_id': self.product.id,
+                'name': 'Deferred Revenue Credit Note',
+                'quantity': 1.0,
+                'price_unit': amount,
+            })],
+        })
+        credit_note.action_post()
+        return credit_note
+
     def test_posted_subscription_invoice_creates_ready_schedule(self):
         subscription, invoice = self._create_posted_subscription_invoice()
 
@@ -554,3 +572,132 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
             public_env['subscription.deferred.revenue.post.wizard'].create({
                 'cutoff_date': self.period_end,
             })
+
+    def test_credit_note_adjustment_cancels_unrecognized_draft_lines(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        first_line = schedule.line_ids.sorted('period_start')[0]
+        credit_note = self._create_posted_credit_note(
+            invoice,
+            first_line.amount,
+            period_start=first_line.period_start,
+            period_end=first_line.period_end,
+        )
+
+        adjustment = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_note)
+
+        self.assertEqual(adjustment.state, 'applied')
+        self.assertEqual(adjustment.schedule_id, schedule)
+        self.assertEqual(adjustment.credit_note_id, credit_note)
+        self.assertEqual(adjustment.adjusted_line_ids, first_line)
+        self.assertEqual(first_line.state, 'cancelled')
+        self.assertFalse(adjustment.reversal_move_ids)
+        self.assertAlmostEqual(adjustment.draft_adjusted_amount, first_line.amount, places=2)
+        self.assertAlmostEqual(adjustment.recognized_reversal_amount, 0.0, places=2)
+
+    def test_credit_note_adjustment_reverses_recognized_lines(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        first_line = schedule.line_ids.sorted('period_start')[0]
+        post_wizard = self.env['subscription.deferred.revenue.post.wizard'].create({
+            'cutoff_date': first_line.period_end,
+            'posting_date': first_line.period_end,
+            'schedule_id': schedule.id,
+            'recognition_journal_id': self.recognition_journal.id,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+        post_wizard.action_post_recognition()
+        recognition_move = first_line.recognition_move_id
+        credit_note = self._create_posted_credit_note(
+            invoice,
+            first_line.amount,
+            period_start=first_line.period_start,
+            period_end=first_line.period_end,
+        )
+
+        adjustment = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_note)
+        reversal = adjustment.reversal_move_ids
+
+        self.assertEqual(adjustment.state, 'applied')
+        self.assertEqual(first_line.state, 'recognized')
+        self.assertEqual(reversal.state, 'posted')
+        self.assertEqual(reversal.reversed_entry_id, recognition_move)
+        self.assertAlmostEqual(sum(reversal.line_ids.mapped('debit')), first_line.amount, places=2)
+        self.assertAlmostEqual(sum(reversal.line_ids.mapped('credit')), first_line.amount, places=2)
+        self.assertEqual(reversal.line_ids.filtered(lambda line: line.debit).account_id, self.revenue_account)
+        self.assertEqual(reversal.line_ids.filtered(lambda line: line.credit).account_id, self.deferred_account)
+        self.assertAlmostEqual(adjustment.recognized_reversal_amount, first_line.amount, places=2)
+
+    def test_credit_note_adjustment_is_idempotent(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        first_line = schedule.line_ids.sorted('period_start')[0]
+        credit_note = self._create_posted_credit_note(
+            invoice,
+            first_line.amount,
+            period_start=first_line.period_start,
+            period_end=first_line.period_end,
+        )
+
+        first = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_note)
+        second = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_note)
+
+        self.assertEqual(first, second)
+        self.assertEqual(
+            self.env['subscription.deferred.revenue.adjustment'].search_count([('credit_note_id', '=', credit_note.id)]),
+            1,
+        )
+        self.assertEqual(first_line.state, 'cancelled')
+
+    def test_credit_note_adjustment_blocks_over_adjustment(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        credit_note = self._create_posted_credit_note(invoice, schedule.amount_total + 1.0)
+
+        adjustment = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_note)
+
+        self.assertEqual(adjustment.state, 'blocked')
+        self.assertIn('exceeds', adjustment.block_reason)
+        self.assertFalse(schedule.line_ids.filtered(lambda line: line.state == 'cancelled'))
+
+    def test_ambiguous_credit_note_adjustment_is_blocked(self):
+        _subscription, _invoice = self._create_posted_subscription_invoice()
+        credit_note = self.env['account.move'].create({
+            'move_type': 'out_refund',
+            'partner_id': self.partner.id,
+            'subscription_period_start': self.period_start,
+            'subscription_period_end': self.period_end,
+            'invoice_line_ids': [(0, 0, {
+                'product_id': self.product.id,
+                'name': 'Unlinked credit note',
+                'quantity': 1.0,
+                'price_unit': 100.0,
+            })],
+        })
+        credit_note.action_post()
+
+        adjustment = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_note)
+
+        self.assertEqual(adjustment.state, 'blocked')
+        self.assertIn('original subscription invoice', adjustment.block_reason)
+
+    def test_credit_note_adjustment_blocks_cancelled_schedule(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        schedule.action_cancel()
+        credit_note = self._create_posted_credit_note(invoice, 100.0)
+
+        adjustment = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_note)
+
+        self.assertEqual(adjustment.state, 'blocked')
+        self.assertIn('blocked or cancelled', adjustment.block_reason)

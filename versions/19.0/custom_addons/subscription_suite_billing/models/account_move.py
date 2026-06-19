@@ -39,6 +39,16 @@ class AccountMove(models.Model):
             'context': {'default_invoice_id': self.id},
         }
 
+    def action_apply_deferred_revenue_adjustment(self):
+        adjustments = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(self)
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Deferred Revenue Adjustments',
+            'res_model': 'subscription.deferred.revenue.adjustment',
+            'view_mode': 'list,form',
+            'domain': [('id', 'in', adjustments.ids)],
+        }
+
 
 class AccountMoveLine(models.Model):
     _inherit = 'account.move.line'

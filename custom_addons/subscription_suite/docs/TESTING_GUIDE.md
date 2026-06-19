@@ -1255,3 +1255,27 @@ Automated coverage:
 Implementation note:
 
 - Manual posting is one journal entry per deferred revenue schedule/invoice. Scheduled cron posting, reversals, credit-note adjustments, revenue recognition reports, and finance reconciliation dashboards remain later Phase 7 slices.
+
+## 48. Revenue Recognition Credit Note And Reversal Foundation
+
+Purpose: verify Phase 7 credit-note adjustments against deferred revenue schedules after manual recognition posting exists.
+
+Walkthrough:
+
+1. Generate a ready deferred revenue schedule from a posted subscription invoice.
+2. Post no recognition lines, create a posted credit note linked to the original invoice for the first service-period segment, and click **Adjust Credit Notes** from the schedule or **Adjust Deferred Revenue** from the credit note.
+3. Confirm a **Deferred Revenue Adjustment** is created, the matching draft recognition line is cancelled or reduced, and no reversal journal entry is created.
+4. Generate a second schedule, post the first recognition line, then create a posted credit note linked to that same service-period segment.
+5. Apply the adjustment and confirm a posted reversal journal entry debits revenue and credits deferred revenue.
+6. Confirm the reversal entry links back to the original recognition journal entry and the adjustment links to the schedule, source invoice, credit note, adjusted lines, subscription, customer, plan, company, and currency.
+7. Rerun the same credit-note adjustment and confirm no duplicate adjustment or reversal entry is created.
+8. Create an over-refund or a credit note without an original invoice/service period and confirm the adjustment is blocked with a clear reason.
+9. Confirm cancelled or blocked source schedules do not accept applied adjustments.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover unrecognized draft-line cancellation, recognized-line reversal journal entries, idempotent reruns, over-adjustment blocking, ambiguous credit-note blocking, cancelled schedule blocking, and existing schedule/preview/posting behavior.
+
+Implementation note:
+
+- Credit-note adjustments are generated audit records. This foundation requires posted `out_refund` records linked to the original subscription invoice and clear subscription service-period dates. It does not add scheduled recognition cron, revenue reports, reconciliation dashboards, advanced partial-refund allocation beyond matching schedule periods, or currency normalization.

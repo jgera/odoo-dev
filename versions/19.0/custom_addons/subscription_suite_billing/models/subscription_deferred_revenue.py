@@ -71,6 +71,13 @@ class SubscriptionDeferredRevenue(models.Model):
     )
     line_count = fields.Integer(compute='_compute_line_count')
     recognition_move_count = fields.Integer(compute='_compute_recognition_move_count')
+    adjustment_ids = fields.One2many(
+        'subscription.deferred.revenue.adjustment',
+        'schedule_id',
+        string='Credit Note Adjustments',
+        readonly=True,
+    )
+    adjustment_count = fields.Integer(compute='_compute_adjustment_count')
     state = fields.Selection(
         [
             ('draft', 'Draft'),
@@ -105,6 +112,10 @@ class SubscriptionDeferredRevenue(models.Model):
     def _compute_recognition_move_count(self):
         for schedule in self:
             schedule.recognition_move_count = len(schedule.line_ids.mapped('recognition_move_id'))
+
+    def _compute_adjustment_count(self):
+        for schedule in self:
+            schedule.adjustment_count = len(schedule.adjustment_ids)
 
     @api.constrains('service_period_start', 'service_period_end')
     def _check_service_period(self):
@@ -411,6 +422,34 @@ class SubscriptionDeferredRevenue(models.Model):
             'res_model': 'account.move',
             'view_mode': 'list,form',
             'domain': [('id', 'in', moves.ids)],
+        }
+
+    def action_adjust_credit_notes(self):
+        self._check_generate_access()
+        credit_notes = self.env['account.move'].search([
+            ('move_type', '=', 'out_refund'),
+            ('state', '=', 'posted'),
+            ('reversed_entry_id', 'in', self.mapped('invoice_id').ids),
+        ])
+        if not credit_notes:
+            raise UserError(_('No posted credit notes are linked to these deferred revenue schedules.'))
+        adjustments = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_notes)
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Deferred Revenue Adjustments'),
+            'res_model': 'subscription.deferred.revenue.adjustment',
+            'view_mode': 'list,form',
+            'domain': [('id', 'in', adjustments.ids)],
+        }
+
+    def action_view_adjustments(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Deferred Revenue Adjustments'),
+            'res_model': 'subscription.deferred.revenue.adjustment',
+            'view_mode': 'list,form',
+            'domain': [('schedule_id', '=', self.id)],
         }
 
 

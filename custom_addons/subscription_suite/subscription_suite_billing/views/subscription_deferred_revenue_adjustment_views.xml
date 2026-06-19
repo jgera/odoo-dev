@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_deferred_revenue_adjustment_list" model="ir.ui.view">
+        <field name="name">subscription.deferred.revenue.adjustment.list</field>
+        <field name="model">subscription.deferred.revenue.adjustment</field>
+        <field name="arch" type="xml">
+            <list string="Deferred Revenue Adjustments" create="0" decoration-danger="state == 'blocked'" decoration-success="state == 'applied'">
+                <field name="name"/>
+                <field name="credit_note_id"/>
+                <field name="source_invoice_id"/>
+                <field name="schedule_id"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <field name="service_period_start"/>
+                <field name="service_period_end"/>
+                <field name="state" widget="badge" decoration-danger="state == 'blocked'" decoration-success="state == 'applied'"/>
+                <field name="amount_total" widget="monetary"/>
+                <field name="draft_adjusted_amount" widget="monetary"/>
+                <field name="recognized_reversal_amount" widget="monetary"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_deferred_revenue_adjustment_form" model="ir.ui.view">
+        <field name="name">subscription.deferred.revenue.adjustment.form</field>
+        <field name="model">subscription.deferred.revenue.adjustment</field>
+        <field name="arch" type="xml">
+            <form string="Deferred Revenue Adjustment" create="0" edit="0">
+                <header>
+                    <button name="action_view_credit_note" type="object" string="Credit Note" class="btn-secondary"/>
+                    <button name="action_view_reversal_moves" type="object" string="Reversal Entries" class="btn-secondary" invisible="not reversal_move_ids"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="schedule_id"/>
+                            <field name="source_invoice_id"/>
+                            <field name="credit_note_id"/>
+                            <field name="subscription_id"/>
+                            <field name="partner_id"/>
+                        </group>
+                        <group>
+                            <field name="service_period_start"/>
+                            <field name="service_period_end"/>
+                            <field name="subscription_plan_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <group string="Amounts">
+                        <field name="amount_total" widget="monetary"/>
+                        <field name="draft_adjusted_amount" widget="monetary"/>
+                        <field name="recognized_reversal_amount" widget="monetary"/>
+                    </group>
+                    <group string="Blocked Reason" invisible="state != 'blocked'">
+                        <field name="block_reason" nolabel="1"/>
+                    </group>
+                    <notebook>
+                        <page string="Adjusted Lines">
+                            <field name="adjusted_line_ids" readonly="1">
+                                <list>
+                                    <field name="schedule_id"/>
+                                    <field name="period_start"/>
+                                    <field name="period_end"/>
+                                    <field name="amount" widget="monetary"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="recognition_move_id"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Reversal Entries">
+                            <field name="reversal_move_ids" readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_deferred_revenue_adjustment_search" model="ir.ui.view">
+        <field name="name">subscription.deferred.revenue.adjustment.search</field>
+        <field name="model">subscription.deferred.revenue.adjustment</field>
+        <field name="arch" type="xml">
+            <search string="Deferred Revenue Adjustments">
+                <field name="name"/>
+                <field name="credit_note_id"/>
+                <field name="source_invoice_id"/>
+                <field name="schedule_id"/>
+                <field name="subscription_id"/>
+                <field name="partner_id"/>
+                <filter string="Applied" name="applied" domain="[('state', '=', 'applied')]"/>
+                <filter string="Blocked" name="blocked" domain="[('state', '=', 'blocked')]"/>
+                <filter string="With Reversals" name="with_reversals" domain="[('reversal_move_ids', '!=', False)]"/>
+                <group>
+                    <filter string="Status" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'subscription_plan_id'}"/>
+                    <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Company" name="group_company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_subscription_deferred_revenue_adjustment" model="ir.actions.act_window">
+        <field name="name">Deferred Revenue Adjustments</field>
+        <field name="res_model">subscription.deferred.revenue.adjustment</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_applied': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Apply posted subscription credit notes to deferred revenue schedules.</p>
+            <p>Adjustments are generated audit records. Draft recognition lines are cancelled or reduced; recognized revenue is reversed through posted journal entries.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_subscription_deferred_revenue_adjustment"
+              name="Deferred Revenue Adjustments"
+              parent="menu_subscription_billing"
+              action="action_subscription_deferred_revenue_adjustment"
+              sequence="55"/>
+</odoo>

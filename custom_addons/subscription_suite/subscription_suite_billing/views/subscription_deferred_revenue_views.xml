@@ -30,6 +30,7 @@
                 <header>
                     <button name="action_preview_recognition" type="object" string="Preview Recognition" class="btn-secondary" invisible="state != 'ready'"/>
                     <button name="action_post_recognition" type="object" string="Post Recognition" class="btn-primary" invisible="state != 'ready' or remaining_amount &lt;= 0"/>
+                    <button name="action_adjust_credit_notes" type="object" string="Adjust Credit Notes" class="btn-secondary" invisible="state not in ['ready', 'draft']"/>
                     <button name="action_regenerate_lines" type="object" string="Regenerate Draft Lines" class="btn-primary" invisible="state == 'cancelled'"/>
                     <button name="action_cancel" type="object" string="Cancel Schedule" invisible="state == 'cancelled'"/>
                     <field name="state" widget="statusbar"/>
@@ -45,9 +46,12 @@
                         <button name="action_view_recognition_moves" type="object" class="oe_stat_button" icon="fa-book">
                             <field name="recognition_move_count" widget="statinfo" string="Journal Entries"/>
                         </button>
+                        <button name="action_view_adjustments" type="object" class="oe_stat_button" icon="fa-undo">
+                            <field name="adjustment_count" widget="statinfo" string="Adjustments"/>
+                        </button>
                     </div>
                     <div class="alert alert-info" role="alert">
-                        Deferred revenue schedules are generated audit records. Recognition posting creates journal entries from due draft lines only; reversals and credit-note adjustments remain deferred.
+                        Deferred revenue schedules are generated audit records. Recognition posting creates journal entries from due draft lines; posted subscription credit notes can generate deferred revenue adjustments and reversal entries.
                     </div>
                     <group>
                         <group>
@@ -94,6 +98,20 @@
                                 </list>
                             </field>
                         </page>
+                        <page string="Credit Note Adjustments">
+                            <field name="adjustment_ids" readonly="1">
+                                <list>
+                                    <field name="credit_note_id"/>
+                                    <field name="service_period_start"/>
+                                    <field name="service_period_end"/>
+                                    <field name="state" widget="badge"/>
+                                    <field name="amount_total" widget="monetary"/>
+                                    <field name="draft_adjusted_amount" widget="monetary"/>
+                                    <field name="recognized_reversal_amount" widget="monetary"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
                     </notebook>
                 </sheet>
                 <chatter/>
@@ -116,6 +134,7 @@
                 <filter string="Missing Configuration" name="missing_configuration" domain="[('state', '=', 'blocked'), ('block_reason', 'ilike', 'configuration')]"/>
                 <filter string="Missing Period" name="missing_period" domain="[('state', '=', 'blocked'), ('block_reason', 'ilike', 'period')]"/>
                 <filter string="Cancelled" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
+                <filter string="With Adjustments" name="with_adjustments" domain="[('adjustment_ids', '!=', False)]"/>
                 <filter string="Straight-line Daily" name="straight_line_daily" domain="[('recognition_method', '=', 'straight_line_daily')]"/>
                 <filter string="Equal Monthly" name="equal_monthly" domain="[('recognition_method', '=', 'equal_monthly')]"/>
                 <group>
@@ -148,6 +167,9 @@
             <xpath expr="//div[@name='button_box']" position="inside">
                 <button name="action_view_deferred_revenue_schedules" type="object" class="oe_stat_button" icon="fa-calendar" invisible="not subscription_id">
                     <field name="deferred_revenue_schedule_count" widget="statinfo" string="Deferred Revenue"/>
+                </button>
+                <button name="action_apply_deferred_revenue_adjustment" type="object" class="oe_stat_button" icon="fa-undo" invisible="move_type != 'out_refund' or state != 'posted'">
+                    <span>Adjust Deferred Revenue</span>
                 </button>
             </xpath>
         </field>

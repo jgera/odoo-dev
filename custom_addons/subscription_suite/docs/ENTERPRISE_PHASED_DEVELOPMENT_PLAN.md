@@ -952,7 +952,7 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
-**Current slice:** Revenue Recognition Journal Posting Foundation. Deferred revenue schedule generation, hardening, and posting preview are complete. This slice posts due draft recognition lines from ready schedules into Odoo accounting as one journal entry per schedule/invoice, then marks included lines recognized. Scheduled cron posting, reversals, credit-note adjustments, revenue reports, and accounting reconciliation remain deferred.
+**Current slice:** Revenue Recognition Credit Note And Reversal Foundation. Deferred revenue schedule generation, hardening, posting preview, and manual journal posting are complete. This slice applies posted subscription credit notes to deferred revenue schedules by cancelling/reducing unrecognized draft lines or posting reversal entries for recognized revenue. Scheduled cron posting, revenue reports, and accounting reconciliation remain deferred.
 
 **Build items:**
 
@@ -982,8 +982,8 @@ For every phase, update or create:
    - Manual posting wizard - foundation done for ready schedules, due draft lines, and one posted journal entry per schedule.
    - Monthly cron.
    - Journal entry links - foundation done from recognition lines and schedule smart button.
-   - Reversal/cancellation handling.
-   - Credit note handling.
+   - Reversal/cancellation handling - foundation done for posted credit notes linked to original subscription invoices.
+   - Credit note handling - foundation done with idempotent adjustment records, draft-line adjustment, and recognized-revenue reversal entries.
 
 5. Finance reports
    - Deferred revenue balance.
@@ -998,7 +998,7 @@ For every phase, update or create:
 - Use mixed invoice examples carefully: only recurring subscription service lines should feed deferred revenue; one-time services should be excluded.
 - Preview recognition from generated schedules before posting.
 - Post due recognition lines from ready schedules to create accounting journal entries.
-- Add cancellation/credit-note examples that adjust deferred revenue.
+- Add cancellation/credit-note examples that adjust deferred revenue through generated adjustment records.
 
 **Documentation updates:**
 
@@ -1018,7 +1018,7 @@ For every phase, update or create:
 - Recognition preview shows due draft lines and debit deferred revenue / credit revenue impact without posting accounting entries.
 - Manual recognition posting creates one posted journal entry per schedule and marks only included due lines recognized.
 - Total recognized plus remaining deferred equals invoice amount.
-- Credit note/cancellation adjusts schedules correctly.
+- Credit note/cancellation adjusts schedules correctly by cancelling/reducing draft recognition lines or posting reversal entries for recognized lines.
 - Finance user can reconcile reports to accounting moves.
 
 **Tests:**
@@ -1032,7 +1032,7 @@ For every phase, update or create:
 - Ready/recognized schedule locking - covered.
 - Recognition preview due-line selection, scoping, totals, manager access, and no-posting/no-state-change behavior - foundation covered.
 - Posting journal entries - foundation covered for due-line selection, one posted move per schedule, line recognition links, idempotent rerun exclusion, configuration validation, filtering, preview immutability, and manager-only access.
-- Cancellation and credit note.
+- Cancellation and credit note - foundation covered for draft-line cancellation, recognized-line reversal entries, idempotency, over-adjustment blocking, ambiguous credit-note blocking, and cancelled schedule blocking.
 - Multi-company and multi-currency.
 
 **Continuous validation:**
