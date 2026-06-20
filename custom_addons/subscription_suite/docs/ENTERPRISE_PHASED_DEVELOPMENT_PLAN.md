@@ -952,7 +952,7 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
-**Current slice:** Deferred Revenue Reconciliation Reports. Deferred revenue schedule generation, hardening, posting preview, manual journal posting, and credit-note adjustments are complete. This slice adds generated audit rows that compare posted subscription invoices, deferred revenue schedules, recognized lines, recognition journal entries, and credit-note adjustments before scheduled cron posting is introduced.
+**Current slice:** Finance Posting Hardening Before Cron. Deferred revenue schedule generation, hardening, posting preview, manual journal posting, credit-note adjustments, and reconciliation reports are complete. This hardening slice centralizes recognition posting helpers, strengthens reversal reconciliation coverage, and improves finance schedule filters before scheduled cron posting is introduced.
 
 **Build items:**
 
@@ -980,6 +980,7 @@ For every phase, update or create:
 4. Recognition posting
    - Preview wizard - foundation done for due draft recognition lines.
    - Manual posting wizard - foundation done for ready schedules, due draft lines, and one posted journal entry per schedule.
+   - Shared posting helper - hardening done so manual posting and future scheduled cron use the same validation, move creation, line marking, and chatter behavior.
    - Monthly cron.
    - Journal entry links - foundation done from recognition lines and schedule smart button.
    - Reversal/cancellation handling - foundation done for posted credit notes linked to original subscription invoices.
@@ -990,6 +991,7 @@ For every phase, update or create:
    - Recognized revenue by period - foundation done through generated reconciliation recognized-line and posted-journal amounts.
    - Unrecognized revenue by customer/plan - deferred beyond period/plan reconciliation buckets.
    - Reconciliation between invoices, schedules, and journal entries - foundation done with source drilldowns and variance status.
+   - Finance schedule filters - hardening done for remaining deferred schedules, recognized lines, and credit-note adjustments.
 
 **Demo data updates:**
 
@@ -1018,6 +1020,7 @@ For every phase, update or create:
 - Ready schedules and recognized schedule lines cannot be edited or removed through normal operations.
 - Recognition preview shows due draft lines and debit deferred revenue / credit revenue impact without posting accounting entries.
 - Manual recognition posting creates one posted journal entry per schedule and marks only included due lines recognized.
+- Manual recognition posting uses the shared schedule-line helper that scheduled cron must reuse.
 - Total recognized plus remaining deferred equals invoice amount.
 - Credit note/cancellation adjusts schedules correctly by cancelling/reducing draft recognition lines or posting reversal entries for recognized lines.
 - Generated reconciliation rows expose ready, variance, missing schedule, missing journal entry, and blocked schedule statuses with drilldowns to every source record.
@@ -1035,7 +1038,7 @@ For every phase, update or create:
 - Recognition preview due-line selection, scoping, totals, manager access, and no-posting/no-state-change behavior - foundation covered.
 - Posting journal entries - foundation covered for due-line selection, one posted move per schedule, line recognition links, idempotent rerun exclusion, configuration validation, filtering, preview immutability, and manager-only access.
 - Cancellation and credit note - foundation covered for draft-line cancellation, recognized-line reversal entries, idempotency, over-adjustment blocking, ambiguous credit-note blocking, and cancelled schedule blocking.
-- Deferred revenue reconciliation - foundation covered for ready rows, variance status, missing schedule, missing journal entry, blocked schedules, credit-note adjustment impact, plan scoping, source drilldowns, idempotent reruns, and manager-only generation.
+- Deferred revenue reconciliation - foundation covered for ready rows, variance status, missing schedule, missing journal entry, blocked schedules, credit-note adjustment impact, recognized reversal plus remaining draft lines, plan scoping, source drilldowns, idempotent reruns, and manager-only generation.
 - Multi-company and multi-currency.
 
 **Continuous validation:**

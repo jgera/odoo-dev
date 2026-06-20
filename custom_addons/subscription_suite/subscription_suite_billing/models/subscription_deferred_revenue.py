@@ -532,3 +532,137 @@ class SubscriptionDeferredRevenueLine(models.Model):
             subscription=subscription,
             schedule=schedule,
         ), order='company_id, currency_id, period_end, id')
+
+    @api.model
+    def _validate_recognition_configuration(
+        self,
+        company,
+        recognition_journal,
+        deferred_revenue_account,
+        revenue_account,
+        schedule=False,
+    ):
+        missing = []
+        if not recognition_journal:
+            missing.append(_('recognition journal'))
+        if not deferred_revenue_account:
+            missing.append(_('deferred revenue account'))
+        if not revenue_account:
+            missing.append(_('revenue account'))
+        if missing:
+            raise ValidationError(_('Missing revenue recognition configuration: %s.') % ', '.join(missing))
+        if company and recognition_journal.company_id != company:
+            raise ValidationError(_('The recognition journal does not belong to %s.') % company.display_name)
+        for account in (deferred_revenue_account, revenue_account):
+            if 'company_ids' in account._fields and account.company_ids and company not in account.company_ids:
+                raise ValidationError(_('Recognition accounts must be available for %s.') % company.display_name)
+            if 'company_id' in account._fields and account.company_id and account.company_id != company:
+                raise ValidationError(_('Recognition accounts must be available for %s.') % company.display_name)
+        if schedule and company and schedule.company_id != company:
+            raise ValidationError(_('The selected schedule does not belong to %s.') % company.display_name)
+
+    @api.model
+    def _prepare_recognition_move_vals(
+        self,
+        schedule,
+        lines,
+        amount,
+        balance_amount,
+        posting_date,
+        recognition_journal,
+        deferred_revenue_account,
+        revenue_account,
+    ):
+        name = _('Revenue recognition for %s') % (schedule.invoice_id.name or schedule.invoice_id.display_name)
+        debit_currency_vals = {}
+        credit_currency_vals = {}
+        if schedule.currency_id != schedule.company_id.currency_id:
+            debit_currency_vals = {
+                'currency_id': schedule.currency_id.id,
+                'amount_currency': amount,
+            }
+            credit_currency_vals = {
+                'currency_id': schedule.currency_id.id,
+                'amount_currency': -amount,
+            }
+        return {
+            'move_type': 'entry',
+            'date': posting_date,
+            'journal_id': recognition_journal.id,
+            'company_id': schedule.company_id.id,
+            'ref': name,
+            'line_ids': [
+                (0, 0, {
+                    'name': name,
+                    'account_id': deferred_revenue_account.id,
+                    'partner_id': schedule.partner_id.id,
+                    'balance': balance_amount,
+                    **debit_currency_vals,
+                }),
+                (0, 0, {
+                    'name': name,
+                    'account_id': revenue_account.id,
+                    'partner_id': schedule.partner_id.id,
+                    'balance': -balance_amount,
+                    **credit_currency_vals,
+                }),
+            ],
+        }
+
+    def _post_recognition_lines(
+        self,
+        posting_date,
+        recognition_journal,
+        deferred_revenue_account,
+        revenue_account,
+    ):
+        lines_by_schedule = {}
+        for line in self:
+            lines_by_schedule.setdefault(line.schedule_id, self.browse())
+            lines_by_schedule[line.schedule_id] |= line
+
+        moves = self.env['account.move']
+        for schedule, lines in lines_by_schedule.items():
+            self._validate_recognition_configuration(
+                schedule.company_id,
+                recognition_journal,
+                deferred_revenue_account,
+                revenue_account,
+                schedule=schedule,
+            )
+            amount = schedule.currency_id.round(sum(lines.mapped('amount')))
+            if schedule.currency_id.is_zero(amount) or amount < 0:
+                raise ValidationError(_('Recognition amount must be positive for %s.') % schedule.display_name)
+            balance_amount = schedule.currency_id._convert(
+                amount,
+                schedule.company_id.currency_id,
+                schedule.company_id,
+                posting_date,
+            )
+            balance_amount = schedule.company_id.currency_id.round(balance_amount)
+            if schedule.company_id.currency_id.is_zero(balance_amount) or balance_amount < 0:
+                raise ValidationError(_('Recognition balance amount must be positive for %s.') % schedule.display_name)
+            move = self.env['account.move'].create(self._prepare_recognition_move_vals(
+                schedule,
+                lines,
+                amount,
+                balance_amount,
+                posting_date,
+                recognition_journal,
+                deferred_revenue_account,
+                revenue_account,
+            ))
+            move.action_post()
+            lines.with_context(deferred_revenue_internal_write=True).write({
+                'state': 'recognized',
+                'recognized_date': posting_date,
+                'recognition_move_id': move.id,
+            })
+            schedule.message_post(
+                body=_('Posted revenue recognition journal entry %(move)s for %(amount)s.') % {
+                    'move': move.display_name,
+                    'amount': schedule.currency_id.format(amount),
+                }
+            )
+            moves |= move
+        return moves

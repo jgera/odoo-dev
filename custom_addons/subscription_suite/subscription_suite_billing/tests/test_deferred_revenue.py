@@ -849,6 +849,42 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         self.assertAlmostEqual(reconciliation.remaining_deferred_amount, sum(schedule.line_ids.filtered(lambda rec: rec.state == 'draft').mapped('amount')), places=2)
         self.assertAlmostEqual(reconciliation.variance_amount, 0.0, places=2)
 
+    def test_deferred_revenue_reconciliation_handles_recognized_reversal_and_remaining_draft(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        line = schedule.line_ids.sorted('period_start')[0]
+        post_wizard = self.env['subscription.deferred.revenue.post.wizard'].create({
+            'cutoff_date': line.period_end,
+            'posting_date': line.period_end,
+            'schedule_id': schedule.id,
+            'recognition_journal_id': self.recognition_journal.id,
+            'deferred_revenue_account_id': self.deferred_account.id,
+            'revenue_account_id': self.revenue_account.id,
+        })
+        post_wizard.action_post_recognition()
+        credit_note = self._create_posted_credit_note(
+            invoice,
+            line.amount,
+            period_start=line.period_start,
+            period_end=line.period_end,
+        )
+        adjustment = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_note)
+
+        reconciliation = self._generate_reconciliation()
+
+        self.assertEqual(adjustment.state, 'applied')
+        self.assertTrue(adjustment.reversal_move_ids)
+        self.assertEqual(reconciliation.status, 'ready')
+        self.assertEqual(reconciliation.adjustment_ids, adjustment)
+        self.assertEqual(reconciliation.recognition_line_ids, line)
+        self.assertEqual(reconciliation.recognition_move_ids, line.recognition_move_id)
+        self.assertAlmostEqual(reconciliation.credit_note_adjustment_amount, line.amount, places=2)
+        self.assertAlmostEqual(reconciliation.remaining_deferred_amount, sum(schedule.line_ids.filtered(lambda rec: rec.state == 'draft').mapped('amount')), places=2)
+        self.assertAlmostEqual(reconciliation.variance_amount, 0.0, places=2)
+
     def test_deferred_revenue_reconciliation_separates_and_filters_plans(self):
         _subscription, invoice = self._create_posted_subscription_invoice()
         schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)

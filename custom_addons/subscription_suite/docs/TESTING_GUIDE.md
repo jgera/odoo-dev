@@ -1254,7 +1254,7 @@ Automated coverage:
 
 Implementation note:
 
-- Manual posting is one journal entry per deferred revenue schedule/invoice. Scheduled cron posting, reversals, credit-note adjustments, revenue recognition reports, and finance reconciliation dashboards remain later Phase 7 slices.
+- Manual posting is one journal entry per deferred revenue schedule/invoice. The schedule-line posting helper is shared intentionally; scheduled cron must reuse it rather than reimplement posting validation, journal entry creation, recognition line updates, or chatter.
 
 ## 48. Revenue Recognition Credit Note And Reversal Foundation
 
@@ -1303,8 +1303,9 @@ Walkthrough:
 
 Automated coverage:
 
-- `subscription_suite_billing` tests cover ready reconciliation, journal variance detection, missing schedule, missing journal entry, blocked schedules, credit-note adjustment impact, plan-filtered generation and drilldowns, idempotent reruns, and manager-only generation.
+- `subscription_suite_billing` tests cover ready reconciliation, journal variance detection, missing schedule, missing journal entry, blocked schedules, credit-note adjustment impact, recognized reversal plus remaining draft revenue, plan-filtered generation and drilldowns, idempotent reruns, and manager-only generation.
 
 Implementation note:
 
 - Deferred revenue reconciliation rows are generated audit records. They do not post journal entries, reverse entries, change schedules, alter invoices, normalize currencies, or replace accounting reports.
+- Before enabling scheduled recognition posting, use **Subscriptions -> Billing -> Deferred Revenue** filters for **Remaining Deferred**, **Recognized Lines**, and **Credit-Note Adjustments** to review schedules that automation will touch or skip.
