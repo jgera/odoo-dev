@@ -1279,3 +1279,32 @@ Automated coverage:
 Implementation note:
 
 - Credit-note adjustments are generated audit records. This foundation requires posted `out_refund` records linked to the original subscription invoice and clear subscription service-period dates. It does not add scheduled recognition cron, revenue reports, reconciliation dashboards, advanced partial-refund allocation beyond matching schedule periods, or currency normalization.
+
+## 49. Deferred Revenue Reconciliation Reports
+
+Purpose: verify Phase 7 generated finance reconciliation before scheduled recognition cron is introduced.
+
+Walkthrough:
+
+1. Generate a ready deferred revenue schedule from a posted subscription invoice.
+2. Post one due recognition line through **Subscriptions -> Billing -> Post Recognition**.
+3. Open **Subscriptions -> Billing -> Generate Deferred Revenue Reconciliation**.
+4. Select an opening and closing date that include the invoice date and recognized line date.
+5. Click **Generate**.
+6. Open **Subscriptions -> Billing -> Deferred Revenue Reconciliation** and confirm the row is **Ready**.
+7. Confirm invoice deferred amount, schedule amount, recognized line amount, posted journal amount, credit-note adjustment amount, remaining deferred amount, and variance amount are source-currency values.
+8. Use row buttons to drill into source invoices, schedules, recognition lines, recognition journal entries, credit notes, and adjustment records.
+9. Create a posted subscription invoice in the same period without generating a schedule and confirm the row status becomes **Missing Schedule**.
+10. Mark a recognition line recognized in a test database without a journal entry link and confirm **Missing Journal Entry**.
+11. Generate a blocked schedule from an invoice missing service-period dates and confirm **Blocked Schedule**.
+12. Create a posted credit note and apply deferred revenue adjustment, then regenerate reconciliation and confirm the adjustment amount reduces the deferred basis with zero variance when sources agree.
+13. Rerun the same period/company/plan generation and confirm no duplicate reconciliation rows are created.
+14. Use an optional plan filter and confirm rows and drilldowns are scoped to the selected plan.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover ready reconciliation, journal variance detection, missing schedule, missing journal entry, blocked schedules, credit-note adjustment impact, plan-filtered generation and drilldowns, idempotent reruns, and manager-only generation.
+
+Implementation note:
+
+- Deferred revenue reconciliation rows are generated audit records. They do not post journal entries, reverse entries, change schedules, alter invoices, normalize currencies, or replace accounting reports.

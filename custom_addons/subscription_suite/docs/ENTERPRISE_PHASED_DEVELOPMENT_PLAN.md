@@ -952,7 +952,7 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
-**Current slice:** Revenue Recognition Credit Note And Reversal Foundation. Deferred revenue schedule generation, hardening, posting preview, and manual journal posting are complete. This slice applies posted subscription credit notes to deferred revenue schedules by cancelling/reducing unrecognized draft lines or posting reversal entries for recognized revenue. Scheduled cron posting, revenue reports, and accounting reconciliation remain deferred.
+**Current slice:** Deferred Revenue Reconciliation Reports. Deferred revenue schedule generation, hardening, posting preview, manual journal posting, and credit-note adjustments are complete. This slice adds generated audit rows that compare posted subscription invoices, deferred revenue schedules, recognized lines, recognition journal entries, and credit-note adjustments before scheduled cron posting is introduced.
 
 **Build items:**
 
@@ -986,10 +986,10 @@ For every phase, update or create:
    - Credit note handling - foundation done with idempotent adjustment records, draft-line adjustment, and recognized-revenue reversal entries.
 
 5. Finance reports
-   - Deferred revenue balance.
-   - Recognized revenue by period.
-   - Unrecognized revenue by customer/plan.
-   - Reconciliation between invoices, schedules, and journal entries.
+   - Deferred revenue balance - foundation done through generated reconciliation remaining-deferred amount.
+   - Recognized revenue by period - foundation done through generated reconciliation recognized-line and posted-journal amounts.
+   - Unrecognized revenue by customer/plan - deferred beyond period/plan reconciliation buckets.
+   - Reconciliation between invoices, schedules, and journal entries - foundation done with source drilldowns and variance status.
 
 **Demo data updates:**
 
@@ -999,6 +999,7 @@ For every phase, update or create:
 - Preview recognition from generated schedules before posting.
 - Post due recognition lines from ready schedules to create accounting journal entries.
 - Add cancellation/credit-note examples that adjust deferred revenue through generated adjustment records.
+- Generate deferred revenue reconciliation rows from posted invoices, schedules, recognition entries, and credit-note adjustments; do not load static reconciliation XML.
 
 **Documentation updates:**
 
@@ -1019,6 +1020,7 @@ For every phase, update or create:
 - Manual recognition posting creates one posted journal entry per schedule and marks only included due lines recognized.
 - Total recognized plus remaining deferred equals invoice amount.
 - Credit note/cancellation adjusts schedules correctly by cancelling/reducing draft recognition lines or posting reversal entries for recognized lines.
+- Generated reconciliation rows expose ready, variance, missing schedule, missing journal entry, and blocked schedule statuses with drilldowns to every source record.
 - Finance user can reconcile reports to accounting moves.
 
 **Tests:**
@@ -1033,11 +1035,12 @@ For every phase, update or create:
 - Recognition preview due-line selection, scoping, totals, manager access, and no-posting/no-state-change behavior - foundation covered.
 - Posting journal entries - foundation covered for due-line selection, one posted move per schedule, line recognition links, idempotent rerun exclusion, configuration validation, filtering, preview immutability, and manager-only access.
 - Cancellation and credit note - foundation covered for draft-line cancellation, recognized-line reversal entries, idempotency, over-adjustment blocking, ambiguous credit-note blocking, and cancelled schedule blocking.
+- Deferred revenue reconciliation - foundation covered for ready rows, variance status, missing schedule, missing journal entry, blocked schedules, credit-note adjustment impact, plan scoping, source drilldowns, idempotent reruns, and manager-only generation.
 - Multi-company and multi-currency.
 
 **Continuous validation:**
 
-- Demo data must reconcile invoice amount, recognized revenue, and remaining deferred revenue.
+- Demo data must reconcile invoice amount, recognized revenue, posted journal amount, credit-note adjustments, and remaining deferred revenue.
 - Tests must verify journal entry lines and schedule totals.
 
 ---

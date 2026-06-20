@@ -85,6 +85,7 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
             'move_type': 'out_invoice',
             'partner_id': self.partner.id,
             'subscription_id': subscription.id,
+            'invoice_date': period_start or self.period_start,
             'subscription_period_start': period_start or self.period_start,
             'subscription_period_end': period_end or self.period_end,
             'invoice_line_ids': [(0, 0, {
@@ -103,6 +104,7 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
             'partner_id': invoice.partner_id.id,
             'subscription_id': invoice.subscription_id.id,
             'reversed_entry_id': invoice.id,
+            'invoice_date': period_start or invoice.subscription_period_start,
             'subscription_period_start': period_start or invoice.subscription_period_start,
             'subscription_period_end': period_end or invoice.subscription_period_end,
             'invoice_line_ids': [(0, 0, {
@@ -114,6 +116,46 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         })
         credit_note.action_post()
         return credit_note
+
+    def _generate_reconciliation(self, opening_date=False, closing_date=False, plan=False):
+        return self.env['subscription.deferred.revenue.reconciliation'].generate_reconciliation(
+            opening_date or self.period_start,
+            closing_date or self.period_end,
+            company=self.env.company,
+            plan=plan,
+        )
+
+    def _post_recognition_line(self, schedule, line=False, amount=False):
+        line = line or schedule.line_ids.sorted('period_start')[0]
+        amount = amount if amount is not False else line.amount
+        move = self.env['account.move'].create({
+            'move_type': 'entry',
+            'date': line.period_end,
+            'journal_id': self.recognition_journal.id,
+            'company_id': schedule.company_id.id,
+            'ref': 'Test revenue recognition',
+            'line_ids': [
+                (0, 0, {
+                    'name': 'Test revenue recognition',
+                    'account_id': self.deferred_account.id,
+                    'partner_id': schedule.partner_id.id,
+                    'balance': amount,
+                }),
+                (0, 0, {
+                    'name': 'Test revenue recognition',
+                    'account_id': self.revenue_account.id,
+                    'partner_id': schedule.partner_id.id,
+                    'balance': -amount,
+                }),
+            ],
+        })
+        move.action_post()
+        line.with_context(deferred_revenue_internal_write=True).write({
+            'state': 'recognized',
+            'recognized_date': line.period_end,
+            'recognition_move_id': move.id,
+        })
+        return move
 
     def test_posted_subscription_invoice_creates_ready_schedule(self):
         subscription, invoice = self._create_posted_subscription_invoice()
@@ -701,3 +743,169 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
 
         self.assertEqual(adjustment.state, 'blocked')
         self.assertIn('blocked or cancelled', adjustment.block_reason)
+
+    def test_deferred_revenue_reconciliation_ready_when_sources_agree(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        line = schedule.line_ids.sorted('period_start')[0]
+        move = self._post_recognition_line(schedule, line=line)
+
+        reconciliation = self._generate_reconciliation()
+
+        self.assertEqual(len(reconciliation), 1)
+        self.assertEqual(reconciliation.status, 'ready')
+        self.assertEqual(reconciliation.invoice_ids, invoice)
+        self.assertEqual(reconciliation.schedule_ids, schedule)
+        self.assertEqual(reconciliation.recognition_line_ids, line)
+        self.assertEqual(reconciliation.recognition_move_ids, move)
+        self.assertAlmostEqual(reconciliation.invoice_deferred_amount, invoice.amount_untaxed, places=2)
+        self.assertAlmostEqual(reconciliation.schedule_amount, schedule.amount_total, places=2)
+        self.assertAlmostEqual(reconciliation.recognized_line_amount, line.amount, places=2)
+        self.assertAlmostEqual(reconciliation.posted_journal_amount, line.amount, places=2)
+        self.assertAlmostEqual(reconciliation.remaining_deferred_amount, sum((schedule.line_ids - line).mapped('amount')), places=2)
+        self.assertAlmostEqual(reconciliation.variance_amount, 0.0, places=2)
+
+    def test_deferred_revenue_reconciliation_detects_journal_variance(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        line = schedule.line_ids.sorted('period_start')[0]
+        self._post_recognition_line(schedule, line=line, amount=line.amount - 10.0)
+
+        reconciliation = self._generate_reconciliation()
+
+        self.assertEqual(reconciliation.status, 'variance')
+        self.assertAlmostEqual(reconciliation.recognized_line_amount, line.amount, places=2)
+        self.assertAlmostEqual(reconciliation.posted_journal_amount, line.amount - 10.0, places=2)
+        self.assertAlmostEqual(abs(reconciliation.variance_amount), 10.0, places=2)
+
+    def test_deferred_revenue_reconciliation_detects_missing_schedule(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+
+        reconciliation = self._generate_reconciliation()
+
+        self.assertEqual(reconciliation.status, 'missing_schedule')
+        self.assertEqual(reconciliation.invoice_ids, invoice)
+        self.assertFalse(reconciliation.schedule_ids)
+
+    def test_deferred_revenue_reconciliation_detects_missing_journal_entry(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        line = schedule.line_ids.sorted('period_start')[0]
+        line.with_context(deferred_revenue_internal_write=True).write({
+            'state': 'recognized',
+            'recognized_date': line.period_end,
+        })
+
+        reconciliation = self._generate_reconciliation()
+
+        self.assertEqual(reconciliation.status, 'missing_journal_entry')
+        self.assertEqual(reconciliation.recognition_line_ids, line)
+        self.assertFalse(reconciliation.recognition_move_ids)
+
+    def test_deferred_revenue_reconciliation_detects_blocked_schedule(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        invoice.write({
+            'subscription_period_start': False,
+            'subscription_period_end': False,
+        })
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        reconciliation = self._generate_reconciliation()
+
+        self.assertEqual(schedule.state, 'blocked')
+        self.assertEqual(reconciliation.status, 'blocked_schedule')
+        self.assertEqual(reconciliation.schedule_ids, schedule)
+
+    def test_deferred_revenue_reconciliation_includes_credit_note_adjustments(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        line = schedule.line_ids.sorted('period_start')[0]
+        credit_note = self._create_posted_credit_note(
+            invoice,
+            line.amount,
+            period_start=line.period_start,
+            period_end=line.period_end,
+        )
+        adjustment = self.env['subscription.deferred.revenue.adjustment'].apply_for_credit_notes(credit_note)
+
+        reconciliation = self._generate_reconciliation()
+
+        self.assertEqual(reconciliation.status, 'ready')
+        self.assertEqual(reconciliation.adjustment_ids, adjustment)
+        self.assertEqual(reconciliation.credit_note_ids, credit_note)
+        self.assertAlmostEqual(reconciliation.credit_note_adjustment_amount, adjustment.amount_total, places=2)
+        self.assertAlmostEqual(reconciliation.remaining_deferred_amount, sum(schedule.line_ids.filtered(lambda rec: rec.state == 'draft').mapped('amount')), places=2)
+        self.assertAlmostEqual(reconciliation.variance_amount, 0.0, places=2)
+
+    def test_deferred_revenue_reconciliation_separates_and_filters_plans(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        other_plan = self.env['subscription.plan'].create({
+            'name': 'Deferred Revenue Other Annual',
+            'code': 'DEFERRED-OTHER',
+            'billing_interval_count': 1,
+            'billing_interval_unit': 'year',
+            'plan_line_ids': [(0, 0, {
+                'product_id': self.product.id,
+                'quantity': 1.0,
+                'price_unit': 600.0,
+                'description': 'Deferred Revenue Product',
+            })],
+        })
+        self.plan = other_plan
+        _other_subscription, other_invoice = self._create_posted_subscription_invoice(amount=600.0)
+        other_schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(other_invoice)
+
+        all_rows = self._generate_reconciliation()
+        self.assertEqual(set(all_rows.mapped('schedule_ids').ids), set((schedule | other_schedule).ids))
+
+        filtered_rows = self._generate_reconciliation(plan=other_plan)
+
+        self.assertEqual(filtered_rows.subscription_plan_id, other_plan)
+        self.assertEqual(filtered_rows.schedule_ids, other_schedule)
+        self.assertNotIn(schedule, filtered_rows.schedule_ids)
+        self.assertIn(('id', 'in', other_schedule.ids), filtered_rows.action_view_schedules()['domain'])
+
+    def test_deferred_revenue_reconciliation_rerun_is_idempotent(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        first = self._generate_reconciliation()
+        second = self._generate_reconciliation()
+
+        self.assertEqual(len(first), 1)
+        self.assertEqual(len(second), 1)
+        self.assertEqual(
+            self.env['subscription.deferred.revenue.reconciliation'].search_count([
+                ('opening_date', '=', self.period_start),
+                ('closing_date', '=', self.period_end),
+            ]),
+            1,
+        )
+
+    def test_non_manager_cannot_generate_deferred_revenue_reconciliation(self):
+        public_env = self.env(user=self.env.ref('base.public_user'))
+
+        with self.assertRaises(AccessError):
+            public_env['subscription.deferred.revenue.reconciliation'].generate_reconciliation(
+                self.period_start,
+                self.period_end,
+                company=self.env.company,
+            )
+        with self.assertRaises(AccessError):
+            public_env['subscription.deferred.revenue.reconciliation.wizard'].create({
+                'opening_date': self.period_start,
+                'closing_date': self.period_end,
+            })

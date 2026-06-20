@@ -26,6 +26,7 @@ Handles advanced billing scenarios:
         'views/subscription_usage_views.xml',
         'views/subscription_deferred_revenue_views.xml',
         'views/subscription_deferred_revenue_adjustment_views.xml',
+        'views/subscription_deferred_revenue_reconciliation_views.xml',
         'views/subscription_proration_views.xml',
         'views/subscription_plan_views.xml',
         'views/subscription_plan_change_request_views.xml',
@@ -39,6 +40,7 @@ Handles advanced billing scenarios:
         'wizard/subscription_deferred_revenue_wizard_views.xml',
         'wizard/subscription_deferred_revenue_preview_wizard_views.xml',
         'wizard/subscription_deferred_revenue_post_wizard_views.xml',
+        'wizard/subscription_deferred_revenue_reconciliation_wizard_views.xml',
     ],
     'demo': [
         'demo/plan_change_approval_demo.xml',
