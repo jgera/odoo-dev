@@ -45,11 +45,17 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         self.config.set_param('subscription_suite.deferred_revenue_account_id', self.deferred_account.id)
         self.config.set_param('subscription_suite.revenue_account_id', self.revenue_account.id)
         self.config.set_param('subscription_suite.recognition_journal_id', self.recognition_journal.id)
+        self.config.set_param('subscription_suite.enable_scheduled_recognition_posting', 'False')
+        self.config.set_param('subscription_suite.scheduled_recognition_cutoff_rule', 'prior_month_end')
 
     def _clear_recognition_config(self):
         self.config.set_param('subscription_suite.deferred_revenue_account_id', '')
         self.config.set_param('subscription_suite.revenue_account_id', '')
         self.config.set_param('subscription_suite.recognition_journal_id', '')
+
+    def _enable_scheduled_recognition(self, cutoff_rule='today'):
+        self.config.set_param('subscription_suite.enable_scheduled_recognition_posting', 'True')
+        self.config.set_param('subscription_suite.scheduled_recognition_cutoff_rule', cutoff_rule)
 
     def _create_subscription(self, amount=1200.0, period_start=False, period_end=False):
         period_start = period_start or self.period_start
@@ -945,3 +951,113 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
                 'opening_date': self.period_start,
                 'closing_date': self.period_end,
             })
+
+    def test_scheduled_recognition_cron_does_nothing_when_disabled(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+
+        runs = self.env['subscription.deferred.revenue.recognition.run']._cron_post_scheduled_recognition()
+
+        self.assertFalse(runs)
+        self.assertFalse(schedule.line_ids.filtered(lambda line: line.state == 'recognized'))
+        self.assertFalse(schedule.line_ids.mapped('recognition_move_id'))
+
+    def test_scheduled_recognition_cron_posts_due_lines_with_today_cutoff(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        due_line = schedule.line_ids.sorted('period_end')[0]
+        future_lines = schedule.line_ids - due_line
+        self._enable_scheduled_recognition('today')
+
+        runs = self.env['subscription.deferred.revenue.recognition.run']._run_scheduled_recognition_posting(
+            company=self.env.company,
+            today=due_line.period_end,
+        )
+
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(runs.status, 'success')
+        self.assertEqual(runs.company_id, self.env.company)
+        self.assertEqual(runs.cutoff_date, due_line.period_end)
+        self.assertEqual(runs.cutoff_rule, 'today')
+        self.assertEqual(runs.line_ids, due_line)
+        self.assertEqual(runs.created_move_count, 1)
+        self.assertEqual(runs.recognized_line_count, 1)
+        self.assertEqual(due_line.state, 'recognized')
+        self.assertTrue(due_line.recognition_move_id)
+        self.assertFalse(future_lines.filtered(lambda line: line.state == 'recognized'))
+
+    def test_scheduled_recognition_cron_prior_month_end_cutoff(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        first_line = schedule.line_ids.sorted('period_end')[0]
+        second_line = schedule.line_ids.sorted('period_end')[1]
+        self._enable_scheduled_recognition('prior_month_end')
+
+        runs = self.env['subscription.deferred.revenue.recognition.run']._run_scheduled_recognition_posting(
+            company=self.env.company,
+            today=date(2026, 3, 15),
+        )
+
+        self.assertEqual(runs.status, 'success')
+        self.assertEqual(runs.cutoff_date, date(2026, 2, 28))
+        self.assertIn(first_line, runs.line_ids)
+        self.assertNotIn(second_line, runs.line_ids)
+        self.assertEqual(first_line.state, 'recognized')
+        self.assertEqual(second_line.state, 'draft')
+
+    def test_scheduled_recognition_cron_missing_config_records_failed_run(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        due_line = schedule.line_ids.sorted('period_end')[0]
+        self._enable_scheduled_recognition('today')
+        self.config.set_param('subscription_suite.recognition_journal_id', '')
+
+        runs = self.env['subscription.deferred.revenue.recognition.run']._run_scheduled_recognition_posting(
+            company=self.env.company,
+            today=due_line.period_end,
+        )
+
+        self.assertEqual(runs.status, 'failed')
+        self.assertIn('recognition journal', runs.error_notes)
+        self.assertEqual(runs.skipped_schedule_count, 1)
+        self.assertEqual(due_line.state, 'draft')
+        self.assertFalse(due_line.recognition_move_id)
+
+    def test_scheduled_recognition_cron_rerun_does_not_duplicate_posting(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(
+            invoice,
+            method='equal_monthly',
+        )
+        due_line = schedule.line_ids.sorted('period_end')[0]
+        self._enable_scheduled_recognition('today')
+
+        first = self.env['subscription.deferred.revenue.recognition.run']._run_scheduled_recognition_posting(
+            company=self.env.company,
+            today=due_line.period_end,
+        )
+        move = due_line.recognition_move_id
+        second = self.env['subscription.deferred.revenue.recognition.run']._run_scheduled_recognition_posting(
+            company=self.env.company,
+            today=due_line.period_end,
+        )
+
+        self.assertEqual(first.status, 'success')
+        self.assertEqual(second.status, 'skipped')
+        self.assertEqual(due_line.recognition_move_id, move)
+        self.assertEqual(
+            self.env['account.move'].search_count([('id', '=', move.id)]),
+            1,
+        )

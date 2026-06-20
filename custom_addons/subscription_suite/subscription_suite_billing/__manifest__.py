@@ -27,6 +27,7 @@ Handles advanced billing scenarios:
         'views/subscription_deferred_revenue_views.xml',
         'views/subscription_deferred_revenue_adjustment_views.xml',
         'views/subscription_deferred_revenue_reconciliation_views.xml',
+        'views/subscription_deferred_revenue_recognition_run_views.xml',
         'views/subscription_proration_views.xml',
         'views/subscription_plan_views.xml',
         'views/subscription_plan_change_request_views.xml',

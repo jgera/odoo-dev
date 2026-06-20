@@ -73,7 +73,7 @@ These are not criticisms; they are the exact next enterprise work.
 | Renewals/upsells | Linked renewal and upsell quotations, sales history, upsell effective date, proration ledger, draft adjustment invoices/credit notes, immediate and scheduled next-period plan changes, approval-gated plan change requests, upgrade/downgrade path checks, minimum commitment enforcement, and plan-level renewal/upsell quote guards now exist | Sales workflow parity is improving; remaining work is optional approval routing and deeper quote lifecycle automation |
 | Usage/seats | Seat-line classification, read-only seat totals, tiered/volume pricing, and a backend usage-metering foundation now exist; no customer seat self-service, external usage API, or entitlement sync yet | Core Phase 5 monetization mechanics are in place; customer-facing and integration-heavy workflows remain later work |
 | Analytics | Generated MRR snapshots, reconciliation, anomalies, KPI summaries, dashboards, waterfalls, retention cohorts, forecasts, ARPU, LTV, churn reasons, top plans, at-risk rows, payment recovery, and trial conversion now exist with source drilldowns and scoped reruns | Management reporting is broad and operationally useful; remaining gaps are executive packaging, normalized multi-currency reporting, and finance-grade revenue recognition |
-| Revenue recognition | Not implemented | Finance/compliance gap for annual/prepaid contracts |
+| Revenue recognition | Deferred schedules, preview, manual posting, credit-note adjustments, reconciliation, posting hardening, and scheduled posting cron foundation now exist | Remaining gaps are cron operational hardening, setup validation, finance reports, and advanced refund/allocation handling |
 | Multi-currency | Amounts remain in order currency; no normalized company-currency MRR ledger | Cross-currency analytics can mislead |
 | Security | Groups and multi-company rules exist; deterministic portal helper tests cover ownership-sensitive flows, but live portal route tests still need a stable local harness | Route-level access regressions may go unnoticed |
 | Performance | No explicit indexes or scale tests for 10K+ subscriptions | Cron/report performance unknown |
@@ -952,7 +952,7 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
-**Current slice:** Finance Posting Hardening Before Cron. Deferred revenue schedule generation, hardening, posting preview, manual journal posting, credit-note adjustments, and reconciliation reports are complete. This hardening slice centralizes recognition posting helpers, strengthens reversal reconciliation coverage, and improves finance schedule filters before scheduled cron posting is introduced.
+**Current slice:** Scheduled Recognition Posting Cron Foundation. Deferred revenue schedule generation, hardening, posting preview, manual journal posting, credit-note adjustments, reconciliation reports, and posting helper hardening are complete. This slice adds config-gated scheduled posting that reuses the shared manual posting helper, posts due ready schedule lines per company, and creates generated run logs for created moves, recognized lines, skipped schedules, and errors.
 
 **Build items:**
 
@@ -981,7 +981,7 @@ For every phase, update or create:
    - Preview wizard - foundation done for due draft recognition lines.
    - Manual posting wizard - foundation done for ready schedules, due draft lines, and one posted journal entry per schedule.
    - Shared posting helper - hardening done so manual posting and future scheduled cron use the same validation, move creation, line marking, and chatter behavior.
-   - Monthly cron.
+   - Monthly/daily scheduled posting cron - foundation done with company-scoped config gate, today/prior-month-end cutoff rules, shared posting helper reuse, idempotent recognized-line exclusion, and generated run logs.
    - Journal entry links - foundation done from recognition lines and schedule smart button.
    - Reversal/cancellation handling - foundation done for posted credit notes linked to original subscription invoices.
    - Credit note handling - foundation done with idempotent adjustment records, draft-line adjustment, and recognized-revenue reversal entries.
@@ -1002,6 +1002,7 @@ For every phase, update or create:
 - Post due recognition lines from ready schedules to create accounting journal entries.
 - Add cancellation/credit-note examples that adjust deferred revenue through generated adjustment records.
 - Generate deferred revenue reconciliation rows from posted invoices, schedules, recognition entries, and credit-note adjustments; do not load static reconciliation XML.
+- Enable scheduled recognition posting only after reviewing deferred revenue schedules and recognition configuration; generated run logs should be reviewed instead of loading static cron results.
 
 **Documentation updates:**
 
@@ -1021,6 +1022,7 @@ For every phase, update or create:
 - Recognition preview shows due draft lines and debit deferred revenue / credit revenue impact without posting accounting entries.
 - Manual recognition posting creates one posted journal entry per schedule and marks only included due lines recognized.
 - Manual recognition posting uses the shared schedule-line helper that scheduled cron must reuse.
+- Scheduled recognition posting is disabled by configuration by default, supports today and prior-month-end cutoffs, skips future/blocked/cancelled/already recognized lines, and does not duplicate posted journal entries on rerun.
 - Total recognized plus remaining deferred equals invoice amount.
 - Credit note/cancellation adjusts schedules correctly by cancelling/reducing draft recognition lines or posting reversal entries for recognized lines.
 - Generated reconciliation rows expose ready, variance, missing schedule, missing journal entry, and blocked schedule statuses with drilldowns to every source record.
@@ -1039,6 +1041,7 @@ For every phase, update or create:
 - Posting journal entries - foundation covered for due-line selection, one posted move per schedule, line recognition links, idempotent rerun exclusion, configuration validation, filtering, preview immutability, and manager-only access.
 - Cancellation and credit note - foundation covered for draft-line cancellation, recognized-line reversal entries, idempotency, over-adjustment blocking, ambiguous credit-note blocking, and cancelled schedule blocking.
 - Deferred revenue reconciliation - foundation covered for ready rows, variance status, missing schedule, missing journal entry, blocked schedules, credit-note adjustment impact, recognized reversal plus remaining draft lines, plan scoping, source drilldowns, idempotent reruns, and manager-only generation.
+- Scheduled recognition posting cron - foundation covered for disabled no-op behavior, today and prior-month-end cutoff rules, missing configuration failure logs, idempotent reruns, run counts, shared posting helper reuse, and no duplicate accounting moves.
 - Multi-company and multi-currency.
 
 **Continuous validation:**

@@ -44,6 +44,20 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='subscription_suite.default_recognition_method',
         default='straight_line_daily',
     )
+    subscription_enable_scheduled_recognition_posting = fields.Boolean(
+        string='Enable Scheduled Recognition Posting',
+        config_parameter='subscription_suite.enable_scheduled_recognition_posting',
+        default=False,
+    )
+    subscription_scheduled_recognition_cutoff_rule = fields.Selection(
+        [
+            ('today', 'Today'),
+            ('prior_month_end', 'Prior Month End'),
+        ],
+        string='Scheduled Recognition Cutoff',
+        config_parameter='subscription_suite.scheduled_recognition_cutoff_rule',
+        default='prior_month_end',
+    )
 
     @api.constrains(
         'subscription_billing_retry_max_attempts',

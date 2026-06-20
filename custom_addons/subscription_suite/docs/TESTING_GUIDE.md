@@ -1309,3 +1309,30 @@ Implementation note:
 
 - Deferred revenue reconciliation rows are generated audit records. They do not post journal entries, reverse entries, change schedules, alter invoices, normalize currencies, or replace accounting reports.
 - Before enabling scheduled recognition posting, use **Subscriptions -> Billing -> Deferred Revenue** filters for **Remaining Deferred**, **Recognized Lines**, and **Credit-Note Adjustments** to review schedules that automation will touch or skip.
+
+## 50. Scheduled Revenue Recognition Posting Cron
+
+Purpose: verify Phase 7 scheduled recognition posting after manual posting, credit-note adjustment, reconciliation, and posting-helper hardening are already validated.
+
+Walkthrough:
+
+1. Generate one or more ready deferred revenue schedules from posted subscription invoices.
+2. Confirm recognition journal, deferred revenue account, and revenue account are configured under subscription settings.
+3. Leave **Enable Scheduled Recognition Posting** disabled and run scheduled action **Subscription: Post Scheduled Revenue Recognition**; confirm no journal entries are posted.
+4. Enable **Enable Scheduled Recognition Posting** and choose either **Today** or **Prior Month End** as the cutoff rule.
+5. Run scheduled action **Subscription: Post Scheduled Revenue Recognition**.
+6. Open **Subscriptions -> Billing -> Recognition Posting Runs**.
+7. Confirm the run shows status, cutoff date, created move count, recognized line count, skipped schedule count, and any error notes.
+8. Open the run's journal-entry and recognition-line buttons and confirm records are scoped to that run.
+9. Rerun the scheduled action with the same cutoff and confirm already recognized lines are excluded and duplicate journal entries are not created.
+10. Clear one recognition account or journal in a test database and confirm the run records a failed or partial status with a clear error note instead of silently posting incomplete accounting.
+11. Switch between **Today** and **Prior Month End** cutoffs and confirm future recognition lines remain draft until their period end is included by the cutoff.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover disabled no-op cron behavior, today cutoff posting, prior-month-end cutoff selection, missing configuration run logging, idempotent rerun exclusion, created move counts, recognized line counts, skipped schedule counts, and reuse of the same posting helper used by manual recognition posting.
+
+Implementation note:
+
+- The scheduled action is installed in Odoo but config-gated by **Enable Scheduled Recognition Posting**. This keeps the cron visible for administrators while preventing accounting mutations until finance explicitly enables it.
+- Scheduled posting creates one posted journal entry per deferred revenue schedule/invoice through the shared schedule-line posting helper. It does not add reversals, credit-note allocation logic, currency normalization, or new revenue reports beyond generated run logs.

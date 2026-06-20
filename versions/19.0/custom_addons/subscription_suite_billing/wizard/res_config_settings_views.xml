@@ -45,6 +45,14 @@
                                     <label for="subscription_default_recognition_method" class="col-lg-5 o_light_label"/>
                                     <field name="subscription_default_recognition_method" class="oe_inline"/>
                                 </div>
+                                <div class="row mt8">
+                                    <label for="subscription_enable_scheduled_recognition_posting" class="col-lg-5 o_light_label"/>
+                                    <field name="subscription_enable_scheduled_recognition_posting" class="oe_inline"/>
+                                </div>
+                                <div class="row mt8">
+                                    <label for="subscription_scheduled_recognition_cutoff_rule" class="col-lg-5 o_light_label"/>
+                                    <field name="subscription_scheduled_recognition_cutoff_rule" class="oe_inline"/>
+                                </div>
                             </div>
                         </setting>
                     </block>

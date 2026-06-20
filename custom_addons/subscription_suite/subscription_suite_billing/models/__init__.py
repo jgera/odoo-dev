@@ -12,6 +12,7 @@ from . import subscription_usage_summary
 from . import subscription_deferred_revenue
 from . import subscription_deferred_revenue_adjustment
 from . import subscription_deferred_revenue_reconciliation
+from . import subscription_deferred_revenue_recognition_run
 from . import subscription_plan_change_request
 from . import sale_order
 from . import account_move
