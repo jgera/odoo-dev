@@ -54,18 +54,16 @@ class SubscriptionDeferredRevenueRecognitionRun(models.Model):
     )
 
     @api.model
-    def _config_enabled(self):
-        return self.env['ir.config_parameter'].sudo().get_param(
-            'subscription_suite.enable_scheduled_recognition_posting',
-            'False',
-        ) == 'True'
+    def _config_enabled(self, company=False):
+        return self.env['subscription.deferred.revenue']._get_company_recognition_config(
+            company=company or self.env.company
+        )['scheduled_recognition_enabled']
 
     @api.model
-    def _config_cutoff_rule(self):
-        return self.env['ir.config_parameter'].sudo().get_param(
-            'subscription_suite.scheduled_recognition_cutoff_rule',
-            'prior_month_end',
-        )
+    def _config_cutoff_rule(self, company=False):
+        return self.env['subscription.deferred.revenue']._get_company_recognition_config(
+            company=company or self.env.company
+        )['scheduled_recognition_cutoff_rule']
 
     @api.model
     def _cutoff_date_for_rule(self, rule, today=False):
@@ -75,19 +73,10 @@ class SubscriptionDeferredRevenueRecognitionRun(models.Model):
         return today.replace(day=1) - relativedelta(days=1)
 
     @api.model
-    def _recognition_config(self):
-        Schedule = self.env['subscription.deferred.revenue']
-        return {
-            'recognition_journal': self.env['account.journal'].browse(
-                Schedule._get_config_m2o('subscription_suite.recognition_journal_id')
-            ),
-            'deferred_revenue_account': self.env['account.account'].browse(
-                Schedule._get_config_m2o('subscription_suite.deferred_revenue_account_id')
-            ),
-            'revenue_account': self.env['account.account'].browse(
-                Schedule._get_config_m2o('subscription_suite.revenue_account_id')
-            ),
-        }
+    def _recognition_config(self, company=False):
+        return self.env['subscription.deferred.revenue']._get_company_recognition_config(
+            company=company or self.env.company
+        )
 
     @api.model
     def _create_run(self, company, cutoff_date, cutoff_rule, status, moves=False, lines=False, skipped=0, errors=False):
@@ -112,7 +101,7 @@ class SubscriptionDeferredRevenueRecognitionRun(models.Model):
 
     @api.model
     def _post_company_due_lines(self, company, cutoff_date, cutoff_rule):
-        config = self._recognition_config()
+        config = self._recognition_config(company=company)
         Line = self.env['subscription.deferred.revenue.line']
         due_lines = Line._get_lines_for_recognition_preview(cutoff_date, company=company)
         if not due_lines:
@@ -167,13 +156,13 @@ class SubscriptionDeferredRevenueRecognitionRun(models.Model):
 
     @api.model
     def _run_scheduled_recognition_posting(self, force=False, company=False, today=False):
-        if not force and not self._config_enabled():
-            return self.browse()
-        cutoff_rule = self._config_cutoff_rule()
-        cutoff_date = self._cutoff_date_for_rule(cutoff_rule, today=today)
         companies = company or self.env['res.company'].search([])
         runs = self.browse()
         for run_company in companies:
+            if not force and not self._config_enabled(company=run_company):
+                continue
+            cutoff_rule = self._config_cutoff_rule(company=run_company)
+            cutoff_date = self._cutoff_date_for_rule(cutoff_rule, today=today)
             runs |= self._post_company_due_lines(run_company, cutoff_date, cutoff_rule)
         return runs
 

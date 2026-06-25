@@ -23,22 +23,22 @@ class SubscriptionDeferredRevenuePreviewWizard(models.TransientModel):
     )
     recognition_journal_id = fields.Many2one(
         'account.journal',
-        default=lambda self: self.env['subscription.deferred.revenue']._get_config_m2o(
-            'subscription_suite.recognition_journal_id'
-        ),
+        default=lambda self: self.env['subscription.deferred.revenue']._get_company_recognition_config()[
+            'recognition_journal'
+        ],
     )
     deferred_revenue_account_id = fields.Many2one(
         'account.account',
         string='Deferred Revenue Account',
-        default=lambda self: self.env['subscription.deferred.revenue']._get_config_m2o(
-            'subscription_suite.deferred_revenue_account_id'
-        ),
+        default=lambda self: self.env['subscription.deferred.revenue']._get_company_recognition_config()[
+            'deferred_revenue_account'
+        ],
     )
     revenue_account_id = fields.Many2one(
         'account.account',
-        default=lambda self: self.env['subscription.deferred.revenue']._get_config_m2o(
-            'subscription_suite.revenue_account_id'
-        ),
+        default=lambda self: self.env['subscription.deferred.revenue']._get_company_recognition_config()[
+            'revenue_account'
+        ],
     )
     line_ids = fields.One2many(
         'subscription.deferred.revenue.preview.line',
@@ -63,9 +63,14 @@ class SubscriptionDeferredRevenuePreviewWizard(models.TransientModel):
             missing.append(_('revenue account'))
         if missing:
             raise ValidationError(_('Missing revenue recognition configuration: %s.') % ', '.join(missing))
+        self.env['subscription.deferred.revenue.line']._validate_recognition_configuration(
+            self.company_id,
+            self.recognition_journal_id,
+            self.deferred_revenue_account_id,
+            self.revenue_account_id,
+            schedule=self.schedule_id,
+        )
         if self.schedule_id:
-            if self.company_id and self.schedule_id.company_id != self.company_id:
-                raise ValidationError(_('The selected schedule does not belong to the selected company.'))
             if self.subscription_id and self.schedule_id.subscription_id != self.subscription_id:
                 raise ValidationError(_('The selected schedule does not belong to the selected subscription.'))
 

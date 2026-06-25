@@ -1336,3 +1336,27 @@ Implementation note:
 
 - The scheduled action is installed in Odoo but config-gated by **Enable Scheduled Recognition Posting**. This keeps the cron visible for administrators while preventing accounting mutations until finance explicitly enables it.
 - Scheduled posting creates one posted journal entry per deferred revenue schedule/invoice through the shared schedule-line posting helper. It does not add reversals, credit-note allocation logic, currency normalization, or new revenue reports beyond generated run logs.
+
+## 51. Finance Setup And Access Hardening
+
+Purpose: verify Phase 7 recognition setup is company-aware and validated before schedules, preview, manual posting, or scheduled posting use it.
+
+Walkthrough:
+
+1. Open **Subscriptions -> Configuration -> Settings** as a subscription manager.
+2. In **Revenue Recognition**, configure deferred revenue account, revenue account, recognition journal, default method, scheduled posting gate, and cutoff rule for the current company.
+3. Generate a deferred revenue schedule from a posted subscription invoice and confirm the schedule copied the current company's accounts, journal, and method.
+4. Clear company-specific setup in a test database while leaving legacy config parameters populated and confirm schedule generation still works as an upgrade fallback.
+5. Set the deferred revenue account to an income account or the revenue account to a liability account and confirm schedule generation blocks with an invalid account-type reason.
+6. Set a non-general recognition journal or a journal/account from another company and confirm preview/posting/schedule generation blocks clearly.
+7. Open **Deferred Revenue** and use filters for **Invalid Configuration**, **Ready With Remaining Deferred**, **Recognized Lines**, and **Credit-Note Adjustments**.
+8. Open **Recognition Posting Runs** and use **Action Required** or **With Errors** to review failed/partial scheduled posting runs.
+9. Log in as an accounting read-only user and confirm schedules, recognition lines, adjustments, reconciliations, and posting runs can be read but not generated, adjusted, or posted.
+
+Automated coverage:
+
+- `subscription_suite_billing` tests cover company-specific config snapshots, legacy config fallback, invalid account-type blocking, company config usage by scheduled posting, accounting read-only access, and manager-only mutation rights.
+
+Implementation note:
+
+- Company fields are now the preferred source of truth. Legacy config parameters remain as fallback for upgrade safety, but new setup should be maintained per company.

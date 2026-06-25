@@ -952,16 +952,17 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
-**Current slice:** Scheduled Recognition Posting Cron Foundation. Deferred revenue schedule generation, hardening, posting preview, manual journal posting, credit-note adjustments, reconciliation reports, and posting helper hardening are complete. This slice adds config-gated scheduled posting that reuses the shared manual posting helper, posts due ready schedule lines per company, and creates generated run logs for created moves, recognized lines, skipped schedules, and errors.
+**Current slice:** Finance Setup And Access Hardening. Deferred revenue schedule generation, hardening, posting preview, manual journal posting, credit-note adjustments, reconciliation reports, posting helper hardening, and scheduled posting cron foundation are complete. This slice makes recognition setup company-aware, validates account/journal suitability before finance workflows use it, and confirms accounting users get read-only finance visibility without mutation rights.
 
 **Build items:**
 
 1. Deferred revenue configuration
-   - Deferred revenue account - foundation done as settings default copied onto schedules.
-   - Revenue account - foundation done as settings default copied onto schedules.
-   - Recognition journal - foundation done as settings default copied onto schedules.
-   - Recognition method - foundation done for straight-line daily and equal monthly.
-   - Company-level defaults - deferred; current defaults use module settings/config parameters.
+   - Deferred revenue account - foundation done as company-specific settings default copied onto schedules.
+   - Revenue account - foundation done as company-specific settings default copied onto schedules.
+   - Recognition journal - foundation done as company-specific settings default copied onto schedules.
+   - Recognition method - foundation done for straight-line daily and equal monthly, now company-scoped.
+   - Company-level defaults - hardening done with legacy config-parameter fallback for upgrade safety.
+   - Account/journal validation - hardening done for missing config, cross-company records, journal type, liability deferred account, and income revenue account.
 
 2. Deferred revenue schedule
    - `subscription.deferred.revenue` - foundation done.
@@ -1003,10 +1004,11 @@ For every phase, update or create:
 - Add cancellation/credit-note examples that adjust deferred revenue through generated adjustment records.
 - Generate deferred revenue reconciliation rows from posted invoices, schedules, recognition entries, and credit-note adjustments; do not load static reconciliation XML.
 - Enable scheduled recognition posting only after reviewing deferred revenue schedules and recognition configuration; generated run logs should be reviewed instead of loading static cron results.
+- Configure recognition defaults per company; generated schedules, preview, manual posting, and scheduled posting use the invoice or schedule company setup.
 
 **Documentation updates:**
 
-- Add finance setup guide for deferred revenue accounts, revenue accounts, and recognition journal.
+- Add finance setup guide for company-specific deferred revenue accounts, revenue accounts, recognition journal, method, scheduled posting gate, and cutoff rule.
 - Add revenue recognition workflow guide.
 - Add reconciliation guide linking invoices, schedules, journal entries, and reports.
 - Add accounting caveats and known limitations.
@@ -1018,15 +1020,17 @@ For every phase, update or create:
 - Mixed posted invoices recognize only eligible recurring subscription service lines.
 - Missing service period invoices are blocked with a clear reason.
 - Missing recognition configuration is blocked with a clear reason.
+- Invalid recognition configuration is blocked with a clear reason, including wrong account type, wrong journal type, or cross-company account/journal setup.
 - Ready schedules and recognized schedule lines cannot be edited or removed through normal operations.
 - Recognition preview shows due draft lines and debit deferred revenue / credit revenue impact without posting accounting entries.
 - Manual recognition posting creates one posted journal entry per schedule and marks only included due lines recognized.
 - Manual recognition posting uses the shared schedule-line helper that scheduled cron must reuse.
 - Scheduled recognition posting is disabled by configuration by default, supports today and prior-month-end cutoffs, skips future/blocked/cancelled/already recognized lines, and does not duplicate posted journal entries on rerun.
+- Preview, manual posting, and scheduled posting use the target schedule/company configuration rather than a different company's setup.
 - Total recognized plus remaining deferred equals invoice amount.
 - Credit note/cancellation adjusts schedules correctly by cancelling/reducing draft recognition lines or posting reversal entries for recognized lines.
 - Generated reconciliation rows expose ready, variance, missing schedule, missing journal entry, and blocked schedule statuses with drilldowns to every source record.
-- Finance user can reconcile reports to accounting moves.
+- Finance users can reconcile reports to accounting moves with read-only access; generation, posting, adjustment, and scheduled-posting setup remain manager-controlled.
 
 **Tests:**
 
@@ -1035,6 +1039,7 @@ For every phase, update or create:
 - Monthly equal calculation - foundation covered.
 - Idempotent schedule regeneration - foundation covered.
 - Missing configuration blocking - covered.
+- Company-specific recognition setup, legacy fallback, invalid account type blocking, and accounting read-only finance access - covered.
 - Mixed invoice recurring-line eligibility - covered.
 - Ready/recognized schedule locking - covered.
 - Recognition preview due-line selection, scoping, totals, manager access, and no-posting/no-state-change behavior - foundation covered.

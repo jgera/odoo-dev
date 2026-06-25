@@ -76,6 +76,8 @@
                 <filter string="Partial" name="partial" domain="[('status', '=', 'partial')]"/>
                 <filter string="Failed" name="failed" domain="[('status', '=', 'failed')]"/>
                 <filter string="Skipped" name="skipped" domain="[('status', '=', 'skipped')]"/>
+                <filter string="Action Required" name="action_required" domain="[('status', 'in', ('partial', 'failed'))]"/>
+                <filter string="With Errors" name="with_errors" domain="[('error_notes', '!=', False)]"/>
                 <group>
                     <filter string="Status" name="group_status" context="{'group_by': 'status'}"/>
                     <filter string="Company" name="group_company" context="{'group_by': 'company_id'}" groups="base.group_multi_company"/>

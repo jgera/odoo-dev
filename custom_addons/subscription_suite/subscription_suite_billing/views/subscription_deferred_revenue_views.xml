@@ -132,9 +132,11 @@
                 <filter string="Ready" name="ready" domain="[('state', '=', 'ready')]"/>
                 <filter string="Blocked" name="blocked" domain="[('state', '=', 'blocked')]"/>
                 <filter string="Missing Configuration" name="missing_configuration" domain="[('state', '=', 'blocked'), ('block_reason', 'ilike', 'configuration')]"/>
+                <filter string="Invalid Configuration" name="invalid_configuration" domain="[('state', '=', 'blocked'), '|', '|', ('block_reason', 'ilike', 'account type'), ('block_reason', 'ilike', 'journal'), ('block_reason', 'ilike', 'available for')]"/>
                 <filter string="Missing Period" name="missing_period" domain="[('state', '=', 'blocked'), ('block_reason', 'ilike', 'period')]"/>
                 <filter string="Cancelled" name="cancelled" domain="[('state', '=', 'cancelled')]"/>
                 <filter string="With Adjustments" name="with_adjustments" domain="[('adjustment_ids', '!=', False)]"/>
+                <filter string="Ready With Remaining Deferred" name="ready_remaining_deferred" domain="[('state', '=', 'ready'), ('line_ids.state', '=', 'draft')]"/>
                 <filter string="Remaining Deferred" name="remaining_deferred" domain="[('line_ids.state', '=', 'draft')]"/>
                 <filter string="Recognized Lines" name="recognized_lines" domain="[('line_ids.state', '=', 'recognized')]"/>
                 <filter string="Credit-Note Adjustments" name="credit_note_adjustments" domain="[('adjustment_ids', '!=', False)]"/>

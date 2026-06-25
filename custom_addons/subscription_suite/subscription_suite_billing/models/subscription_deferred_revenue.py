@@ -129,16 +129,71 @@ class SubscriptionDeferredRevenue(models.Model):
             raise AccessError(_('Only subscription managers can generate deferred revenue schedules.'))
 
     @api.model
-    def _get_default_recognition_method(self):
-        return self.env['ir.config_parameter'].sudo().get_param(
-            'subscription_suite.default_recognition_method',
-            'straight_line_daily',
-        )
+    def _get_default_recognition_method(self, company=False):
+        return self._get_company_recognition_config(company=company)['recognition_method']
 
     @api.model
     def _get_config_m2o(self, key):
         value = self.env['ir.config_parameter'].sudo().get_param(key)
         return int(value) if value else False
+
+    @api.model
+    def _get_company_recognition_config(self, company=False):
+        company = company or self.env.company
+        return {
+            'recognition_method': (
+                company.subscription_default_recognition_method
+                or self.env['ir.config_parameter'].sudo().get_param(
+                    'subscription_suite.default_recognition_method',
+                    'straight_line_daily',
+                )
+            ),
+            'recognition_journal': (
+                company.subscription_recognition_journal_id
+                or self.env['account.journal'].browse(
+                    self._get_config_m2o('subscription_suite.recognition_journal_id')
+                )
+            ),
+            'deferred_revenue_account': (
+                company.subscription_deferred_revenue_account_id
+                or self.env['account.account'].browse(
+                    self._get_config_m2o('subscription_suite.deferred_revenue_account_id')
+                )
+            ),
+            'revenue_account': (
+                company.subscription_revenue_account_id
+                or self.env['account.account'].browse(
+                    self._get_config_m2o('subscription_suite.revenue_account_id')
+                )
+            ),
+            'scheduled_recognition_enabled': (
+                company.subscription_enable_scheduled_recognition_posting
+                or self.env['ir.config_parameter'].sudo().get_param(
+                    'subscription_suite.enable_scheduled_recognition_posting',
+                    'False',
+                ) == 'True'
+            ),
+            'scheduled_recognition_cutoff_rule': (
+                company.subscription_scheduled_recognition_cutoff_rule
+                or self.env['ir.config_parameter'].sudo().get_param(
+                    'subscription_suite.scheduled_recognition_cutoff_rule',
+                    'prior_month_end',
+                )
+            ),
+        }
+
+    @api.model
+    def _validate_company_recognition_config(self, company, config=False, schedule=False):
+        config = config or self._get_company_recognition_config(company=company)
+        line_model = self.env['subscription.deferred.revenue.line']
+        line_model._validate_recognition_configuration(
+            company,
+            config['recognition_journal'],
+            config['deferred_revenue_account'],
+            config['revenue_account'],
+            schedule=schedule,
+        )
+        return config
 
     @api.model
     def _eligible_invoice_lines(self, invoice):
@@ -221,21 +276,22 @@ class SubscriptionDeferredRevenue(models.Model):
     @api.model
     def _prepare_schedule_values(self, invoice, method=False):
         subscription = invoice.subscription_id
+        config = self._get_company_recognition_config(company=invoice.company_id)
         return {
             'name': _('Deferred Revenue - %s') % (invoice.name or invoice.display_name),
             'subscription_id': subscription.id,
             'invoice_id': invoice.id,
             'service_period_start': invoice.subscription_period_start,
             'service_period_end': invoice.subscription_period_end,
-            'recognition_method': method or self._get_default_recognition_method(),
-            'deferred_revenue_account_id': self._get_config_m2o('subscription_suite.deferred_revenue_account_id'),
-            'revenue_account_id': self._get_config_m2o('subscription_suite.revenue_account_id'),
-            'recognition_journal_id': self._get_config_m2o('subscription_suite.recognition_journal_id'),
+            'recognition_method': method or config['recognition_method'],
+            'deferred_revenue_account_id': config['deferred_revenue_account'].id,
+            'revenue_account_id': config['revenue_account'].id,
+            'recognition_journal_id': config['recognition_journal'].id,
             'amount_total': self._invoice_amount(invoice),
         }
 
     @api.model
-    def _configuration_block_reason(self, values):
+    def _configuration_block_reason(self, values, company=False):
         missing = []
         if not values.get('deferred_revenue_account_id'):
             missing.append(_('deferred revenue account'))
@@ -245,6 +301,23 @@ class SubscriptionDeferredRevenue(models.Model):
             missing.append(_('recognition journal'))
         if missing:
             return _('Missing revenue recognition configuration: %s.') % ', '.join(missing)
+        try:
+            self._validate_company_recognition_config(
+                company or self.env.company,
+                config={
+                    'recognition_journal': self.env['account.journal'].browse(
+                        values.get('recognition_journal_id')
+                    ),
+                    'deferred_revenue_account': self.env['account.account'].browse(
+                        values.get('deferred_revenue_account_id')
+                    ),
+                    'revenue_account': self.env['account.account'].browse(
+                        values.get('revenue_account_id')
+                    ),
+                },
+            )
+        except ValidationError as error:
+            return str(error)
         return False
 
     @api.model
@@ -261,7 +334,7 @@ class SubscriptionDeferredRevenue(models.Model):
             return _('Invoice subscription service period is invalid.')
         if invoice.currency_id.is_zero(amount) or amount < 0:
             return _('Invoice has no positive tax-excluded subscription amount to recognize.')
-        config_reason = self._configuration_block_reason(values or {})
+        config_reason = self._configuration_block_reason(values or {}, company=invoice.company_id)
         if config_reason:
             return config_reason
         return False
@@ -551,13 +624,23 @@ class SubscriptionDeferredRevenueLine(models.Model):
             missing.append(_('revenue account'))
         if missing:
             raise ValidationError(_('Missing revenue recognition configuration: %s.') % ', '.join(missing))
-        if company and recognition_journal.company_id != company:
+        if recognition_journal.type != 'general':
+            raise ValidationError(_('The recognition journal must be a miscellaneous/general journal.'))
+        if company and recognition_journal.company_id and recognition_journal.company_id != company:
             raise ValidationError(_('The recognition journal does not belong to %s.') % company.display_name)
-        for account in (deferred_revenue_account, revenue_account):
+        account_checks = (
+            (deferred_revenue_account, _('Deferred revenue account'), ('liability_current', 'liability_non_current')),
+            (revenue_account, _('Revenue account'), ('income', 'income_other')),
+        )
+        for account, label, allowed_types in account_checks:
             if 'company_ids' in account._fields and account.company_ids and company not in account.company_ids:
                 raise ValidationError(_('Recognition accounts must be available for %s.') % company.display_name)
             if 'company_id' in account._fields and account.company_id and account.company_id != company:
                 raise ValidationError(_('Recognition accounts must be available for %s.') % company.display_name)
+            if account.account_type not in allowed_types:
+                raise ValidationError(_('%(label)s has an invalid account type for revenue recognition.') % {
+                    'label': label,
+                })
         if schedule and company and schedule.company_id != company:
             raise ValidationError(_('The selected schedule does not belong to %s.') % company.display_name)
 

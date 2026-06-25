@@ -42,18 +42,36 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         self._set_recognition_config()
 
     def _set_recognition_config(self):
+        self.env.company.write({
+            'subscription_deferred_revenue_account_id': self.deferred_account.id,
+            'subscription_revenue_account_id': self.revenue_account.id,
+            'subscription_recognition_journal_id': self.recognition_journal.id,
+            'subscription_default_recognition_method': 'straight_line_daily',
+            'subscription_enable_scheduled_recognition_posting': False,
+            'subscription_scheduled_recognition_cutoff_rule': 'prior_month_end',
+        })
         self.config.set_param('subscription_suite.deferred_revenue_account_id', self.deferred_account.id)
         self.config.set_param('subscription_suite.revenue_account_id', self.revenue_account.id)
         self.config.set_param('subscription_suite.recognition_journal_id', self.recognition_journal.id)
+        self.config.set_param('subscription_suite.default_recognition_method', 'straight_line_daily')
         self.config.set_param('subscription_suite.enable_scheduled_recognition_posting', 'False')
         self.config.set_param('subscription_suite.scheduled_recognition_cutoff_rule', 'prior_month_end')
 
     def _clear_recognition_config(self):
+        self.env.company.write({
+            'subscription_deferred_revenue_account_id': False,
+            'subscription_revenue_account_id': False,
+            'subscription_recognition_journal_id': False,
+        })
         self.config.set_param('subscription_suite.deferred_revenue_account_id', '')
         self.config.set_param('subscription_suite.revenue_account_id', '')
         self.config.set_param('subscription_suite.recognition_journal_id', '')
 
     def _enable_scheduled_recognition(self, cutoff_rule='today'):
+        self.env.company.write({
+            'subscription_enable_scheduled_recognition_posting': True,
+            'subscription_scheduled_recognition_cutoff_rule': cutoff_rule,
+        })
         self.config.set_param('subscription_suite.enable_scheduled_recognition_posting', 'True')
         self.config.set_param('subscription_suite.scheduled_recognition_cutoff_rule', cutoff_rule)
 
@@ -247,6 +265,50 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         self.assertIn('configuration', schedule.block_reason)
         self.assertFalse(schedule.line_ids)
 
+    def test_company_recognition_config_is_copied_to_schedule(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        self.config.set_param('subscription_suite.deferred_revenue_account_id', '')
+        self.config.set_param('subscription_suite.revenue_account_id', '')
+        self.config.set_param('subscription_suite.recognition_journal_id', '')
+        self.env.company.subscription_default_recognition_method = 'equal_monthly'
+
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        self.assertEqual(schedule.state, 'ready', schedule.block_reason)
+        self.assertEqual(schedule.deferred_revenue_account_id, self.deferred_account)
+        self.assertEqual(schedule.revenue_account_id, self.revenue_account)
+        self.assertEqual(schedule.recognition_journal_id, self.recognition_journal)
+        self.assertEqual(schedule.recognition_method, 'equal_monthly')
+
+    def test_global_recognition_config_fallback_is_preserved(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        self.env.company.write({
+            'subscription_deferred_revenue_account_id': False,
+            'subscription_revenue_account_id': False,
+            'subscription_recognition_journal_id': False,
+            'subscription_default_recognition_method': False,
+        })
+
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        self.assertEqual(schedule.state, 'ready', schedule.block_reason)
+        self.assertEqual(schedule.deferred_revenue_account_id, self.deferred_account)
+        self.assertEqual(schedule.revenue_account_id, self.revenue_account)
+        self.assertEqual(schedule.recognition_journal_id, self.recognition_journal)
+
+    def test_invalid_recognition_account_types_block_schedule(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        self.env.company.write({
+            'subscription_deferred_revenue_account_id': self.revenue_account.id,
+            'subscription_revenue_account_id': self.deferred_account.id,
+        })
+
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+        self.assertEqual(schedule.state, 'blocked')
+        self.assertIn('account type', schedule.block_reason)
+        self.assertFalse(schedule.line_ids)
+
     def test_mixed_invoice_only_recognizes_subscription_lines(self):
         subscription = self._create_subscription(amount=1200.0)
         subscription_line = subscription.order_line[:1]
@@ -373,6 +435,39 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
 
         with self.assertRaises(AccessError):
             public_env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+
+    def test_accounting_readonly_user_can_inspect_finance_records_without_mutation(self):
+        _subscription, invoice = self._create_posted_subscription_invoice()
+        schedule = self.env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        run = self.env['subscription.deferred.revenue.recognition.run']._create_run(
+            self.env.company,
+            self.period_end,
+            'today',
+            'skipped',
+        )
+        accounting_user = self.env['res.users'].create({
+            'name': 'Deferred Revenue Readonly Accountant',
+            'login': 'deferred-revenue-readonly-accountant',
+            'email': 'deferred-revenue-readonly-accountant@example.com',
+            'group_ids': [(6, 0, [
+                self.env.ref('base.group_user').id,
+                self.env.ref('account.group_account_readonly').id,
+            ])],
+        })
+        accounting_env = self.env(user=accounting_user)
+
+        self.assertTrue(accounting_env['subscription.deferred.revenue'].browse(schedule.id).exists())
+        self.assertTrue(accounting_env['subscription.deferred.revenue.line'].browse(schedule.line_ids[:1].id).exists())
+        self.assertTrue(accounting_env['subscription.deferred.revenue.adjustment'].search([], limit=1) is not None)
+        self.assertTrue(accounting_env['subscription.deferred.revenue.reconciliation'].search([], limit=1) is not None)
+        self.assertTrue(accounting_env['subscription.deferred.revenue.recognition.run'].browse(run.id).exists())
+        with self.assertRaises(AccessError):
+            accounting_env['subscription.deferred.revenue'].generate_for_invoices(invoice)
+        with self.assertRaises(AccessError):
+            accounting_env['subscription.deferred.revenue.post.wizard'].create({
+                'cutoff_date': self.period_end,
+                'posting_date': self.period_end,
+            })
 
     def test_ready_schedule_lines_are_locked(self):
         _subscription, invoice = self._create_posted_subscription_invoice()
@@ -974,6 +1069,9 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         due_line = schedule.line_ids.sorted('period_end')[0]
         future_lines = schedule.line_ids - due_line
         self._enable_scheduled_recognition('today')
+        self.config.set_param('subscription_suite.deferred_revenue_account_id', '')
+        self.config.set_param('subscription_suite.revenue_account_id', '')
+        self.config.set_param('subscription_suite.recognition_journal_id', '')
 
         runs = self.env['subscription.deferred.revenue.recognition.run']._run_scheduled_recognition_posting(
             company=self.env.company,
@@ -1023,6 +1121,7 @@ class TestSubscriptionDeferredRevenue(TransactionCase):
         due_line = schedule.line_ids.sorted('period_end')[0]
         self._enable_scheduled_recognition('today')
         self.config.set_param('subscription_suite.recognition_journal_id', '')
+        self.env.company.subscription_recognition_journal_id = False
 
         runs = self.env['subscription.deferred.revenue.recognition.run']._run_scheduled_recognition_posting(
             company=self.env.company,

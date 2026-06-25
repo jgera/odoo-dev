@@ -22,22 +22,22 @@ class SubscriptionDeferredRevenuePostWizard(models.TransientModel):
     )
     recognition_journal_id = fields.Many2one(
         'account.journal',
-        default=lambda self: self.env['subscription.deferred.revenue']._get_config_m2o(
-            'subscription_suite.recognition_journal_id'
-        ),
+        default=lambda self: self.env['subscription.deferred.revenue']._get_company_recognition_config()[
+            'recognition_journal'
+        ],
     )
     deferred_revenue_account_id = fields.Many2one(
         'account.account',
         string='Deferred Revenue Account',
-        default=lambda self: self.env['subscription.deferred.revenue']._get_config_m2o(
-            'subscription_suite.deferred_revenue_account_id'
-        ),
+        default=lambda self: self.env['subscription.deferred.revenue']._get_company_recognition_config()[
+            'deferred_revenue_account'
+        ],
     )
     revenue_account_id = fields.Many2one(
         'account.account',
-        default=lambda self: self.env['subscription.deferred.revenue']._get_config_m2o(
-            'subscription_suite.revenue_account_id'
-        ),
+        default=lambda self: self.env['subscription.deferred.revenue']._get_company_recognition_config()[
+            'revenue_account'
+        ],
     )
 
     def _check_post_access(self):

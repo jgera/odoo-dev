@@ -23,40 +23,35 @@ class ResConfigSettings(models.TransientModel):
     subscription_deferred_revenue_account_id = fields.Many2one(
         'account.account',
         string='Deferred Revenue Account',
-        config_parameter='subscription_suite.deferred_revenue_account_id',
+        related='company_id.subscription_deferred_revenue_account_id',
+        readonly=False,
     )
     subscription_revenue_account_id = fields.Many2one(
         'account.account',
         string='Revenue Account',
-        config_parameter='subscription_suite.revenue_account_id',
+        related='company_id.subscription_revenue_account_id',
+        readonly=False,
     )
     subscription_recognition_journal_id = fields.Many2one(
         'account.journal',
         string='Recognition Journal',
-        config_parameter='subscription_suite.recognition_journal_id',
+        related='company_id.subscription_recognition_journal_id',
+        readonly=False,
     )
     subscription_default_recognition_method = fields.Selection(
-        [
-            ('straight_line_daily', 'Straight-line Daily'),
-            ('equal_monthly', 'Equal Monthly'),
-        ],
         string='Default Recognition Method',
-        config_parameter='subscription_suite.default_recognition_method',
-        default='straight_line_daily',
+        related='company_id.subscription_default_recognition_method',
+        readonly=False,
     )
     subscription_enable_scheduled_recognition_posting = fields.Boolean(
         string='Enable Scheduled Recognition Posting',
-        config_parameter='subscription_suite.enable_scheduled_recognition_posting',
-        default=False,
+        related='company_id.subscription_enable_scheduled_recognition_posting',
+        readonly=False,
     )
     subscription_scheduled_recognition_cutoff_rule = fields.Selection(
-        [
-            ('today', 'Today'),
-            ('prior_month_end', 'Prior Month End'),
-        ],
         string='Scheduled Recognition Cutoff',
-        config_parameter='subscription_suite.scheduled_recognition_cutoff_rule',
-        default='prior_month_end',
+        related='company_id.subscription_scheduled_recognition_cutoff_rule',
+        readonly=False,
     )
 
     @api.constrains(

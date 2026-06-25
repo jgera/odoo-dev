@@ -27,7 +27,7 @@
                         </setting>
                     </block>
                     <block title="Revenue Recognition" name="subscription_revenue_recognition_settings">
-                        <setting id="subscription_revenue_recognition" string="Deferred Revenue Schedules" help="Configure schedule defaults. This foundation creates generated schedules only; it does not post journal entries yet.">
+                        <setting id="subscription_revenue_recognition" string="Deferred Revenue Schedules" help="Configure company-specific recognition defaults. Generated schedules, preview, manual posting, and scheduled posting use the invoice or schedule company configuration.">
                             <div class="content-group">
                                 <div class="row mt8">
                                     <label for="subscription_deferred_revenue_account_id" class="col-lg-5 o_light_label"/>
