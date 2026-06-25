@@ -1360,3 +1360,39 @@ Automated coverage:
 Implementation note:
 
 - Company fields are now the preferred source of truth. Legacy config parameters remain as fallback for upgrade safety, but new setup should be maintained per company.
+
+## 52. Security And Access Audit Foundation
+
+Purpose: verify the first Phase 8 security hardening pass before scale benchmarking and release packaging.
+
+Access matrix:
+
+| Role | Expected access |
+| --- | --- |
+| Subscription user | Read assigned/unassigned operational subscription records and generated analytics, but no manager-only generation, finance posting, finance adjustment, or setup mutation |
+| Subscription manager | Generate analytics, run finance workflows, manage subscription operations, and view allowed companies |
+| Accounting read-only | Read deferred revenue schedules, lines, adjustments, reconciliations, and recognition run logs without mutation |
+| Accounting manager | Read finance records through accounting access; subscription workflow mutation still requires subscription manager rights |
+| Portal requester | Manage only subscriptions, invoices, payment tokens, lifecycle requests, cancellation requests, and plan-change requests owned by their commercial partner |
+
+Walkthrough:
+
+1. Install or upgrade the full suite.
+2. Log in as a subscription user and confirm they can read allowed subscription/reporting records but cannot generate analytics, post recognition, adjust credit notes, or mutate finance schedules.
+3. Log in as a subscription manager and confirm manager-only generation and operational actions remain available.
+4. Log in as an accounting read-only user and confirm deferred revenue schedules, lines, adjustments, reconciliations, and recognition runs are readable but not writable.
+5. In a multi-company test database, create billing/dunning/reporting records in two companies and confirm single-company users only see allowed-company rows.
+6. From portal-helper tests, confirm a requester from another customer cannot submit lifecycle, cancellation, plan-change, payment retry, payment-token assignment, or validation-transaction actions.
+7. Keep live `HttpCase` route testing deferred unless the local route-test harness is stable; deterministic helper/controller-adjacent tests remain the validated foundation.
+
+Automated coverage:
+
+- `subscription_suite` tests cover subscription user record rules, manager visibility, plan mutation rights, and portal lifecycle/cancellation ownership checks.
+- `subscription_suite_billing` tests cover billing multi-company record rules, finance read-only access, manager-only finance mutation paths, and portal plan-change ownership checks.
+- `subscription_suite_reports` tests cover generated report multi-company record rules plus subscription-user read-only/generation blocking.
+- `subscription_suite_dunning` tests cover dunning policy company scoping and manager-only mutation.
+- Existing `subscription_suite_portal` tests continue to cover portal payment recovery ownership, unrelated invoices, token ownership, and validation transaction ownership.
+
+Implementation note:
+
+- This slice adds deterministic access coverage and targeted rule hardening only. Stable live portal route `HttpCase` coverage, 10K benchmarks, large demo-data generation, packaging assets, and migration tooling remain later Phase 8 work.

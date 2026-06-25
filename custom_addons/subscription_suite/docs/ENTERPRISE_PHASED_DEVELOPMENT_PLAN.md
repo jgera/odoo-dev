@@ -952,7 +952,7 @@ For every phase, update or create:
 
 **Objective:** Add finance-grade deferred revenue and recognition workflows.
 
-**Current slice:** Finance Setup And Access Hardening. Deferred revenue schedule generation, hardening, posting preview, manual journal posting, credit-note adjustments, reconciliation reports, posting helper hardening, and scheduled posting cron foundation are complete. This slice makes recognition setup company-aware, validates account/journal suitability before finance workflows use it, and confirms accounting users get read-only finance visibility without mutation rights.
+**Current slice status:** Phase 7 finance setup and access hardening is complete. Deferred revenue schedule generation, hardening, posting preview, manual journal posting, credit-note adjustments, reconciliation reports, posting helper hardening, scheduled posting cron foundation, company-aware setup, account/journal validation, and accounting read-only finance visibility are complete.
 
 **Build items:**
 
@@ -1060,14 +1060,16 @@ For every phase, update or create:
 
 **Objective:** Make the suite deployable for serious customers.
 
+**Current slice:** Security And Access Audit Foundation. This slice adds cross-suite deterministic access tests, hardens portal model-helper ownership checks for lifecycle/cancellation/plan-change requests, and adds explicit company record rules for billing and dunning custom records before performance benchmarking or release packaging.
+
 **Build items:**
 
 1. Security hardening
-   - Full record-rule audit.
-   - Portal route audit and stable `HttpCase` harness.
-   - Multi-company tests.
-   - Manager/user/portal permission matrix.
-   - Read/write/delete access review for every model.
+   - Full record-rule audit - foundation started with core, billing, dunning, portal-helper, reports, finance, and generated analytics coverage.
+   - Portal route audit and stable `HttpCase` harness - still deferred until the local route harness is stable.
+   - Multi-company tests - foundation added for generated reports plus billing and dunning records.
+   - Manager/user/portal permission matrix - foundation added for subscription users, subscription managers, accounting read-only users, and portal requester ownership.
+   - Read/write/delete access review for every model - foundation started with high-risk generated, finance, billing, and dunning records.
 
 2. Performance
    - Indexes for cron and reports.
@@ -1115,13 +1117,14 @@ For every phase, update or create:
 **Acceptance gates:**
 
 - A fresh production-style database can install and configure the suite using docs.
-- All access rules are tested.
+- All high-risk access rules are tested before release: subscription user, subscription manager, accounting read-only, accounting manager, portal requester, and multi-company cases.
 - 10K subscription benchmark is recorded.
 - Release notes list known limitations honestly.
 - Demo data tells a complete story: trial, active, paused, past due, cancelled, renewed, upsold, recovered, churned.
 
 **Continuous validation:**
 
+- Security hardening must pass core, billing, dunning, portal, and reports test tags plus full installed-suite upgrade.
 - Release candidate must pass fresh install, module upgrade, full tests, portal smoke test, and demo walkthrough.
 - Large demo database must prove cron and report performance targets.
 

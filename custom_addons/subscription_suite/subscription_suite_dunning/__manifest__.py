@@ -19,6 +19,7 @@ Handles failed payments and collections:
     'depends': ['subscription_suite_billing'],
     'data': [
         'security/ir.model.access.csv',
+        'security/dunning_record_rules.xml',
         'data/sequence_data.xml',
         'data/email_templates.xml',
         'data/cron_data.xml',

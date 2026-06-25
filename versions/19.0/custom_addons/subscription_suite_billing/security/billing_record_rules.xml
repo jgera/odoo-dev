@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="subscription_proration_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Proration Multi-Company</field>
+            <field name="model_id" ref="model_subscription_proration"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_billing_run_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Billing Run Multi-Company</field>
+            <field name="model_id" ref="model_subscription_billing_run"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_billing_attempt_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Billing Attempt Multi-Company</field>
+            <field name="model_id" ref="model_subscription_billing_attempt"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_payment_attempt_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Payment Attempt Multi-Company</field>
+            <field name="model_id" ref="model_subscription_payment_attempt"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_usage_meter_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Usage Meter Multi-Company</field>
+            <field name="model_id" ref="model_subscription_usage_meter"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_plan_usage_line_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Plan Usage Line Multi-Company</field>
+            <field name="model_id" ref="model_subscription_plan_usage_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_usage_event_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Usage Event Multi-Company</field>
+            <field name="model_id" ref="model_subscription_usage_event"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_usage_summary_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Usage Summary Multi-Company</field>
+            <field name="model_id" ref="model_subscription_usage_summary"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_deferred_revenue_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Deferred Revenue Multi-Company</field>
+            <field name="model_id" ref="model_subscription_deferred_revenue"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_deferred_revenue_line_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Deferred Revenue Line Multi-Company</field>
+            <field name="model_id" ref="model_subscription_deferred_revenue_line"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_deferred_revenue_adjustment_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Deferred Revenue Adjustment Multi-Company</field>
+            <field name="model_id" ref="model_subscription_deferred_revenue_adjustment"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_deferred_revenue_reconciliation_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Deferred Revenue Reconciliation Multi-Company</field>
+            <field name="model_id" ref="model_subscription_deferred_revenue_reconciliation"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_deferred_revenue_recognition_run_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Deferred Revenue Recognition Run Multi-Company</field>
+            <field name="model_id" ref="model_subscription_deferred_revenue_recognition_run"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_plan_change_request_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Plan Change Request Multi-Company</field>
+            <field name="model_id" ref="model_subscription_plan_change_request"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_manager_operation_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Manager Operation Multi-Company</field>
+            <field name="model_id" ref="model_subscription_manager_operation"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+    </data>
+</odoo>

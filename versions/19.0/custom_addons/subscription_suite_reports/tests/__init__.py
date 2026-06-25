@@ -15,3 +15,5 @@ from . import test_plan_performance_summary
 from . import test_at_risk_summary
 from . import test_payment_recovery_summary
 from . import test_trial_conversion_summary
+from . import test_security_access
+from . import test_security_access

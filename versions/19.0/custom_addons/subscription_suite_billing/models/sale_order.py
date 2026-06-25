@@ -1169,6 +1169,7 @@ class SaleOrder(models.Model):
         self.ensure_one()
         new_plan.ensure_one()
         requester.ensure_one()
+        self._check_portal_requester_owns_subscription(requester)
 
         if not self.is_subscription:
             raise ValidationError(_("Only subscriptions can request plan changes."))

@@ -1069,6 +1069,26 @@ class TestPlanChange(TransactionCase):
                 self.subscription_user,
             )
 
+    def test_portal_plan_change_request_rejects_other_customer_requester(self):
+        self.basic_plan.upgrade_plan_ids = self.premium_plan
+        subscription = self._create_basic_subscription()
+        other_partner = self.env['res.partner'].create({'name': 'Other Plan Change Customer'})
+        other_user = self.env['res.users'].with_context(no_reset_password=True).create({
+            'name': 'Other Plan Change User',
+            'login': 'other_plan_change_user@example.com',
+            'email': 'other_plan_change_user@example.com',
+            'partner_id': other_partner.id,
+            'group_ids': [(6, 0, [
+                self.env.ref('base.group_portal').id,
+            ])],
+        })
+
+        with self.assertRaises(ValidationError):
+            subscription.sudo()._portal_request_plan_change(
+                self.premium_plan,
+                other_user,
+            )
+
     def test_portal_plan_change_request_blocks_duplicate_pending_request(self):
         self.basic_plan.upgrade_plan_ids = self.premium_plan
         subscription = self._create_basic_subscription()

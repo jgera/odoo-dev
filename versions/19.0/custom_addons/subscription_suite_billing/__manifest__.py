@@ -19,6 +19,7 @@ Handles advanced billing scenarios:
     'depends': ['subscription_suite', 'payment'],
     'data': [
         'security/ir.model.access.csv',
+        'security/billing_record_rules.xml',
         'security/plan_change_request_rules.xml',
         'data/sequence_data.xml',
         'data/cron_data.xml',

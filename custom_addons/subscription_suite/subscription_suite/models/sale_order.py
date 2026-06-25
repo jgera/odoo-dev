@@ -664,9 +664,18 @@ class SaleOrder(models.Model):
                 new_values={'next_invoice_date': order.next_invoice_date},
             )
 
+    def _check_portal_requester_owns_subscription(self, requester):
+        self.ensure_one()
+        requester.ensure_one()
+        if requester.has_group('base.group_user'):
+            return
+        if requester.partner_id.commercial_partner_id != self.partner_id.commercial_partner_id:
+            raise ValidationError(_("You can only manage your own subscription."))
+
     def _portal_request_lifecycle_action(self, request_type, feedback, requester):
         self.ensure_one()
         requester.ensure_one()
+        self._check_portal_requester_owns_subscription(requester)
         if request_type not in ['pause', 'resume']:
             raise ValidationError(_("Select a valid lifecycle action."))
         if not self.is_subscription:
@@ -777,6 +786,7 @@ class SaleOrder(models.Model):
         self.ensure_one()
         reason.ensure_one()
         requester.ensure_one()
+        self._check_portal_requester_owns_subscription(requester)
 
         if not self.is_subscription:
             raise ValidationError(_("Only subscriptions can request cancellation."))

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="subscription_dunning_policy_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Dunning Policy Multi-Company</field>
+            <field name="model_id" ref="model_subscription_dunning_policy"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_dunning_policy_line_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Dunning Policy Line Multi-Company</field>
+            <field name="model_id" ref="model_subscription_dunning_policy_line"/>
+            <field name="domain_force">['|', ('policy_id.company_id', '=', False), ('policy_id.company_id', 'in', company_ids)]</field>
+        </record>
+        <record id="subscription_dunning_attempt_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Dunning Attempt Multi-Company</field>
+            <field name="model_id" ref="model_subscription_dunning_attempt"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+    </data>
+</odoo>
