@@ -154,12 +154,13 @@ class SaleOrder(models.Model):
     @api.model
     def _cron_process_dunning(self):
         today = fields.Date.today()
+        batch_size = int(self.env['ir.config_parameter'].sudo().get_param('subscription_suite.dunning_batch_size', 100))
         subscriptions = self.search([
             ('is_subscription', '=', True),
             ('subscription_state', '=', 'past_due'),
             ('next_dunning_date', '<=', today),
             ('subscription_plan_id.dunning_policy_id', '!=', False)
-        ])
+        ], limit=batch_size, order='next_dunning_date asc, id asc')
         
         for sub in subscriptions:
             policy = sub.subscription_plan_id.dunning_policy_id

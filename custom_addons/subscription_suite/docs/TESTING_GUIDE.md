@@ -1428,3 +1428,40 @@ Expected smoke outcomes:
 Implementation note:
 
 - This is a deterministic medium-scale smoke layer, not the final benchmark. The 10K dataset generator, recorded wall-clock budget, query-plan review, and release packaging remain later Phase 8 work.
+
+## 54. 10K Scale Benchmark Harness Foundation
+
+Purpose: create a repeatable, opt-in benchmark path for subscription-scale validation without loading large records during normal demo installation.
+
+What changed:
+
+- `scripts/subscription_suite_scale_benchmark.py` bootstraps the configured Odoo 19 environment and can generate deterministic scale subscriptions with a clear prefix.
+- The script default mode is `plan`, so running it without an explicit mode does not create records.
+- Dunning cron now supports `subscription_suite.dunning_batch_size`, matching the existing billing batch-size pattern.
+- The benchmark harness measures billing cron, dunning cron, deferred revenue recognition preview selection, and the generated analytics chain.
+
+Safe command sequence:
+
+```powershell
+python scripts\subscription_suite_scale_benchmark.py --odoo-version 19.0 -d odoo19_subscription_demo --mode plan --subscriptions 10000
+python scripts\subscription_suite_scale_benchmark.py --odoo-version 19.0 -d odoo19_subscription_demo --mode generate --subscriptions 10000 --prefix SS-PERF
+python scripts\subscription_suite_scale_benchmark.py --odoo-version 19.0 -d odoo19_subscription_demo --mode benchmark --prefix SS-PERF --output .\subscription_suite_scale_benchmark.json
+```
+
+Developer smoke command:
+
+```powershell
+python scripts\subscription_suite_scale_benchmark.py --odoo-version 19.0 -d odoo19_subscription_demo --mode all --subscriptions 100 --auxiliary-count 25 --prefix SS-PERF-SMOKE
+```
+
+Expected benchmark checks:
+
+- Generated records are identifiable by the selected prefix and are not loaded from XML demo data.
+- Billing cron processes only due active subscriptions and respects `subscription_suite.batch_size`.
+- Dunning cron processes only due past-due subscriptions and respects `subscription_suite.dunning_batch_size`.
+- Recognition preview selection reports due eligible draft lines without mutating recognition states.
+- Generated analytics complete for the current company/currency scope and can be rerun without duplicate generated rows.
+
+Implementation note:
+
+- This is the benchmark harness, not the final release benchmark report. Before release, run the 10K command on a clean release-candidate database, record timings and database size, then update the release notes with the measured limits and hardware context.

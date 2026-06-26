@@ -71,3 +71,23 @@ class TestSubscriptionDunningPerformanceSmoke(TransactionCase):
 
         self.assertEqual(second_attempts, first_attempts)
         self.assertTrue(all(subscription.next_dunning_date > fields.Date.today() for subscription in due_subscriptions))
+
+    def test_dunning_cron_respects_batch_size(self):
+        self.env['ir.config_parameter'].sudo().set_param('subscription_suite.dunning_batch_size', 4)
+        due_subscriptions = self.env['sale.order']
+        for index in range(9):
+            due_subscriptions |= self._create_subscription('batch-%s' % index)
+
+        self.env['sale.order']._cron_process_dunning()
+        first_attempts = self.env['subscription.dunning.attempt'].search([
+            ('subscription_id', 'in', due_subscriptions.ids),
+        ])
+
+        self.assertEqual(len(first_attempts), 4)
+
+        self.env['sale.order']._cron_process_dunning()
+        second_attempts = self.env['subscription.dunning.attempt'].search([
+            ('subscription_id', 'in', due_subscriptions.ids),
+        ])
+
+        self.assertEqual(len(second_attempts), 8)

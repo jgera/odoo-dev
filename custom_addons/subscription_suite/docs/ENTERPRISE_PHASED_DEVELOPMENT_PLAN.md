@@ -1060,7 +1060,7 @@ For every phase, update or create:
 
 **Objective:** Make the suite deployable for serious customers.
 
-**Current slice:** Performance Index And Scale Smoke Foundation. The security/access foundation is complete; this slice adds targeted Odoo-native indexes for existing cron, recovery, finance, usage, and generated-report domains plus medium-scale operational smoke coverage before the final 10K benchmark or release packaging.
+**Current slice:** 10K Scale Benchmark Harness Foundation. The security/access foundation and performance index/medium-smoke foundation are complete; this slice adds an opt-in large-data generator and repeatable benchmark harness for billing, dunning, deferred revenue recognition selection, and generated analytics before release packaging.
 
 **Build items:**
 
@@ -1073,10 +1073,10 @@ For every phase, update or create:
 
 2. Performance
    - Indexes for cron and reports - foundation started for billing due-date selection, dunning due-date selection, payment recovery attempts, usage aggregation, deferred revenue schedules/lines/adjustments, and generated analytics bucket fields.
-   - Batch size configuration.
+   - Batch size configuration - billing already supported configurable batches; dunning now supports `subscription_suite.dunning_batch_size` for due work selection.
    - Medium-scale operational smoke tests - foundation added for billing cron, recognition preview selection, dunning cron, and generated analytics stack idempotency.
-   - Large demo data generator.
-   - 10K subscription cron benchmark.
+   - Large demo data generator - opt-in developer harness added in `scripts/subscription_suite_scale_benchmark.py`; no large records are loaded during normal demo install.
+   - 10K subscription cron benchmark - harness added for repeatable local measurement; recorded timing budget still needs to be captured on a release-candidate database.
    - Query review on SQL reports.
 
 3. Observability
