@@ -19,9 +19,9 @@ class SubscriptionPaymentAttempt(models.Model):
     )
     invoice_id = fields.Many2one('account.move', string='Invoice', required=True, ondelete='cascade', index=True)
     transaction_id = fields.Many2one('payment.transaction', string='Transaction', readonly=True, index=True)
-    partner_id = fields.Many2one(related='subscription_id.partner_id', string='Customer', store=True, readonly=True)
-    company_id = fields.Many2one(related='subscription_id.company_id', string='Company', store=True, readonly=True)
-    currency_id = fields.Many2one(related='invoice_id.currency_id', string='Currency', store=True, readonly=True)
+    partner_id = fields.Many2one(related='subscription_id.partner_id', string='Customer', store=True, readonly=True, index=True)
+    company_id = fields.Many2one(related='subscription_id.company_id', string='Company', store=True, readonly=True, index=True)
+    currency_id = fields.Many2one(related='invoice_id.currency_id', string='Currency', store=True, readonly=True, index=True)
     provider_id = fields.Many2one('payment.provider', string='Provider', readonly=True, index=True)
     token_id = fields.Many2one('payment.token', string='Payment Token', readonly=True, index=True)
     token_role = fields.Selection([

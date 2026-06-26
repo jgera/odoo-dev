@@ -7,9 +7,9 @@ _logger = logging.getLogger(__name__)
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
-    dunning_start_date = fields.Date(string='Dunning Start Date', copy=False)
-    next_dunning_date = fields.Date(string='Next Dunning Date', copy=False)
-    dunning_step_id = fields.Many2one('subscription.dunning.policy.line', string='Last Dunning Step', copy=False)
+    dunning_start_date = fields.Date(string='Dunning Start Date', copy=False, index=True)
+    next_dunning_date = fields.Date(string='Next Dunning Date', copy=False, index=True)
+    dunning_step_id = fields.Many2one('subscription.dunning.policy.line', string='Last Dunning Step', copy=False, index=True)
     dunning_attempt_ids = fields.One2many('subscription.dunning.attempt', 'subscription_id', string='Dunning Attempts')
     dunning_attempt_count = fields.Integer(string='Dunning Count', compute='_compute_dunning_attempt_count')
 

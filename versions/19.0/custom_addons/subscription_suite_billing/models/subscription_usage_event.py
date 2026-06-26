@@ -14,18 +14,19 @@ class SubscriptionUsageEvent(models.Model):
         required=True,
         ondelete='cascade',
         domain=[('is_subscription', '=', True)],
+        index=True,
     )
-    meter_id = fields.Many2one('subscription.usage.meter', string='Meter', required=True)
+    meter_id = fields.Many2one('subscription.usage.meter', string='Meter', required=True, index=True)
     quantity = fields.Float(required=True)
-    event_date = fields.Date(required=True, default=fields.Date.context_today)
-    external_reference = fields.Char(copy=False)
+    event_date = fields.Date(required=True, default=fields.Date.context_today, index=True)
+    external_reference = fields.Char(copy=False, index=True)
     state = fields.Selection([
         ('ready', 'Ready'),
         ('invoiced', 'Invoiced'),
         ('cancelled', 'Cancelled'),
-    ], default='ready', required=True, copy=False)
-    summary_id = fields.Many2one('subscription.usage.summary', string='Usage Summary', copy=False, readonly=True)
-    company_id = fields.Many2one('res.company', related='subscription_id.company_id', store=True)
+    ], default='ready', required=True, copy=False, index=True)
+    summary_id = fields.Many2one('subscription.usage.summary', string='Usage Summary', copy=False, readonly=True, index=True)
+    company_id = fields.Many2one('res.company', related='subscription_id.company_id', store=True, index=True)
 
     _external_reference_unique = models.Constraint(
         'UNIQUE(external_reference, company_id)',

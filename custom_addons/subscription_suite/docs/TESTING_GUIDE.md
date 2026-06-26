@@ -1396,3 +1396,35 @@ Automated coverage:
 Implementation note:
 
 - This slice adds deterministic access coverage and targeted rule hardening only. Stable live portal route `HttpCase` coverage, 10K benchmarks, large demo-data generation, packaging assets, and migration tooling remain later Phase 8 work.
+
+## 53. Performance Index And Scale Smoke Foundation
+
+Purpose: verify the first Phase 8 performance hardening pass before the final 10K benchmark and release packaging.
+
+What changed:
+
+- Odoo-native indexes are added to stored fields already used by recurring billing, dunning, payment recovery, usage aggregation, deferred revenue recognition, credit-note adjustments, and generated analytics scopes.
+- `subscription_suite_billing` includes a medium smoke test for billing cron idempotency and deferred revenue recognition preview selection.
+- `subscription_suite_dunning` includes a medium smoke test for due/future dunning selection and duplicate-attempt protection.
+- `subscription_suite_reports` keeps the generated analytics smoke test as the generated-report idempotency and currency/company scoping check.
+
+Validation commands:
+
+```powershell
+python -m compileall versions\19.0\custom_addons\subscription_suite versions\19.0\custom_addons\subscription_suite_billing versions\19.0\custom_addons\subscription_suite_dunning versions\19.0\custom_addons\subscription_suite_reports
+python scripts\dev_odoo.py --odoo-version 19.0 --port 8079 --no-browser --no-cron -- -d odoo19_subscription_demo -u subscription_suite_billing --test-tags /subscription_suite_billing --stop-after-init
+python scripts\dev_odoo.py --odoo-version 19.0 --port 8079 --no-browser --no-cron -- -d odoo19_subscription_demo -u subscription_suite_dunning --test-tags /subscription_suite_dunning --stop-after-init
+python scripts\dev_odoo.py --odoo-version 19.0 --port 8079 --no-browser --no-cron -- -d odoo19_subscription_demo -u subscription_suite_reports --test-tags /subscription_suite_reports --stop-after-init
+```
+
+Expected smoke outcomes:
+
+- Billing cron creates one successful billing attempt for each due active confirmed subscription and does not create duplicate attempts on rerun.
+- Future-dated and non-active subscriptions are excluded from the current billing cron behavior.
+- Recognition preview includes due draft lines on ready schedules, excludes future lines, and does not mutate line state.
+- Dunning cron creates one attempt for each due past-due subscription, excludes future/active subscriptions, and does not duplicate attempts on immediate rerun.
+- Generated analytics reruns remain idempotent and keep company/currency/all-plan scopes separated.
+
+Implementation note:
+
+- This is a deterministic medium-scale smoke layer, not the final benchmark. The 10K dataset generator, recorded wall-clock budget, query-plan review, and release packaging remain later Phase 8 work.

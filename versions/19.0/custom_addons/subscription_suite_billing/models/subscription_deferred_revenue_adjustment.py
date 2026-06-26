@@ -30,14 +30,14 @@ class SubscriptionDeferredRevenueAdjustment(models.Model):
         readonly=True,
         index=True,
     )
-    subscription_id = fields.Many2one(related='schedule_id.subscription_id', store=True, readonly=True)
+    subscription_id = fields.Many2one(related='schedule_id.subscription_id', store=True, readonly=True, index=True)
     partner_id = fields.Many2one(related='schedule_id.partner_id', store=True, readonly=True)
-    subscription_plan_id = fields.Many2one(related='schedule_id.subscription_plan_id', store=True, readonly=True)
-    company_id = fields.Many2one(related='schedule_id.company_id', store=True, readonly=True)
-    currency_id = fields.Many2one(related='schedule_id.currency_id', store=True, readonly=True)
-    adjustment_date = fields.Date(related='credit_note_id.invoice_date', store=True, readonly=True)
-    service_period_start = fields.Date(readonly=True)
-    service_period_end = fields.Date(readonly=True)
+    subscription_plan_id = fields.Many2one(related='schedule_id.subscription_plan_id', store=True, readonly=True, index=True)
+    company_id = fields.Many2one(related='schedule_id.company_id', store=True, readonly=True, index=True)
+    currency_id = fields.Many2one(related='schedule_id.currency_id', store=True, readonly=True, index=True)
+    adjustment_date = fields.Date(related='credit_note_id.invoice_date', store=True, readonly=True, index=True)
+    service_period_start = fields.Date(readonly=True, index=True)
+    service_period_end = fields.Date(readonly=True, index=True)
     amount_total = fields.Monetary(currency_field='currency_id', readonly=True)
     draft_adjusted_amount = fields.Monetary(currency_field='currency_id', readonly=True)
     recognized_reversal_amount = fields.Monetary(currency_field='currency_id', readonly=True)
@@ -50,6 +50,7 @@ class SubscriptionDeferredRevenueAdjustment(models.Model):
         required=True,
         readonly=True,
         tracking=True,
+        index=True,
     )
     block_reason = fields.Text(readonly=True)
     adjusted_line_ids = fields.Many2many(

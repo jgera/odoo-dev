@@ -8,7 +8,7 @@ _logger = logging.getLogger(__name__)
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
-    is_subscription = fields.Boolean(string='Is Subscription', default=False)
+    is_subscription = fields.Boolean(string='Is Subscription', default=False, index=True)
     subscription_state = fields.Selection([
         ('draft', 'Draft'),
         ('trial', 'Trial'),
@@ -17,9 +17,9 @@ class SaleOrder(models.Model):
         ('past_due', 'Past Due'),
         ('cancelled', 'Cancelled'),
         ('expired', 'Expired'),
-    ], string='Subscription Status', default='draft', copy=False, tracking=True)
+    ], string='Subscription Status', default='draft', copy=False, tracking=True, index=True)
     
-    subscription_plan_id = fields.Many2one('subscription.plan', string='Subscription Plan')
+    subscription_plan_id = fields.Many2one('subscription.plan', string='Subscription Plan', index=True)
     subscription_code = fields.Char(string='Subscription Code', copy=False, readonly=True)
     subscription_quote_type = fields.Selection([
         ('renewal', 'Renewal'),
@@ -51,13 +51,13 @@ class SaleOrder(models.Model):
         compute='_compute_subscription_request_counts',
     )
     
-    trial_start_date = fields.Date(string='Trial Start Date', copy=False)
-    trial_end_date = fields.Date(string='Trial End Date', copy=False)
-    subscription_start_date = fields.Date(string='Subscription Start Date', copy=False)
-    subscription_end_date = fields.Date(string='Subscription End Date', copy=False)
+    trial_start_date = fields.Date(string='Trial Start Date', copy=False, index=True)
+    trial_end_date = fields.Date(string='Trial End Date', copy=False, index=True)
+    subscription_start_date = fields.Date(string='Subscription Start Date', copy=False, index=True)
+    subscription_end_date = fields.Date(string='Subscription End Date', copy=False, index=True)
     
-    next_invoice_date = fields.Date(string='Next Invoice Date', copy=False)
-    last_invoice_date = fields.Date(string='Last Invoice Date', copy=False)
+    next_invoice_date = fields.Date(string='Next Invoice Date', copy=False, index=True)
+    last_invoice_date = fields.Date(string='Last Invoice Date', copy=False, index=True)
     
     billing_interval_count = fields.Integer(string='Billing Interval Count', default=1)
     billing_interval_unit = fields.Selection([
@@ -67,8 +67,8 @@ class SaleOrder(models.Model):
         ('year', 'Years')
     ], string='Billing Interval Unit', default='month')
     
-    payment_token_id = fields.Many2one('payment.token', string='Payment Token', copy=False)
-    backup_payment_token_id = fields.Many2one('payment.token', string='Backup Payment Token', copy=False)
+    payment_token_id = fields.Many2one('payment.token', string='Payment Token', copy=False, index=True)
+    backup_payment_token_id = fields.Many2one('payment.token', string='Backup Payment Token', copy=False, index=True)
     
     recurring_total = fields.Monetary(string='Recurring Total', compute='_compute_recurring_total', store=True)
     mrr = fields.Monetary(string='MRR', compute='_compute_mrr', store=True)
@@ -76,7 +76,7 @@ class SaleOrder(models.Model):
     
     pause_date = fields.Date(string='Pause Date', copy=False)
     resume_date = fields.Date(string='Resume Date', copy=False)
-    cancellation_date = fields.Date(string='Cancellation Date', copy=False)
+    cancellation_date = fields.Date(string='Cancellation Date', copy=False, index=True)
     cancellation_requested_date = fields.Date(string='Cancellation Requested Date', copy=False)
     cancellation_effective_date = fields.Date(string='Cancellation Effective Date', copy=False, index=True)
     cancellation_policy_applied = fields.Selection([
@@ -85,7 +85,7 @@ class SaleOrder(models.Model):
     ], string='Cancellation Policy Applied', copy=False)
     pending_cancellation = fields.Boolean(string='Pending Cancellation', copy=False, index=True)
     
-    cancellation_reason_id = fields.Many2one('subscription.cancel.reason', string='Cancellation Reason', copy=False)
+    cancellation_reason_id = fields.Many2one('subscription.cancel.reason', string='Cancellation Reason', copy=False, index=True)
     cancellation_feedback = fields.Text(string='Cancellation Feedback', copy=False)
     
     subscription_log_ids = fields.One2many('subscription.log', 'subscription_id', string='Subscription Logs')

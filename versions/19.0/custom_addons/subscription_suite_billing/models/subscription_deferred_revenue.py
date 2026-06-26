@@ -33,10 +33,11 @@ class SubscriptionDeferredRevenue(models.Model):
         string='Plan',
         store=True,
         readonly=True,
+        index=True,
     )
-    invoice_date = fields.Date(related='invoice_id.invoice_date', store=True, readonly=True)
-    service_period_start = fields.Date(readonly=True)
-    service_period_end = fields.Date(readonly=True)
+    invoice_date = fields.Date(related='invoice_id.invoice_date', store=True, readonly=True, index=True)
+    service_period_start = fields.Date(readonly=True, index=True)
+    service_period_end = fields.Date(readonly=True, index=True)
     recognition_method = fields.Selection(
         [
             ('straight_line_daily', 'Straight-line Daily'),
@@ -88,10 +89,11 @@ class SubscriptionDeferredRevenue(models.Model):
         default='draft',
         required=True,
         tracking=True,
+        index=True,
     )
     block_reason = fields.Text(readonly=True)
-    company_id = fields.Many2one(related='invoice_id.company_id', store=True, readonly=True)
-    currency_id = fields.Many2one(related='invoice_id.currency_id', store=True, readonly=True)
+    company_id = fields.Many2one(related='invoice_id.company_id', store=True, readonly=True, index=True)
+    currency_id = fields.Many2one(related='invoice_id.currency_id', store=True, readonly=True, index=True)
 
     _unique_invoice_schedule = models.Constraint(
         'unique(invoice_id)',
@@ -538,12 +540,12 @@ class SubscriptionDeferredRevenueLine(models.Model):
         index=True,
     )
     sequence = fields.Integer(default=10)
-    subscription_id = fields.Many2one(related='schedule_id.subscription_id', store=True, readonly=True)
-    invoice_id = fields.Many2one(related='schedule_id.invoice_id', store=True, readonly=True)
+    subscription_id = fields.Many2one(related='schedule_id.subscription_id', store=True, readonly=True, index=True)
+    invoice_id = fields.Many2one(related='schedule_id.invoice_id', store=True, readonly=True, index=True)
     partner_id = fields.Many2one(related='schedule_id.partner_id', store=True, readonly=True)
-    subscription_plan_id = fields.Many2one(related='schedule_id.subscription_plan_id', store=True, readonly=True)
-    period_start = fields.Date(required=True)
-    period_end = fields.Date(required=True)
+    subscription_plan_id = fields.Many2one(related='schedule_id.subscription_plan_id', store=True, readonly=True, index=True)
+    period_start = fields.Date(required=True, index=True)
+    period_end = fields.Date(required=True, index=True)
     amount = fields.Monetary(currency_field='currency_id', required=True)
     state = fields.Selection(
         [
@@ -553,11 +555,12 @@ class SubscriptionDeferredRevenueLine(models.Model):
         ],
         default='draft',
         required=True,
+        index=True,
     )
-    recognized_date = fields.Date(readonly=True)
-    recognition_move_id = fields.Many2one('account.move', string='Recognition Journal Entry', readonly=True, copy=False)
-    company_id = fields.Many2one(related='schedule_id.company_id', store=True, readonly=True)
-    currency_id = fields.Many2one(related='schedule_id.currency_id', store=True, readonly=True)
+    recognized_date = fields.Date(readonly=True, index=True)
+    recognition_move_id = fields.Many2one('account.move', string='Recognition Journal Entry', readonly=True, copy=False, index=True)
+    company_id = fields.Many2one(related='schedule_id.company_id', store=True, readonly=True, index=True)
+    currency_id = fields.Many2one(related='schedule_id.currency_id', store=True, readonly=True, index=True)
 
     @api.constrains('period_start', 'period_end')
     def _check_period(self):

@@ -4,4 +4,6 @@ from . import test_billing_attempts
 from . import test_manager_operations
 from . import test_deferred_revenue
 from . import test_security_access
+from . import test_performance_smoke
+from . import test_performance_smoke
 from . import test_security_access

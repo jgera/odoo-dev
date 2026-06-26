@@ -1060,7 +1060,7 @@ For every phase, update or create:
 
 **Objective:** Make the suite deployable for serious customers.
 
-**Current slice:** Security And Access Audit Foundation. This slice adds cross-suite deterministic access tests, hardens portal model-helper ownership checks for lifecycle/cancellation/plan-change requests, and adds explicit company record rules for billing and dunning custom records before performance benchmarking or release packaging.
+**Current slice:** Performance Index And Scale Smoke Foundation. The security/access foundation is complete; this slice adds targeted Odoo-native indexes for existing cron, recovery, finance, usage, and generated-report domains plus medium-scale operational smoke coverage before the final 10K benchmark or release packaging.
 
 **Build items:**
 
@@ -1072,8 +1072,9 @@ For every phase, update or create:
    - Read/write/delete access review for every model - foundation started with high-risk generated, finance, billing, and dunning records.
 
 2. Performance
-   - Indexes for cron and reports.
+   - Indexes for cron and reports - foundation started for billing due-date selection, dunning due-date selection, payment recovery attempts, usage aggregation, deferred revenue schedules/lines/adjustments, and generated analytics bucket fields.
    - Batch size configuration.
+   - Medium-scale operational smoke tests - foundation added for billing cron, recognition preview selection, dunning cron, and generated analytics stack idempotency.
    - Large demo data generator.
    - 10K subscription cron benchmark.
    - Query review on SQL reports.

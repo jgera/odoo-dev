@@ -21,8 +21,8 @@ class SubscriptionBillingAttempt(models.Model):
         index=True,
     )
     partner_id = fields.Many2one(related='subscription_id.partner_id', string='Customer', store=True, readonly=True)
-    company_id = fields.Many2one(related='subscription_id.company_id', string='Company', store=True, readonly=True)
-    currency_id = fields.Many2one(related='subscription_id.currency_id', string='Currency', store=True, readonly=True)
+    company_id = fields.Many2one(related='subscription_id.company_id', string='Company', store=True, readonly=True, index=True)
+    currency_id = fields.Many2one(related='subscription_id.currency_id', string='Currency', store=True, readonly=True, index=True)
     invoice_id = fields.Many2one('account.move', string='Invoice', readonly=True)
     period_start = fields.Date(string='Period Start', required=True, index=True)
     period_end = fields.Date(string='Period End', required=True, index=True)
