@@ -156,6 +156,10 @@ class SubscriptionDunningAttempt(models.Model):
 
     @api.model
     def _cron_retry_dunning_attempts(self, limit=50):
+        operation_run = self.env['subscription.operation.run']._start_run(
+            'dunning_retry',
+            company=self.env.company,
+        )
         now = fields.Datetime.now()
         attempts = self.search([
             ('auto_retry_enabled', '=', True),
@@ -167,6 +171,22 @@ class SubscriptionDunningAttempt(models.Model):
         ], order='next_auto_retry_at asc, id asc', limit=limit)
         for attempt in attempts:
             attempt._run_auto_retry()
+        failed_attempts = attempts.filtered(
+            lambda attempt: attempt.retry_exhausted
+            or (attempt.payment_attempt_id and attempt.payment_attempt_id.state in ['failed', 'error', 'cancelled'])
+        )
+        successful_attempts = attempts.filtered(
+            lambda attempt: attempt.payment_attempt_id and attempt.payment_attempt_id.state == 'success'
+        )
+        operation_run._finish_run(
+            processed=len(attempts),
+            succeeded=len(successful_attempts),
+            failed=len(failed_attempts),
+            skipped=len(attempts - successful_attempts - failed_attempts),
+            errors=failed_attempts.mapped('note'),
+            dunning_attempt_ids=attempts,
+            payment_attempt_ids=attempts.mapped('payment_attempt_id'),
+        )
         return True
 
     def _run_auto_retry(self):

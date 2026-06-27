@@ -168,7 +168,29 @@ class SubscriptionDeferredRevenueRecognitionRun(models.Model):
 
     @api.model
     def _cron_post_scheduled_recognition(self):
-        return self._run_scheduled_recognition_posting()
+        operation_run = self.env['subscription.operation.run']._start_run(
+            'revenue_recognition',
+            company=self.env.company,
+        )
+        try:
+            runs = self._run_scheduled_recognition_posting()
+        except Exception as error:
+            operation_run._finish_run(processed=1, failed=1, errors=[str(error)])
+            raise
+        failed_runs = runs.filtered(lambda run: run.status == 'failed')
+        successful_runs = runs.filtered(lambda run: run.status == 'success')
+        partial_runs = runs.filtered(lambda run: run.status == 'partial')
+        skipped_runs = runs.filtered(lambda run: run.status == 'skipped')
+        operation_run._finish_run(
+            processed=len(runs),
+            succeeded=len(successful_runs),
+            failed=len(failed_runs) + len(partial_runs),
+            skipped=len(skipped_runs),
+            errors=(failed_runs | partial_runs).mapped('error_notes'),
+            state='partial' if partial_runs or (successful_runs and failed_runs) else False,
+            recognition_run_ids=runs,
+        )
+        return runs
 
     def action_view_moves(self):
         self.ensure_one()

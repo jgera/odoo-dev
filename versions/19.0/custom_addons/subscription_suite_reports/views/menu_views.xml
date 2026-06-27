@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="view_subscription_operation_run_form_inherit_reports" model="ir.ui.view">
+        <field name="name">subscription.operation.run.form.reports</field>
+        <field name="model">subscription.operation.run</field>
+        <field name="inherit_id" ref="subscription_suite_billing.view_subscription_operation_run_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_snapshots" type="object" class="oe_stat_button"
+                        icon="fa-line-chart" invisible="not snapshot_ids">
+                    <field name="snapshot_ids" widget="statinfo" string="MRR Snapshots"/>
+                </button>
+            </xpath>
+        </field>
+    </record>
     <!-- Reporting Menu -->
     <menuitem id="menu_subscription_reporting"
               name="Reporting"

@@ -35,3 +35,20 @@ class ResCompany(models.Model):
         string='Scheduled Subscription Recognition Cutoff',
         default='prior_month_end',
     )
+    subscription_operation_digest_enabled = fields.Boolean(
+        string='Enable Subscription Operations Digest',
+    )
+    subscription_operation_digest_recipient_ids = fields.Many2many(
+        'res.users',
+        'subscription_operation_digest_company_user_rel',
+        'company_id',
+        'user_id',
+        string='Operations Digest Recipients',
+    )
+    subscription_operation_cleanup_enabled = fields.Boolean(
+        string='Enable Subscription Operation Run Cleanup',
+    )
+    subscription_operation_retention_days = fields.Integer(
+        string='Successful Operation Run Retention',
+        default=180,
+    )

@@ -36,4 +36,7 @@
 
 - The 10K benchmark is a local measurement, not a universal production SLA.
 - Migration/backfill tooling for arbitrary third-party datasets remains limited.
-- Operational digest email and a unified error dashboard remain deferred.
+- Operational monitoring summarizes supported scheduled jobs but does not provide
+  external alerting, raw traceback storage, queue-worker telemetry, or generic replay.
+- Operations digest and successful-run cleanup are opt-in and their Odoo scheduled
+  actions are disabled by default.

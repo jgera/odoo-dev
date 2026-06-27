@@ -35,5 +35,25 @@
             <field name="active">True</field>
             <field name="nextcall" eval="(DateTime.now().replace(hour=23, minute=0, second=0)).strftime('%Y-%m-%d %H:%M:%S')" />
         </record>
+
+        <record id="cron_send_subscription_operation_digest" model="ir.cron">
+            <field name="name">Subscription: Send Operations Digest</field>
+            <field name="model_id" ref="model_subscription_operation_run"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_send_daily_digest()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active">False</field>
+        </record>
+
+        <record id="cron_cleanup_subscription_operation_runs" model="ir.cron">
+            <field name="name">Subscription: Cleanup Operation Runs</field>
+            <field name="model_id" ref="model_subscription_operation_run"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_cleanup_operation_runs()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">weeks</field>
+            <field name="active">False</field>
+        </record>
     </data>
 </odoo>

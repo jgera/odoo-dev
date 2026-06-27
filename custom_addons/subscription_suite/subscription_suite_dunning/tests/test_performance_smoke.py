@@ -60,6 +60,12 @@ class TestSubscriptionDunningPerformanceSmoke(TransactionCase):
 
         self.assertEqual(len(first_attempts), len(due_subscriptions))
         self.assertEqual(set(first_attempts.mapped('state')), {'done'})
+        operation_run = self.env['subscription.operation.run'].search([
+            ('operation_type', '=', 'dunning'),
+        ], order='id desc', limit=1)
+        self.assertEqual(operation_run.state, 'success')
+        self.assertEqual(operation_run.processed_count, len(due_subscriptions))
+        self.assertEqual(operation_run.dunning_attempt_ids, first_attempts)
         self.assertFalse(self.env['subscription.dunning.attempt'].search([
             ('subscription_id', 'in', (future_subscription | active_subscription).ids),
         ]))

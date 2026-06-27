@@ -122,3 +122,16 @@ class TestSubscriptionMrrSnapshot(TransactionCase):
         self.assertEqual(action['type'], 'ir.actions.act_window')
         snapshot = self._snapshot_for_plan(self.plan)
         self.assertTrue(snapshot)
+
+    def test_daily_snapshot_cron_creates_linked_operation_run(self):
+        self._create_subscription('active', price=100.0)
+
+        snapshots = self.env['subscription.mrr.snapshot']._cron_generate_daily_snapshot()
+        operation_run = self.env['subscription.operation.run'].search([
+            ('operation_type', '=', 'mrr_snapshot'),
+        ], order='id desc', limit=1)
+
+        self.assertTrue(snapshots)
+        self.assertEqual(operation_run.state, 'success')
+        self.assertEqual(operation_run.processed_count, len(snapshots))
+        self.assertEqual(operation_run.snapshot_ids, snapshots)

@@ -56,6 +56,27 @@
                             </div>
                         </setting>
                     </block>
+                    <block title="Operational Observability" name="subscription_operation_observability_settings">
+                        <setting string="Daily Operations Digest"
+                                 help="Queue a daily email only when failed or partial subscription operations require review. The scheduled action is disabled by default.">
+                            <field name="subscription_operation_digest_enabled"/>
+                            <div class="content-group" invisible="not subscription_operation_digest_enabled">
+                                <label for="subscription_operation_digest_recipient_ids"/>
+                                <field name="subscription_operation_digest_recipient_ids"
+                                       widget="many2many_tags"
+                                       domain="[('share', '=', False), ('company_ids', 'in', company_id)]"/>
+                            </div>
+                        </setting>
+                        <setting string="Operation Run Retention"
+                                 help="Delete successful and skipped run summaries after the retention period. Failed and partial runs are never removed automatically. The scheduled action is disabled by default.">
+                            <field name="subscription_operation_cleanup_enabled"/>
+                            <div class="content-group" invisible="not subscription_operation_cleanup_enabled">
+                                <label for="subscription_operation_retention_days"/>
+                                <field name="subscription_operation_retention_days" class="oe_inline"/>
+                                <span class="ms-2">days</span>
+                            </div>
+                        </setting>
+                    </block>
                 </app>
             </xpath>
         </field>

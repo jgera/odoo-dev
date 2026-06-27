@@ -30,6 +30,35 @@ python scripts\subscription_suite_release_check.py -d odoo19_subscription_releas
 
 `--fresh-install` drops and recreates the named database. Never target production.
 
+## Operational Observability
+
+Open **Subscriptions -> Operations -> Operational Runs** and verify:
+
+- Scheduled billing, billing retry, payment collection, dunning, dunning retry,
+  revenue recognition, and MRR snapshot jobs create summary rows.
+- Failed and partial rows show counts, error summaries, company, duration, and
+  source-record drilldowns.
+- Manager Operations shows failed, partial, recent, and review-required run counts.
+- Subscription and accounting read-only users can inspect allowed-company rows but
+  cannot modify them.
+
+Configure the optional digest and retention under **Subscriptions -> Configuration
+-> Settings**. Both supporting scheduled actions are disabled by default. The digest
+queues no email when there are no actionable failures. Cleanup removes only expired
+successful or skipped summaries; failed and partial summaries remain.
+
+Run focused validation:
+
+```powershell
+python scripts\dev_odoo.py --odoo-version 19.0 -d odoo19_subscription_demo -u subscription_suite_billing --stop-after-init --no-browser --no-cron --no-dev --log-level=test -- --test-enable --test-tags /subscription_suite_billing
+python scripts\dev_odoo.py --odoo-version 19.0 -d odoo19_subscription_demo -u subscription_suite_dunning --stop-after-init --no-browser --no-cron --no-dev --log-level=test -- --test-enable --test-tags /subscription_suite_dunning
+python scripts\dev_odoo.py --odoo-version 19.0 -d odoo19_subscription_demo -u subscription_suite_reports --stop-after-init --no-browser --no-cron --no-dev --log-level=test -- --test-enable --test-tags /subscription_suite_reports
+```
+
+Operational runs are summaries. Billing attempts, payment attempts, dunning
+attempts, recognition runs, accounting moves, and generated snapshots remain the
+authoritative detailed records. There is no generic replay action.
+
 ## Float And Monetary Comparison Standard
 
 Use Odoo precision helpers for subscription quantities and money-sensitive comparisons:

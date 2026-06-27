@@ -53,6 +53,22 @@ class ResConfigSettings(models.TransientModel):
         related='company_id.subscription_scheduled_recognition_cutoff_rule',
         readonly=False,
     )
+    subscription_operation_digest_enabled = fields.Boolean(
+        related='company_id.subscription_operation_digest_enabled',
+        readonly=False,
+    )
+    subscription_operation_digest_recipient_ids = fields.Many2many(
+        related='company_id.subscription_operation_digest_recipient_ids',
+        readonly=False,
+    )
+    subscription_operation_cleanup_enabled = fields.Boolean(
+        related='company_id.subscription_operation_cleanup_enabled',
+        readonly=False,
+    )
+    subscription_operation_retention_days = fields.Integer(
+        related='company_id.subscription_operation_retention_days',
+        readonly=False,
+    )
 
     @api.constrains(
         'subscription_billing_retry_max_attempts',
@@ -67,3 +83,5 @@ class ResConfigSettings(models.TransientModel):
                 raise ValidationError(_('Billing retry batch size must be at least 1.'))
             if settings.subscription_billing_retry_delay_hours < 1:
                 raise ValidationError(_('Billing retry delay must be at least 1 hour.'))
+            if settings.subscription_operation_retention_days < 1:
+                raise ValidationError(_('Operation run retention must be at least 1 day.'))

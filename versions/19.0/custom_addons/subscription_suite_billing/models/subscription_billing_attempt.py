@@ -107,6 +107,10 @@ class SubscriptionBillingAttempt(models.Model):
 
     @api.model
     def _cron_retry_failed_billing_attempts(self):
+        operation_run = self.env['subscription.operation.run']._start_run(
+            'billing_retry',
+            company=self.env.company,
+        )
         now = fields.Datetime.now()
         max_attempts = self._get_retry_max_attempts()
         batch_size = self._get_retry_batch_size()
@@ -127,6 +131,16 @@ class SubscriptionBillingAttempt(models.Model):
                 attempt.action_retry()
                 if attempt.state == 'failed' and attempt.attempt_no >= max_attempts:
                     attempt._mark_retry_exhausted()
+        failed_attempts = attempts.filtered(lambda attempt: attempt.state == 'failed')
+        successful_attempts = attempts.filtered(lambda attempt: attempt.state == 'success')
+        operation_run._finish_run(
+            processed=len(attempts),
+            succeeded=len(successful_attempts),
+            failed=len(failed_attempts),
+            skipped=len(attempts - successful_attempts - failed_attempts),
+            errors=failed_attempts.mapped('error_message'),
+            billing_attempt_ids=attempts,
+        )
         return attempts
 
     def _prepare_failure_values(self, error):

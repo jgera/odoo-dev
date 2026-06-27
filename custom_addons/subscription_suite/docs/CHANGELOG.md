@@ -11,6 +11,8 @@
 - Deferred revenue schedules, posting, adjustments, reconciliation, and scheduled controls.
 - Security, multi-company, performance smoke, and 10K benchmark foundations.
 - Release acceptance runner and release-readiness documentation.
+- Unified operational run summaries, manager health drilldowns, opt-in failure
+  digest, and safe successful-run retention controls.
 
 ### Known Limitations
 

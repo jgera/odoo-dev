@@ -33,6 +33,7 @@ Handles advanced billing scenarios:
         'views/subscription_plan_views.xml',
         'views/subscription_plan_change_request_views.xml',
         'views/subscription_manager_operation_views.xml',
+        'views/subscription_operation_run_views.xml',
         'views/sale_order_views.xml',
         'wizard/res_config_settings_views.xml',
         'wizard/subscription_change_plan_wizard_views.xml',

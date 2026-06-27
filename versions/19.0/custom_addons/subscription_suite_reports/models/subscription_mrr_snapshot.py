@@ -170,7 +170,21 @@ class SubscriptionMrrSnapshot(models.Model):
 
     @api.model
     def _cron_generate_daily_snapshot(self):
-        return self.sudo().generate_for_date(fields.Date.context_today(self))
+        operation_run = self.env['subscription.operation.run']._start_run(
+            'mrr_snapshot',
+            company=self.env.company,
+        )
+        try:
+            snapshots = self.sudo().generate_for_date(fields.Date.context_today(self))
+        except Exception as error:
+            operation_run._finish_run(processed=1, failed=1, errors=[str(error)])
+            raise
+        operation_run._finish_run(
+            processed=len(snapshots),
+            succeeded=len(snapshots),
+            snapshot_ids=snapshots,
+        )
+        return snapshots
 
     @api.model
     def action_open_generate_wizard(self):

@@ -1060,7 +1060,7 @@ For every phase, update or create:
 
 **Objective:** Make the suite deployable for serious customers.
 
-**Current slice:** Release Readiness Foundation. Security/access hardening, performance smoke coverage, the 10K benchmark harness, and the first measured performance budget are complete. This slice adds a repeatable release acceptance runner, installation/configuration guidance, a known-limitations register, a release checklist, and a changelog before the final operational-observability and packaging passes.
+**Current slice:** Operational Observability Foundation. Release-readiness documentation and acceptance tooling are complete. This slice adds company-scoped operational run summaries, source drilldowns, manager health metrics, opt-in failure digests, and safe run-summary retention before migration tooling and final packaging.
 
 **Build items:**
 
@@ -1080,10 +1080,11 @@ For every phase, update or create:
    - Query review on SQL reports.
 
 3. Observability
-   - Billing run logs.
-   - Failed cron activities.
-   - Admin dashboard for operational errors.
-   - Optional digest email for failed billing/dunning.
+   - Billing run logs - complete and linked to unified operational runs.
+   - Failed cron activities - foundation complete for billing, payment collection, dunning, recognition, and daily MRR snapshots.
+   - Admin dashboard for operational errors - foundation complete through Manager Operations metrics and drilldowns.
+   - Optional digest email for failed billing/dunning - company-scoped foundation complete and disabled by default.
+   - Successful/skipped run retention - company-scoped cleanup foundation complete and disabled by default.
 
 4. Data operations
    - Import templates.

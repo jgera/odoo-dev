@@ -31,6 +31,9 @@
 - [ ] User, manager, accounting, and portal permissions are reviewed.
 - [ ] Multi-company visibility is verified.
 - [ ] Required crons are configured and unwanted crons remain disabled.
+- [ ] Failed and partial operational runs are reviewed and source drilldowns resolve.
+- [ ] Operations digest recipients are approved, or the digest remains disabled.
+- [ ] Run cleanup retention is approved; failed and partial summaries are preserved.
 - [ ] Email and payment credentials are tested in staging.
 - [ ] Database and filestore backup/restore are proven.
 - [ ] The 10K benchmark is reviewed against the performance budget.

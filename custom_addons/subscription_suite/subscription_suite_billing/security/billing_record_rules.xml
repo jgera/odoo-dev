@@ -11,6 +11,11 @@
             <field name="model_id" ref="model_subscription_billing_run"/>
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
+        <record id="subscription_operation_run_multi_company_rule" model="ir.rule">
+            <field name="name">Subscription Operation Run Multi-Company</field>
+            <field name="model_id" ref="model_subscription_operation_run"/>
+            <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+        </record>
         <record id="subscription_billing_attempt_multi_company_rule" model="ir.rule">
             <field name="name">Subscription Billing Attempt Multi-Company</field>
             <field name="model_id" ref="model_subscription_billing_attempt"/>

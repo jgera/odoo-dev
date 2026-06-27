@@ -373,6 +373,10 @@ class SaleOrder(models.Model):
 
     @api.model
     def _cron_generate_subscription_invoices(self):
+        operation_run = self.env['subscription.operation.run']._start_run(
+            'recurring_billing',
+            company=self.env.company,
+        )
         today = fields.Date.today()
         subscriptions = self.search([
             ('is_subscription', '=', True),
@@ -413,6 +417,15 @@ class SaleOrder(models.Model):
                     })
 
         run._finalize_from_attempts()
+        operation_run._finish_run(
+            processed=run.success_count + run.failed_count + run.skipped_count,
+            succeeded=run.success_count,
+            failed=run.failed_count,
+            skipped=run.skipped_count,
+            errors=run.attempt_ids.filtered(lambda attempt: attempt.state == 'failed').mapped('error_message'),
+            billing_run_ids=run,
+            billing_attempt_ids=run.attempt_ids,
+        )
         return run
 
     def _generate_subscription_invoice(self, billing_run=None):
@@ -1673,6 +1686,10 @@ class SaleOrder(models.Model):
 
     @api.model
     def _cron_auto_collect_payments(self):
+        operation_run = self.env['subscription.operation.run']._start_run(
+            'payment_collection',
+            company=self.env.company,
+        )
         # Scheduled job to attempt payment collection on open subscription invoices
         invoices = self.env['account.move'].search([
             ('subscription_id', '!=', False),
@@ -1681,8 +1698,27 @@ class SaleOrder(models.Model):
         ])
         # Pre-filter to only invoices whose subscription has a payment token
         invoices = invoices.filtered(lambda inv: inv.subscription_id.payment_token_id)
+        attempts = self.env['subscription.payment.attempt']
+        errors = []
         for inv in invoices:
             try:
                 inv.subscription_id._auto_collect_payment(inv)
-            except Exception:
+                attempts |= self.env['subscription.payment.attempt'].search([
+                    ('invoice_id', '=', inv.id),
+                    ('source', '=', 'cron'),
+                ], order='attempt_date desc, id desc', limit=1)
+            except Exception as error:
                 _logger.exception('Failed to auto-collect payment for invoice %s', inv.name)
+                errors.append('%s: %s' % (inv.display_name, error))
+        failed_attempts = attempts.filtered(lambda attempt: attempt.state in ['failed', 'error', 'cancelled'])
+        successful_attempts = attempts.filtered(lambda attempt: attempt.state == 'success')
+        pending_attempts = attempts.filtered(lambda attempt: attempt.state == 'pending')
+        operation_run._finish_run(
+            processed=len(invoices),
+            succeeded=len(successful_attempts),
+            failed=len(failed_attempts) + len(errors),
+            skipped=max(len(invoices) - len(attempts) - len(errors), 0) + len(pending_attempts),
+            errors=errors + failed_attempts.mapped('failure_message'),
+            payment_attempt_ids=attempts,
+        )
+        return attempts

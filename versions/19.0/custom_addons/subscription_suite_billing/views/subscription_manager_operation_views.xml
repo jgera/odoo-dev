@@ -43,6 +43,20 @@
                             <field name="failed_billing_count" widget="statinfo" string="Failed Billing"/>
                         </button>
                     </group>
+                    <group string="Operational Health">
+                        <button name="action_open_failed_operation_runs" type="object" class="oe_stat_button" icon="fa-times-circle">
+                            <field name="failed_operation_run_count" widget="statinfo" string="Failed Runs"/>
+                        </button>
+                        <button name="action_open_partial_operation_runs" type="object" class="oe_stat_button" icon="fa-exclamation-circle">
+                            <field name="partial_operation_run_count" widget="statinfo" string="Partial Runs"/>
+                        </button>
+                        <button name="action_open_recent_operation_failures" type="object" class="oe_stat_button" icon="fa-clock-o">
+                            <field name="recent_operation_failure_count" widget="statinfo" string="Recent Failures"/>
+                        </button>
+                        <button name="action_open_unresolved_operation_errors" type="object" class="oe_stat_button" icon="fa-wrench">
+                            <field name="unresolved_operation_error_count" widget="statinfo" string="Needs Review"/>
+                        </button>
+                    </group>
                     <group string="Oldest Pending Item" invisible="not oldest_operation_id">
                         <field name="oldest_operation_id"/>
                     </group>

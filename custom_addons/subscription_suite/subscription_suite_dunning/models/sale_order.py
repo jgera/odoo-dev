@@ -154,6 +154,10 @@ class SaleOrder(models.Model):
 
     @api.model
     def _cron_process_dunning(self):
+        operation_run = self.env['subscription.operation.run']._start_run(
+            'dunning',
+            company=self.env.company,
+        )
         today = fields.Date.today()
         batch_size = int(self.env['ir.config_parameter'].sudo().get_param('subscription_suite.dunning_batch_size', 100))
         subscriptions = self.search([
@@ -163,6 +167,8 @@ class SaleOrder(models.Model):
             ('subscription_plan_id.dunning_policy_id', '!=', False)
         ], limit=batch_size, order='next_dunning_date asc, id asc')
         
+        attempts = self.env['subscription.dunning.attempt']
+        errors = []
         for sub in subscriptions:
             policy = sub.subscription_plan_id.dunning_policy_id
             
@@ -180,7 +186,9 @@ class SaleOrder(models.Model):
                         
             if next_step:
                 attempt = sub._execute_dunning_step(policy, next_step)
+                attempts |= attempt
                 if attempt.state == 'failed':
+                    errors.append('%s: %s' % (sub.display_name, attempt.error_message or _('Dunning step failed.')))
                     continue
                 sub.dunning_step_id = next_step.id
                 
@@ -198,7 +206,18 @@ class SaleOrder(models.Model):
                     last_step = steps[-1]
                     if sub.dunning_step_id and sub.dunning_step_id.id == last_step.id:
                         if days_since_start >= last_step.delay_days + policy.final_action_delay:
-                            sub._execute_final_dunning_action(policy)
+                            attempts |= sub._execute_final_dunning_action(policy)
+        failed_attempts = attempts.filtered(lambda attempt: attempt.state == 'failed')
+        successful_attempts = attempts - failed_attempts
+        operation_run._finish_run(
+            processed=len(subscriptions),
+            succeeded=len(successful_attempts),
+            failed=len(failed_attempts),
+            skipped=max(len(subscriptions) - len(attempts), 0),
+            errors=errors,
+            dunning_attempt_ids=attempts,
+        )
+        return attempts
 
     def _execute_final_dunning_action(self, policy):
         self.ensure_one()
