@@ -38,6 +38,7 @@ addons/*/static/lib/
 
 # Generated local files
 scripts/pasword.txt
+subscription_suite_scale_benchmark_*.json
 *.bak
 *.tmp
 *.temp

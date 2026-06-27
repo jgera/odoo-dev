@@ -1,5 +1,12 @@
 # Demo Data Inventory
 
+## Release Readiness
+
+Release acceptance reuses the coherent demo records documented below. Fresh-install
+validation uses a disposable database created by
+`scripts/subscription_suite_release_check.py`; no release-only static XML records
+are loaded. Scale data and benchmark JSON remain local generated artifacts.
+
 This inventory tracks the demo records that make each phase visible and testable. Update it whenever demo XML, demo scripts, or manual demo setup changes.
 
 ## Current Demo Source

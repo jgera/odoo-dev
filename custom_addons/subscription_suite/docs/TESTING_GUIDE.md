@@ -2,6 +2,34 @@
 
 This guide defines the standard validation commands for Subscription Suite on Odoo 19.
 
+## Release Acceptance Runner
+
+Run non-database checks:
+
+```powershell
+python scripts\subscription_suite_release_check.py --static-only
+```
+
+Upgrade the complete suite:
+
+```powershell
+python scripts\subscription_suite_release_check.py -d odoo19_subscription_demo
+```
+
+Run the upgrade followed by all five addon test tags:
+
+```powershell
+python scripts\subscription_suite_release_check.py -d odoo19_subscription_demo --run-tests
+```
+
+Create a disposable release database and install the suite:
+
+```powershell
+python scripts\subscription_suite_release_check.py -d odoo19_subscription_release --fresh-install --confirm-recreate
+```
+
+`--fresh-install` drops and recreates the named database. Never target production.
+
 ## Float And Monetary Comparison Standard
 
 Use Odoo precision helpers for subscription quantities and money-sensitive comparisons:

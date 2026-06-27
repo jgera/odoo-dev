@@ -14,6 +14,10 @@ The suite targets **Odoo 19 only**. Every phase should update demo data, tests, 
 | [Testing Guide](TESTING_GUIDE.md) | Compile, install, upgrade, and Odoo test commands |
 | [Portal Demo Guide](PORTAL_DEMO_GUIDE.md) | How to validate customer portal subscription visibility |
 | [10K Benchmark Report](10K_BENCHMARK_REPORT.md) | Dedicated 10K benchmark evidence and current performance budget |
+| [Installation And Configuration Guide](INSTALLATION_AND_CONFIGURATION_GUIDE.md) | Deployment, setup, upgrade, and post-install checks |
+| [Release Checklist](RELEASE_CHECKLIST.md) | Release-candidate acceptance and sign-off gates |
+| [Known Limitations](KNOWN_LIMITATIONS.md) | Explicit functional and operational product boundaries |
+| [Changelog](CHANGELOG.md) | Release-facing change history |
 
 ## Phase 0 Baseline
 

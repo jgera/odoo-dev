@@ -1060,7 +1060,7 @@ For every phase, update or create:
 
 **Objective:** Make the suite deployable for serious customers.
 
-**Current slice:** 10K Benchmark Report And Performance Budget. The security/access foundation, performance index/medium-smoke foundation, and 10K benchmark harness are complete; this slice records dedicated-database benchmark evidence, fixes benchmark blockers, and sets the first measured performance budget before release packaging.
+**Current slice:** Release Readiness Foundation. Security/access hardening, performance smoke coverage, the 10K benchmark harness, and the first measured performance budget are complete. This slice adds a repeatable release acceptance runner, installation/configuration guidance, a known-limitations register, a release checklist, and a changelog before the final operational-observability and packaging passes.
 
 **Build items:**
 
@@ -1092,13 +1092,16 @@ For every phase, update or create:
    - Backfill billing attempts from existing invoices where possible.
 
 5. Packaging
+   - Installation and configuration guide - foundation done.
    - User guide.
    - Admin guide.
    - Finance guide.
-   - Portal guide.
-   - Test guide.
-   - Release checklist.
-   - Changelog.
+   - Portal guide - demo guide foundation exists.
+   - Test guide - broad development and validation guide exists.
+   - Release checklist - foundation done.
+   - Known-limitations register - foundation done.
+   - Changelog - foundation done.
+   - Repeatable release acceptance runner - foundation done.
    - Odoo Apps description assets.
 
 **Demo data updates:**
