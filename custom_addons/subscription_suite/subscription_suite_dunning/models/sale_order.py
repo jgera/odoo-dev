@@ -122,10 +122,11 @@ class SaleOrder(models.Model):
         try:
             mail_id = False
             if step.email_template_id:
+                force_send = not self.env.context.get('subscription_suite_benchmark_queue_dunning_mail')
                 mail_id = step.email_template_id.with_context(
                     dunning_recovery_url=attempt.recovery_url,
                     dunning_attempt_id=attempt.id,
-                ).send_mail(self.id, force_send=True)
+                ).send_mail(self.id, force_send=force_send)
                 attempt.write({'mail_mail_id': mail_id or False, 'state': 'sent'})
 
             values = {

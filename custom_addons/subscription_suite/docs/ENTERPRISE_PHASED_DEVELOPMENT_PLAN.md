@@ -1060,7 +1060,7 @@ For every phase, update or create:
 
 **Objective:** Make the suite deployable for serious customers.
 
-**Current slice:** 10K Scale Benchmark Harness Foundation. The security/access foundation and performance index/medium-smoke foundation are complete; this slice adds an opt-in large-data generator and repeatable benchmark harness for billing, dunning, deferred revenue recognition selection, and generated analytics before release packaging.
+**Current slice:** 10K Benchmark Report And Performance Budget. The security/access foundation, performance index/medium-smoke foundation, and 10K benchmark harness are complete; this slice records dedicated-database benchmark evidence, fixes benchmark blockers, and sets the first measured performance budget before release packaging.
 
 **Build items:**
 
@@ -1076,7 +1076,7 @@ For every phase, update or create:
    - Batch size configuration - billing already supported configurable batches; dunning now supports `subscription_suite.dunning_batch_size` for due work selection.
    - Medium-scale operational smoke tests - foundation added for billing cron, recognition preview selection, dunning cron, and generated analytics stack idempotency.
    - Large demo data generator - opt-in developer harness added in `scripts/subscription_suite_scale_benchmark.py`; no large records are loaded during normal demo install.
-   - 10K subscription cron benchmark - harness added for repeatable local measurement; recorded timing budget still needs to be captured on a release-candidate database.
+   - 10K subscription cron benchmark - dedicated database benchmark recorded in `10K_BENCHMARK_REPORT.md`; release-candidate hardware should be measured again before external publication.
    - Query review on SQL reports.
 
 3. Observability
@@ -1111,6 +1111,7 @@ For every phase, update or create:
 
 - Finalize user, admin, finance, portal, developer, and testing guides.
 - Add release checklist.
+- Maintain the 10K benchmark report and refresh it before release-candidate publication.
 - Add migration notes.
 - Add troubleshooting guide.
 - Add Odoo Apps listing content and screenshots checklist.
@@ -1119,7 +1120,7 @@ For every phase, update or create:
 
 - A fresh production-style database can install and configure the suite using docs.
 - All high-risk access rules are tested before release: subscription user, subscription manager, accounting read-only, accounting manager, portal requester, and multi-company cases.
-- 10K subscription benchmark is recorded.
+- 10K subscription benchmark is recorded in `10K_BENCHMARK_REPORT.md`.
 - Release notes list known limitations honestly.
 - Demo data tells a complete story: trial, active, paused, past due, cancelled, renewed, upsold, recovered, churned.
 

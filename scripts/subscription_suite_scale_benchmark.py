@@ -479,7 +479,9 @@ class SubscriptionSuiteScaleHarness:
 
     def _benchmark_dunning_cron(self):
         before = self.env["subscription.dunning.attempt"].sudo().search_count([])
-        self.env["sale.order"].sudo()._cron_process_dunning()
+        self.env["sale.order"].sudo().with_context(
+            subscription_suite_benchmark_queue_dunning_mail=True
+        )._cron_process_dunning()
         after = self.env["subscription.dunning.attempt"].sudo().search_count([])
         return {"new_attempts": after - before}
 

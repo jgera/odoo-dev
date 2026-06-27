@@ -143,7 +143,7 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | Recognition posting runs | Generated | Enable scheduled recognition posting in subscription settings, run scheduled action **Subscription: Post Scheduled Revenue Recognition**, then review **Subscriptions -> Billing -> Recognition Posting Runs** for created moves, recognized lines, skipped schedules, and errors; static XML is intentionally avoided |
 | Security and access audit | Test-only | Covered by Phase 8 automated tests using subscription user, subscription manager, accounting read-only, accounting manager, portal requester, and multi-company scenarios; no static demo XML is loaded for security users |
 | Performance scale smoke | Generated/Test-only | Covered by Phase 8 medium-scale automated tests for billing cron, dunning cron, recognition preview selection, and generated analytics idempotency; no static XML is loaded |
-| 10K scale benchmark data | Generated/Script-only | Use `scripts/subscription_suite_scale_benchmark.py` with an explicit prefix and `--mode generate` or `--mode all`; default `plan` mode creates no records, and generated records are intentionally not part of demo XML |
+| 10K scale benchmark data | Generated/Script-only | Use `scripts/subscription_suite_scale_benchmark.py` with an explicit prefix and `--mode generate` or `--mode all`; official 10K numbers use the dedicated `odoo19_subscription_benchmark` database, generated records are intentionally not part of demo XML, and the current measured budget is recorded in `10K_BENCHMARK_REPORT.md` |
 
 ## Demo Expansion Rules
 

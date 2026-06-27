@@ -13,6 +13,7 @@ The suite targets **Odoo 19 only**. Every phase should update demo data, tests, 
 | [Demo Data Inventory](DEMO_DATA_INVENTORY.md) | Current demo records and the required demo expansion path |
 | [Testing Guide](TESTING_GUIDE.md) | Compile, install, upgrade, and Odoo test commands |
 | [Portal Demo Guide](PORTAL_DEMO_GUIDE.md) | How to validate customer portal subscription visibility |
+| [10K Benchmark Report](10K_BENCHMARK_REPORT.md) | Dedicated 10K benchmark evidence and current performance budget |
 
 ## Phase 0 Baseline
 

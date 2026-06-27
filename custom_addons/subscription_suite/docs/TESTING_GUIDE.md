@@ -1464,4 +1464,35 @@ Expected benchmark checks:
 
 Implementation note:
 
-- This is the benchmark harness, not the final release benchmark report. Before release, run the 10K command on a clean release-candidate database, record timings and database size, then update the release notes with the measured limits and hardware context.
+- This is the benchmark harness. The first official local 10K report is recorded in `10K_BENCHMARK_REPORT.md`; refresh it on release-candidate hardware before external publication.
+
+## 55. 10K Benchmark Report And Performance Budget
+
+Purpose: record an honest 10K benchmark envelope on a dedicated database before release packaging.
+
+Official local benchmark command sequence:
+
+```powershell
+versions\19.0\venv\Scripts\python.exe scripts\recreate_odoo_database.py odoo19_subscription_benchmark
+python scripts\dev_odoo.py --odoo-version 19.0 --port 8079 --no-browser --no-cron -- -d odoo19_subscription_benchmark -i subscription_suite,subscription_suite_billing,subscription_suite_dunning,subscription_suite_portal,subscription_suite_reports --stop-after-init
+
+python scripts\subscription_suite_scale_benchmark.py --odoo-version 19.0 -d odoo19_subscription_benchmark --mode plan --subscriptions 10000 --prefix SS-PERF-10K
+python scripts\subscription_suite_scale_benchmark.py --odoo-version 19.0 -d odoo19_subscription_benchmark --mode generate --subscriptions 10000 --auxiliary-count 250 --prefix SS-PERF-10K
+python scripts\subscription_suite_scale_benchmark.py --odoo-version 19.0 -d odoo19_subscription_benchmark --mode benchmark --prefix SS-PERF-10K --billing-batch-size 250 --dunning-batch-size 250 --output subscription_suite_scale_benchmark_10k.json
+python scripts\subscription_suite_scale_benchmark.py --odoo-version 19.0 -d odoo19_subscription_benchmark --mode benchmark --prefix SS-PERF-10K --billing-batch-size 250 --dunning-batch-size 250 --output subscription_suite_scale_benchmark_10k_rerun.json
+```
+
+Recorded local result:
+
+- First run: billing cron 651.621s for 3,000 attempts, dunning cron 8.721s for 250 attempts, recognition preview 0.006s for 50 eligible lines, analytics chain 52.103s.
+- Rerun: billing cron 0.372s with 0 new attempts, dunning cron 8.839s for the next 250 due attempts, recognition preview 0.008s, analytics chain 50.881s.
+- Dunning rerun should not duplicate a subscription/policy-step pair. A second run may process the next due batch because `subscription_suite.dunning_batch_size` is a hard due-work limit.
+- Benchmark dunning queues email through an explicit benchmark context; production dunning still sends normally.
+
+Cleanup guidance:
+
+```powershell
+versions\19.0\venv\Scripts\python.exe scripts\recreate_odoo_database.py odoo19_subscription_benchmark
+```
+
+Review `10K_BENCHMARK_REPORT.md` after every official benchmark run and keep raw JSON artifacts local unless they are intentionally small and useful enough to version.
