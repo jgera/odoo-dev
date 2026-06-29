@@ -13,6 +13,10 @@ The portal currently supports:
 - MRR, recurring amount, next invoice date, billing period, payment method, and auto-pay display.
 - Recurring subscription items.
 - Subscription invoice history when invoices are linked to the subscription.
+- Payment recovery banner for eligible unpaid or partial subscription invoices.
+- Saved payment-token selection for customer-owned tokens.
+- Payment method validation return through Odoo payment validation.
+- Payment retry for eligible recovery invoices when a saved method is available.
 - Scheduled plan change and scheduled cancellation visibility.
 - Plan change request history.
 - Pause/resume lifecycle request history.
@@ -121,7 +125,7 @@ Expected result:
 
 ## Current Known Gaps
 
-- Portal update-payment flow is not implemented.
-- Portal retry-payment flow is not implemented.
-- Portal route tests are currently basic and should become `HttpCase` tests once the local authenticated HTTP test flow is stable.
+- Portal seat, add-on, usage, and promotion self-service are not implemented.
+- Provider-specific payment UX depends on configured Odoo payment providers.
+- Portal route tests are currently deterministic helper/model coverage and should become `HttpCase` tests once the local authenticated HTTP test flow is stable.
 - Portal demo depends on creating/granting a portal user manually.

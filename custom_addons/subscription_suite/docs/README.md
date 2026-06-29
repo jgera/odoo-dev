@@ -15,10 +15,18 @@ The suite targets **Odoo 19 only**. Every phase should update demo data, tests, 
 | [Portal Demo Guide](PORTAL_DEMO_GUIDE.md) | How to validate customer portal subscription visibility |
 | [10K Benchmark Report](10K_BENCHMARK_REPORT.md) | Dedicated 10K benchmark evidence and current performance budget |
 | [Installation And Configuration Guide](INSTALLATION_AND_CONFIGURATION_GUIDE.md) | Deployment, setup, upgrade, and post-install checks |
+| [User Guide](USER_GUIDE.md) | Daily subscription, billing, dunning, analytics, portal-support, operations, and migration workflows |
+| [Admin Guide](ADMIN_GUIDE.md) | Users, companies, scheduled actions, observability, backups, and release validation |
+| [Finance Guide](FINANCE_GUIDE.md) | Deferred revenue setup, schedules, preview, posting, adjustments, reconciliation, and finance limits |
+| [Portal Guide](PORTAL_GUIDE.md) | Customer portal access, subscription visibility, lifecycle requests, payment recovery, and ownership checks |
+| [Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md) | Install, upgrade, portal, payment, dunning, analytics, finance, migration, and operations troubleshooting |
 | [Release Checklist](RELEASE_CHECKLIST.md) | Release-candidate acceptance and sign-off gates |
 | [Known Limitations](KNOWN_LIMITATIONS.md) | Explicit functional and operational product boundaries |
 | [Changelog](CHANGELOG.md) | Release-facing change history |
 | [Migration And Data Operations Runbook](MIGRATION_RUNBOOK.md) | CSV preparation, validation, apply, backfill, correction, and recovery workflow |
+| [Odoo Apps Listing](ODOO_APPS_LISTING.md) | App-store listing copy, support statement, limitations summary, and screenshot plan |
+| [Screenshots Checklist](SCREENSHOTS_CHECKLIST.md) | Required release-candidate screenshot coverage |
+| [Release Notes Template](RELEASE_NOTES_TEMPLATE.md) | Versioned release notes structure |
 
 ## Phase 0 Baseline
 

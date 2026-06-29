@@ -1060,7 +1060,7 @@ For every phase, update or create:
 
 **Objective:** Make the suite deployable for serious customers.
 
-**Current slice:** Migration And Data Operations Foundation. This slice adds manager-only UTF-8 CSV validation/import, persistent row-level audit results, stable import references, payment-token assignment safety, and idempotent MRR movement and billing-attempt backfills. Apply mode is row-isolated and requires a matching prior validation hash.
+**Current slice:** Release Candidate Documentation And Packaging Foundation. This slice completes the first release-candidate user, admin, finance, portal, troubleshooting, Odoo Apps listing, screenshot, and release-notes documentation package so the suite can be reviewed without relying on chat history. No runtime behavior changes are included.
 
 **Build items:**
 
@@ -1096,16 +1096,17 @@ For every phase, update or create:
 
 5. Packaging
    - Installation and configuration guide - foundation done.
-   - User guide.
-   - Admin guide.
-   - Finance guide.
-   - Portal guide - demo guide foundation exists.
+   - User guide - foundation done.
+   - Admin guide - foundation done.
+   - Finance guide - foundation done.
+   - Portal guide - foundation done; separate portal demo guide remains available for walkthrough validation.
    - Test guide - broad development and validation guide exists.
    - Release checklist - foundation done.
    - Known-limitations register - foundation done.
    - Changelog - foundation done.
    - Repeatable release acceptance runner - foundation done.
-   - Odoo Apps description assets.
+   - Troubleshooting guide - foundation done.
+   - Odoo Apps description assets - listing draft, screenshot checklist, and release notes template added.
 
 **Demo data updates:**
 
@@ -1115,7 +1116,7 @@ For every phase, update or create:
 
 **Documentation updates:**
 
-- Finalize user, admin, finance, portal, developer, and testing guides.
+- Maintain user, admin, finance, portal, troubleshooting, developer, and testing guides.
 - Add release checklist.
 - Maintain the 10K benchmark report and refresh it before release-candidate publication.
 - Add migration notes.

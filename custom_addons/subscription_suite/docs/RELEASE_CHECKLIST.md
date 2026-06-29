@@ -49,10 +49,13 @@
 
 ## Packaging
 
-- [ ] Installation/configuration and testing guidance is current.
-- [ ] Odoo Apps description, screenshots, icon, license, author, and support details are reviewed.
+- [ ] Installation/configuration, user, admin, finance, portal, troubleshooting, migration, and testing guidance is current.
+- [ ] Odoo Apps listing copy is reviewed and does not overclaim unsupported features.
+- [ ] Screenshot checklist is complete or every omitted screenshot has an approved reason.
+- [ ] Icon, license, author, website, pricing, and support details are reviewed.
+- [ ] Release notes use the release notes template and state upgrade steps.
 - [ ] Release commit and tag are created.
-- [ ] Release notes state upgrade steps and known limitations.
+- [ ] Release notes state known limitations.
 
 ## Sign-Off
 

@@ -11,6 +11,8 @@
 - Portal lifecycle operations use existing approval/request flows.
 - Stable live `HttpCase` coverage for every portal route remains incomplete.
 - Portal seat, add-on, usage, and promotion self-service are not included.
+- Portal payment-method validation and retry use Odoo payment providers and
+  transactions; provider-specific portal behavior depends on provider setup.
 
 ## Pricing And Usage
 

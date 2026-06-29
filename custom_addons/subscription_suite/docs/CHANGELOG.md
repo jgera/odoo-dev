@@ -16,6 +16,8 @@
 - Audited UTF-8 CSV migration for plans, subscriptions, recurring lines, tiers,
   payment-token assignments, and usage events, plus idempotent MRR and
   billing-attempt backfills.
+- Release-candidate user, admin, finance, portal, troubleshooting, Odoo Apps
+  listing, screenshot, and release-notes documentation package.
 
 ### Known Limitations
 
