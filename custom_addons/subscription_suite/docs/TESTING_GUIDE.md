@@ -59,6 +59,44 @@ Operational runs are summaries. Billing attempts, payment attempts, dunning
 attempts, recognition runs, accounting moves, and generated snapshots remain the
 authoritative detailed records. There is no generic replay action.
 
+## Migration And Data Operations
+
+Follow [Migration And Data Operations Runbook](MIGRATION_RUNBOOK.md). Back up and
+test restoration of both the database and filestore before apply mode.
+
+Manual validation:
+
+1. Open **Subscriptions -> Configuration -> Data Operations** as a Subscription
+   Manager.
+2. Upload one UTF-8 template from `docs/import_templates` in **Validate** mode.
+3. Confirm validation creates no business records and review every warning/failure.
+4. Select **Apply**, reference that validation, and upload the exact same file.
+5. Confirm the company, template, and SHA-256 gate rejects a changed file.
+6. Rerun the validated file and verify supported records update without duplicates.
+7. Download the result CSV and verify row number, stable reference, outcome,
+   target record, and diagnostic message. Raw source rows must not be stored.
+8. Verify another customer's payment token and cross-company references fail.
+
+Backfill validation:
+
+- Validate MRR movement backfill, then apply it. Confirm one `new` movement is
+  created only for eligible live subscriptions with no prior history.
+- Validate billing-attempt backfill for a narrow invoice-date range, then apply
+  it. Confirm eligible posted invoices get one successful attempt and invoice or
+  payment state is unchanged.
+- Rerun both backfills and confirm the deterministic keys prevent duplicates.
+
+Focused automated checks:
+
+```powershell
+python scripts\dev_odoo.py --odoo-version 19.0 --no-browser --no-cron -- -d odoo19_subscription_demo -u subscription_suite_billing --stop-after-init --test-enable --test-tags /subscription_suite_billing:TestSubscriptionDataOperations
+python scripts\dev_odoo.py --odoo-version 19.0 --no-browser --no-cron -- -d odoo19_subscription_demo -u subscription_suite --stop-after-init --test-enable --test-tags /subscription_suite
+python scripts\dev_odoo.py --odoo-version 19.0 --no-browser --no-cron -- -d odoo19_subscription_demo -u subscription_suite_billing --stop-after-init --test-enable --test-tags /subscription_suite_billing
+```
+
+The CSV framework does not import accounting documents or create payment tokens.
+Apply is row-isolated, not file-atomic, and automated rollback is not available.
+
 ## Float And Monetary Comparison Standard
 
 Use Odoo precision helpers for subscription quantities and money-sensitive comparisons:

@@ -9,6 +9,7 @@ class SubscriptionPlanLine(models.Model):
 
     plan_id = fields.Many2one('subscription.plan', string='Plan', required=True, ondelete='cascade')
     sequence = fields.Integer(string='Sequence', default=10)
+    import_reference = fields.Char(string='Import Reference', copy=False, index=True)
     subscription_component_type = fields.Selection([
         ('base', 'Base'),
         ('seat', 'Seat'),
@@ -37,6 +38,11 @@ class SubscriptionPlanLine(models.Model):
     
     currency_id = fields.Many2one('res.currency', related='plan_id.currency_id')
     company_id = fields.Many2one('res.company', related='plan_id.company_id')
+
+    _plan_line_import_reference_unique = models.Constraint(
+        'UNIQUE(plan_id, import_reference)',
+        'Plan line import reference must be unique per plan.',
+    )
 
     @api.onchange('product_id')
     def _onchange_product_id(self):

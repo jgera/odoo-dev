@@ -13,6 +13,9 @@
 - Release acceptance runner and release-readiness documentation.
 - Unified operational run summaries, manager health drilldowns, opt-in failure
   digest, and safe successful-run retention controls.
+- Audited UTF-8 CSV migration for plans, subscriptions, recurring lines, tiers,
+  payment-token assignments, and usage events, plus idempotent MRR and
+  billing-attempt backfills.
 
 ### Known Limitations
 

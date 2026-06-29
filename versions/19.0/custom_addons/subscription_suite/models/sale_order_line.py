@@ -6,6 +6,11 @@ class SaleOrderLine(models.Model):
     _inherit = 'sale.order.line'
 
     is_recurring = fields.Boolean(string='Is Recurring', default=False)
+    subscription_import_reference = fields.Char(
+        string='Subscription Line Import Reference',
+        copy=False,
+        index=True,
+    )
     subscription_component_type = fields.Selection([
         ('base', 'Base'),
         ('seat', 'Seat'),
@@ -43,6 +48,11 @@ class SaleOrderLine(models.Model):
         ('active', 'Active'),
         ('expired', 'Expired'),
     ], string='Promo Discount Status', default='inactive', copy=False, readonly=True)
+
+    _subscription_line_import_reference_unique = models.Constraint(
+        'UNIQUE(order_id, subscription_import_reference)',
+        'Subscription line import reference must be unique per order.',
+    )
 
     @api.constrains(
         'subscription_pricing_model',

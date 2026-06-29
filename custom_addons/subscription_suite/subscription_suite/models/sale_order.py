@@ -21,6 +21,11 @@ class SaleOrder(models.Model):
     
     subscription_plan_id = fields.Many2one('subscription.plan', string='Subscription Plan', index=True)
     subscription_code = fields.Char(string='Subscription Code', copy=False, readonly=True)
+    subscription_import_reference = fields.Char(
+        string='Subscription Import Reference',
+        copy=False,
+        index=True,
+    )
     subscription_quote_type = fields.Selection([
         ('renewal', 'Renewal'),
         ('upsell', 'Upsell'),
@@ -100,6 +105,11 @@ class SaleOrder(models.Model):
     days_since_start = fields.Integer(string='Days Since Start', compute='_compute_days_since_start')
     current_period_start = fields.Date(string='Current Period Start', compute='_compute_current_period')
     current_period_end = fields.Date(string='Current Period End', compute='_compute_current_period')
+
+    _subscription_import_reference_unique = models.Constraint(
+        'UNIQUE(subscription_import_reference, company_id)',
+        'Subscription import reference must be unique per company.',
+    )
 
     def _compute_subscription_quote_count(self):
         grouped = self.env['sale.order']._read_group(

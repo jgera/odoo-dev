@@ -1,0 +1,3 @@
+subscription_reference,line_reference,sequence,min_quantity,max_quantity,price_unit
+LEGACY-SUB-0001,SEATS,10,1,10,12.00
+LEGACY-SUB-0001,SEATS,20,10,,10.00

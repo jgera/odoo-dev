@@ -1,0 +1,2 @@
+subscription_reference,line_reference,product_default_code,quantity,price_unit,discount,is_recurring,component_type,pricing_model
+LEGACY-SUB-0001,BASE,SUB-BASE,1,49.00,0,true,base,flat

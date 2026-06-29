@@ -1,0 +1,2 @@
+plan_code,line_reference,product_default_code,component_type,quantity,price_unit,discount,promo_discount,promo_start_date,promo_end_date,pricing_model
+BASIC-MONTHLY,BASE,SUB-BASE,base,1,49.00,0,0,,,flat

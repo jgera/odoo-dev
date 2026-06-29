@@ -1,0 +1,3 @@
+plan_code,line_reference,sequence,min_quantity,max_quantity,price_unit
+BASIC-MONTHLY,SEATS,10,1,10,12.00
+BASIC-MONTHLY,SEATS,20,10,,10.00

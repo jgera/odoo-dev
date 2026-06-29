@@ -1060,7 +1060,7 @@ For every phase, update or create:
 
 **Objective:** Make the suite deployable for serious customers.
 
-**Current slice:** Operational Observability Foundation. Release-readiness documentation and acceptance tooling are complete. This slice adds company-scoped operational run summaries, source drilldowns, manager health metrics, opt-in failure digests, and safe run-summary retention before migration tooling and final packaging.
+**Current slice:** Migration And Data Operations Foundation. This slice adds manager-only UTF-8 CSV validation/import, persistent row-level audit results, stable import references, payment-token assignment safety, and idempotent MRR movement and billing-attempt backfills. Apply mode is row-isolated and requires a matching prior validation hash.
 
 **Build items:**
 
@@ -1087,10 +1087,12 @@ For every phase, update or create:
    - Successful/skipped run retention - company-scoped cleanup foundation complete and disabled by default.
 
 4. Data operations
-   - Import templates.
-   - Migration scripts.
-   - Backfill MRR movement from existing subscriptions.
-   - Backfill billing attempts from existing invoices where possible.
+   - UTF-8 CSV templates for plans, lines, tiers, subscriptions, token assignments, and usage events - foundation complete.
+   - Persistent validation/apply audit records with downloadable diagnostics - foundation complete.
+   - Stable, company-scoped import references and idempotent reruns - foundation complete.
+   - MRR movement backfill from unambiguous live subscriptions - foundation complete.
+   - Billing-attempt backfill from eligible posted subscription invoices - foundation complete.
+   - Arbitrary schema mapping, accounting-document import, and automated rollback - deferred.
 
 5. Packaging
    - Installation and configuration guide - foundation done.

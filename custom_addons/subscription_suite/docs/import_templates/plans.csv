@@ -1,0 +1,2 @@
+code,name,billing_interval_count,billing_interval_unit,trial_days,currency,auto_renew,allow_renewal_quote,allow_upsell_quote,allow_past_due_renewal_quote,allow_past_due_upsell_quote,cancellation_policy,pause_allowed,max_pause_days,min_commitment_periods
+BASIC-MONTHLY,Basic Monthly,1,month,14,USD,true,true,true,true,true,end_of_period,true,30,0

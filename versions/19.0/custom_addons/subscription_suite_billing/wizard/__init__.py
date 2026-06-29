@@ -7,3 +7,4 @@ from . import subscription_deferred_revenue_wizard
 from . import subscription_deferred_revenue_preview_wizard
 from . import subscription_deferred_revenue_post_wizard
 from . import subscription_deferred_revenue_reconciliation_wizard
+from . import subscription_data_operation_wizard

@@ -18,6 +18,7 @@ The suite targets **Odoo 19 only**. Every phase should update demo data, tests, 
 | [Release Checklist](RELEASE_CHECKLIST.md) | Release-candidate acceptance and sign-off gates |
 | [Known Limitations](KNOWN_LIMITATIONS.md) | Explicit functional and operational product boundaries |
 | [Changelog](CHANGELOG.md) | Release-facing change history |
+| [Migration And Data Operations Runbook](MIGRATION_RUNBOOK.md) | CSV preparation, validation, apply, backfill, correction, and recovery workflow |
 
 ## Phase 0 Baseline
 

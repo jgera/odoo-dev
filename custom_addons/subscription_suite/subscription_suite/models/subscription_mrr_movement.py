@@ -49,3 +49,9 @@ class SubscriptionMrrMovement(models.Model):
     new_mrr = fields.Monetary(string='New MRR', currency_field='currency_id', readonly=True)
     amount = fields.Monetary(string='Movement Amount', currency_field='currency_id', readonly=True)
     currency_id = fields.Many2one(related='subscription_id.currency_id', string='Currency', store=True, readonly=True)
+    backfill_key = fields.Char(copy=False, readonly=True, index=True)
+
+    _backfill_key_unique = models.Constraint(
+        'UNIQUE(backfill_key)',
+        'MRR movement backfill key must be unique.',
+    )

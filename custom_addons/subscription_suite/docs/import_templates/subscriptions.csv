@@ -1,0 +1,2 @@
+external_reference,partner_ref,plan_code,state,subscription_start_date,trial_start_date,trial_end_date,subscription_end_date,next_invoice_date,last_invoice_date,billing_interval_count,billing_interval_unit,salesperson_login,pricelist_name,currency
+LEGACY-SUB-0001,CUST-0001,BASIC-MONTHLY,active,2026-01-01,,,,2026-07-01,2026-06-01,1,month,admin,Default Pricelist,USD

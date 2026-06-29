@@ -38,6 +38,15 @@
 - [ ] Database and filestore backup/restore are proven.
 - [ ] The 10K benchmark is reviewed against the performance budget.
 
+## Migration And Data Operations
+
+- [ ] Database and filestore backups are verified before apply mode.
+- [ ] Every CSV was validated and apply used the same company, template, and file hash.
+- [ ] Import result CSVs and operation counts were reviewed and retained.
+- [ ] Cross-company references and payment-token ownership failures were resolved.
+- [ ] MRR and billing-attempt backfills were validated before apply.
+- [ ] Imported records were spot-checked by stable external reference.
+
 ## Packaging
 
 - [ ] Installation/configuration and testing guidance is current.

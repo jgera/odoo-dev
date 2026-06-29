@@ -35,7 +35,12 @@
 ## Operations
 
 - The 10K benchmark is a local measurement, not a universal production SLA.
-- Migration/backfill tooling for arbitrary third-party datasets remains limited.
+- Migration supports documented UTF-8 CSV schemas only; Excel ingestion and
+  arbitrary third-party schema mapping are not included.
+- CSV apply is row-isolated rather than file-atomic, blank updates do not clear
+  fields, and automated rollback is not included.
+- Migration does not create payment tokens or import invoices, payments,
+  accounting entries, historical churn, or currency-converted values.
 - Operational monitoring summarizes supported scheduled jobs but does not provide
   external alerting, raw traceback storage, queue-worker telemetry, or generic replay.
 - Operations digest and successful-run cleanup are opt-in and their Odoo scheduled
