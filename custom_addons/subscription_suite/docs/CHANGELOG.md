@@ -18,6 +18,8 @@
   billing-attempt backfills.
 - Release-candidate user, admin, finance, portal, troubleshooting, Odoo Apps
   listing, screenshot, and release-notes documentation package.
+- RC acceptance runner, evidence runbook, and Odoo Apps listing HTML/screenshot
+  package scaffold.
 
 ### Known Limitations
 

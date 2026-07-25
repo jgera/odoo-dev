@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Subscription Suite for Odoo 19 Community</title>
+    <style>
+      body {
+        color: #1f2933;
+        font-family: Arial, sans-serif;
+        line-height: 1.55;
+        margin: 0;
+      }
+      .wrap {
+        margin: 0 auto;
+        max-width: 960px;
+        padding: 40px 24px;
+      }
+      h1, h2 {
+        color: #2f234f;
+      }
+      .lead {
+        font-size: 18px;
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+      .card {
+        border: 1px solid #d9d4e8;
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .note {
+        background: #f8f7fb;
+        border-left: 4px solid #6f5aa7;
+        padding: 12px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Subscription Suite for Odoo 19 Community</h1>
+      <p class="lead">
+        Enterprise-grade subscription lifecycle, recurring billing, dunning,
+        portal recovery, analytics, deferred revenue, observability, and
+        migration tools for Odoo 19 Community.
+      </p>
+
+      <h2>Included Capabilities</h2>
+      <div class="grid">
+        <section class="card">
+          <h3>Subscription Operations</h3>
+          <p>Plans, recurring orders, renewal and upsell quotes, seats,
+          add-ons, tiered pricing, usage metering, and time-limited discounts.</p>
+        </section>
+        <section class="card">
+          <h3>Billing Recovery</h3>
+          <p>Idempotent recurring billing, payment attempts, backup-token
+          fallback, dunning policies, and manager recovery drilldowns.</p>
+        </section>
+        <section class="card">
+          <h3>Analytics</h3>
+          <p>Generated MRR, retention, forecast, ARPU, LTV, churn, top-plan,
+          at-risk, trial-conversion, and payment-recovery reports.</p>
+        </section>
+        <section class="card">
+          <h3>Finance</h3>
+          <p>Deferred revenue schedules, recognition preview, journal posting,
+          credit-note adjustments, reconciliation, and scheduled posting controls.</p>
+        </section>
+        <section class="card">
+          <h3>Operations</h3>
+          <p>Unified operational runs, optional failure digest, retention cleanup,
+          and audited CSV migration/backfill workflows.</p>
+        </section>
+      </div>
+
+      <h2>Requirements</h2>
+      <ul>
+        <li>Odoo 19 Community.</li>
+        <li>Correct users, companies, journals, accounts, payment providers,
+        products, taxes, and scheduled actions before production use.</li>
+        <li>Accounting policy review before enabling revenue recognition in production.</li>
+      </ul>
+
+      <div class="note">
+        Known limitations include no provider-specific webhooks, no normalized
+        multi-currency analytics, no public usage ingestion API, no portal
+        seat/add-on/usage/promotion self-service, and no automated migration rollback.
+      </div>
+    </main>
+  </body>
+</html>

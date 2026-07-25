@@ -3,6 +3,21 @@
 Use a prepared demo database with representative customers and subscriptions.
 Avoid credentials, local filesystem paths, and unrelated browser chrome.
 
+Official listing screenshots should be captured from the RC database, reviewed,
+then placed under `subscription_suite/static/description/screenshots`. Keep the
+full evidence set local or in the release evidence folder only when every image
+is safe to commit.
+
+Recommended capture rules:
+
+- Use a clean browser window around 1440x900.
+- Disable debug overlays unless the screenshot is explicitly for an admin guide.
+- Do not show passwords, tokens, local paths, database manager screens, or
+  unrelated browser tabs.
+- Prefer real demo records over empty configuration pages.
+- Record every omitted checklist item with an approved reason in the RC evidence
+  report.
+
 ## Core Subscription Screens
 
 - Subscriptions list with active, trial, paused, past-due, cancelled, and
@@ -79,4 +94,3 @@ Avoid credentials, local filesystem paths, and unrelated browser chrome.
 - Subscription settings showing company-scoped recognition configuration.
 - Scheduled actions review screen for required crons.
 - User/group setup for subscription manager and accounting read-only review.
-

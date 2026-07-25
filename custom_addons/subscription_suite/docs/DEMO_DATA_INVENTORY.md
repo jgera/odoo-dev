@@ -157,6 +157,8 @@ The current demo data is loaded by the core `subscription_suite` manifest and bi
 | Performance scale smoke | Generated/Test-only | Covered by Phase 8 medium-scale automated tests for billing cron, dunning cron, recognition preview selection, and generated analytics idempotency; no static XML is loaded |
 | 10K scale benchmark data | Generated/Script-only | Use `scripts/subscription_suite_scale_benchmark.py` with an explicit prefix and `--mode generate` or `--mode all`; official 10K numbers use the dedicated `odoo19_subscription_benchmark` database, generated records are intentionally not part of demo XML, and the current measured budget is recorded in `10K_BENCHMARK_REPORT.md` |
 | Migration and data operations | Generated/Manager-only | Use the UTF-8 files under `docs/import_templates`, validate before apply, and review persistent operation lines/result CSVs; migration records are intentionally not loaded as static demo XML |
+| RC acceptance evidence | Generated/Script-only | Use `scripts/subscription_suite_rc_acceptance.py` against `odoo19_subscription_rc`; evidence reports are generated from release checks and manual gate status, not static XML |
+| Odoo Apps screenshots | Manual/Reviewed | Capture from the RC database after automated checks pass, review every image for secrets/local paths/debug artifacts, then copy approved listing images to `subscription_suite/static/description/screenshots` |
 
 ## Demo Expansion Rules
 

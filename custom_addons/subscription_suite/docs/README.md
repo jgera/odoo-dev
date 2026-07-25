@@ -21,6 +21,7 @@ The suite targets **Odoo 19 only**. Every phase should update demo data, tests, 
 | [Portal Guide](PORTAL_GUIDE.md) | Customer portal access, subscription visibility, lifecycle requests, payment recovery, and ownership checks |
 | [Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md) | Install, upgrade, portal, payment, dunning, analytics, finance, migration, and operations troubleshooting |
 | [Release Checklist](RELEASE_CHECKLIST.md) | Release-candidate acceptance and sign-off gates |
+| [RC Acceptance Runbook](RC_ACCEPTANCE_RUNBOOK.md) | Disposable release-candidate database, evidence, portal smoke, screenshot, and manual gate workflow |
 | [Known Limitations](KNOWN_LIMITATIONS.md) | Explicit functional and operational product boundaries |
 | [Changelog](CHANGELOG.md) | Release-facing change history |
 | [Migration And Data Operations Runbook](MIGRATION_RUNBOOK.md) | CSV preparation, validation, apply, backfill, correction, and recovery workflow |

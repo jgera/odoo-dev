@@ -1591,3 +1591,54 @@ versions\19.0\venv\Scripts\python.exe scripts\recreate_odoo_database.py odoo19_s
 ```
 
 Review `10K_BENCHMARK_REPORT.md` after every official benchmark run and keep raw JSON artifacts local unless they are intentionally small and useful enough to version.
+
+## 56. Release Candidate Acceptance And Screenshot Packaging
+
+Purpose: create repeatable release-candidate evidence before publication or
+handoff.
+
+Fast static rehearsal:
+
+```powershell
+python scripts\subscription_suite_rc_acceptance.py -d odoo19_subscription_rc --dry-run --portal-smoke
+```
+
+Official RC evidence run on a disposable database:
+
+```powershell
+python scripts\subscription_suite_rc_acceptance.py -d odoo19_subscription_rc --fresh-install --confirm-recreate --run-tests --portal-smoke
+```
+
+The runner writes JSON and Markdown reports under:
+
+```text
+custom_addons/subscription_suite/docs/release_evidence
+```
+
+Review rules:
+
+- `static`, `fresh_install` or `upgrade`, and `tagged_tests` must pass before
+  screenshots are considered release evidence.
+- Portal smoke remains a manual release gate: test two unrelated portal
+  customers and confirm cross-customer subscription, invoice, token, lifecycle
+  request, cancellation request, and payment transaction access is denied.
+- Screenshot review remains a manual release gate: complete
+  `SCREENSHOTS_CHECKLIST.md`, omit only with an approved reason, and verify no
+  credentials, local paths, debug traces, or unsupported claims are visible.
+- Commercial metadata is blocked until the product owner confirms author,
+  website, support, pricing, and listing ownership.
+
+Listing package paths:
+
+```text
+versions/19.0/custom_addons/subscription_suite/static/description/index.html
+versions/19.0/custom_addons/subscription_suite/static/description/screenshots
+```
+
+The root mirror contains the same listing scaffold where this workspace already
+mirrors addon files. Capture real screenshots from the RC database before adding
+PNG files to the screenshot package directory.
+
+This slice is documentation, release evidence, and packaging scaffold only. It
+does not change business logic, schemas, security rules, crons, demo XML, or
+test expectations.

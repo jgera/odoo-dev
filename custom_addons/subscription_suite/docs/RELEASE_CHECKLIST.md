@@ -11,6 +11,7 @@
 ## Automated Acceptance
 
 - [ ] `python scripts\subscription_suite_release_check.py --static-only` passes.
+- [ ] `python scripts\subscription_suite_rc_acceptance.py -d odoo19_subscription_rc --fresh-install --confirm-recreate --run-tests` produces JSON and Markdown evidence.
 - [ ] Fresh installation passes on a disposable database.
 - [ ] Upgrade passes on a staging copy of the prior release.
 - [ ] All five tagged addon test suites pass.
@@ -50,8 +51,11 @@
 ## Packaging
 
 - [ ] Installation/configuration, user, admin, finance, portal, troubleshooting, migration, and testing guidance is current.
+- [ ] RC acceptance runbook and latest evidence report are reviewed.
 - [ ] Odoo Apps listing copy is reviewed and does not overclaim unsupported features.
 - [ ] Screenshot checklist is complete or every omitted screenshot has an approved reason.
+- [ ] Listing screenshots are copied to `subscription_suite/static/description/screenshots` only after visual review.
+- [ ] `subscription_suite/static/description/index.html` is reviewed against current product scope and limitations.
 - [ ] Icon, license, author, website, pricing, and support details are reviewed.
 - [ ] Release notes use the release notes template and state upgrade steps.
 - [ ] Release commit and tag are created.

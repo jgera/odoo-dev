@@ -1060,7 +1060,7 @@ For every phase, update or create:
 
 **Objective:** Make the suite deployable for serious customers.
 
-**Current slice:** Release Candidate Documentation And Packaging Foundation. This slice completes the first release-candidate user, admin, finance, portal, troubleshooting, Odoo Apps listing, screenshot, and release-notes documentation package so the suite can be reviewed without relying on chat history. No runtime behavior changes are included.
+**Current slice:** Release Candidate Acceptance And Screenshot Packaging. This slice adds a repeatable release-candidate evidence runner, RC runbook, Odoo Apps listing HTML scaffold, screenshot package directory, and explicit manual gates for portal smoke, screenshot review, and blocked commercial metadata. No subscription business logic, schemas, security rules, crons, or demo XML are changed.
 
 **Build items:**
 
@@ -1107,12 +1107,15 @@ For every phase, update or create:
    - Repeatable release acceptance runner - foundation done.
    - Troubleshooting guide - foundation done.
    - Odoo Apps description assets - listing draft, screenshot checklist, and release notes template added.
+   - RC acceptance evidence runner - foundation added in `scripts/subscription_suite_rc_acceptance.py`.
+   - Odoo Apps HTML listing scaffold and screenshot package directory - foundation added; real screenshots still require RC database capture and visual review.
 
 **Demo data updates:**
 
 - Consolidate all phase demo records into a coherent demo story.
 - Add optional large demo-data generator for scale testing.
 - Ensure demo data covers trial, active, paused, past due, cancelled, renewed, upsold, recovered, usage-billed, and revenue-recognized subscriptions.
+- Prepare release-candidate demo scenarios in a disposable RC database before capturing screenshots; do not add large or sensitive release data to static XML.
 
 **Documentation updates:**
 
@@ -1122,6 +1125,7 @@ For every phase, update or create:
 - Add migration notes.
 - Add troubleshooting guide.
 - Add Odoo Apps listing content and screenshots checklist.
+- Add RC acceptance runbook and keep evidence reports free of credentials, dumps, raw logs, and local configuration.
 
 **Acceptance gates:**
 
@@ -1135,6 +1139,7 @@ For every phase, update or create:
 
 - Security hardening must pass core, billing, dunning, portal, and reports test tags plus full installed-suite upgrade.
 - Release candidate must pass fresh install, module upgrade, full tests, portal smoke test, and demo walkthrough.
+- RC acceptance evidence must record automated gates and manual gates separately so blocked branding metadata or missing screenshots cannot be mistaken for passed validation.
 - Large demo database must prove cron and report performance targets.
 
 ---

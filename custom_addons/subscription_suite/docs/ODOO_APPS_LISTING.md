@@ -90,3 +90,16 @@ Use [Screenshots Checklist](SCREENSHOTS_CHECKLIST.md) to capture listing images
 from a prepared demo database. Screenshots should show real records and avoid
 local-only technical details, credentials, and browser debug artifacts.
 
+The Odoo Apps HTML listing scaffold lives in
+`subscription_suite/static/description/index.html`. Listing screenshots should
+be copied to `subscription_suite/static/description/screenshots` only after the
+RC screenshot review is complete.
+
+## Publication Blockers
+
+- Replace placeholder author, website, support, pricing, and ownership metadata
+  only after product-owner sign-off.
+- Do not publish screenshots that expose local database names, credentials,
+  filesystem paths, debug traces, or unsupported self-service claims.
+- Keep the limitation summary visible until each limitation is implemented and
+  validated.
